@@ -1,0 +1,30 @@
+syntax = "proto3";
+package agent;
+
+//import "google/protobuf/any.proto";
+//import "google/protobuf/duration.proto";
+//import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.gostring_all) = false;
+
+message RemoteMessage {
+    string type_name    = 1;
+    bytes message_data  = 2;
+    bool response       = 3;
+    string sender       = 4;
+}
+
+message PingMessage {
+    // option (gogoproto.typedecl) = false;
+    // option (gogoproto.stringer) = false;
+    int64 timestamp = 1;
+}
+
+message PongMessage {
+    int64 timestamp = 1;
+}
+
+message TickMessage {
+    int64 delta     = 1; 
+}

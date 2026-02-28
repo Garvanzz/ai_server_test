@@ -1,0 +1,18 @@
+{
+  "Log": {
+    "WriteFile": true,
+    "FilePath": "./log/login_server.log",
+    "Level": "DEBUG",
+    "Format": "text",
+    "Prefix": "",
+    "MaxSize": 1,
+    "MaxBackups": 5,
+    "MaxAge": 30,
+    "Compress": false
+  },
+  "AccountAddr": "root:@Xiao1998@tcp(47.121.121.101:5001)/xiyou?&charset=utf8mb4&collation=utf8mb4_general_ci",
+  "RedisAddr": "127.0.0.1",
+  "RedisPassword": "Xiao1998",
+  "RedisDbNum": 0,
+  "HttpPort": ":9003"
+}
