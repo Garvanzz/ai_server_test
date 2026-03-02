@@ -1,5 +1,7 @@
 package gate
 
+import "time"
+
 type Gate interface {
 	NewAgent(session Session) (Agent, error)
 }

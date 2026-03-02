@@ -19,25 +19,14 @@ type defaultActor struct {
 }
 
 func (da *defaultActor) Receive(context actor.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			buf := make([]byte, 4096)
-			l := runtime.Stack(buf, false)
-			log.Error("%v: %s", r, buf[:l])
-		}
-	}()
-
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		da.onStart(context)
 	case *actor.Stopping:
-		break
 	case *actor.Stopped:
 		da.onStop()
 	case *actor.Restarting:
-		break
 	case *actor.Restart:
-		break
 	case *actor.Terminated:
 		da.OnTerminated(msg.Who, msg.Why)
 	case *createMessage:
@@ -58,6 +47,8 @@ func (da *defaultActor) onStart(context actor.Context) {
 		context: context,
 		system:  da.system,
 		opts:    &da.opts,
+		states:  make(map[string]interface{}),
+		metrics: &Metrics{},
 	}
 	da.name = da.opts.Name
 	da.agent = da.opts.Agent
@@ -90,6 +81,16 @@ func (da *defaultActor) onCreate(context actor.Context, name string, agent Agent
 }
 
 func (da *defaultActor) onTick(context actor.Context, delta time.Duration) {
+	start := time.Now()
+	defer func() {
+		if r := recover(); r != nil {
+			da.context.metrics.recordPanic()
+			buf := make([]byte, 4096)
+			n := runtime.Stack(buf, false)
+			log.Error("agent OnTick panic: %v\nStack: %s", r, buf[:n])
+		}
+		da.context.metrics.recordTick(time.Since(start))
+	}()
 	da.agent.OnTick(delta)
 	for _, child := range context.Children() {
 		context.Send(child, tickMessage(delta))
@@ -97,14 +98,38 @@ func (da *defaultActor) onTick(context actor.Context, delta time.Duration) {
 }
 
 func (da *defaultActor) onMessage(context actor.Context, msg interface{}) {
-	m, sender, senderA, response := unwrapMessage(msg)
+	start := time.Now()
+	m, sender, senderA, response, err := unwrapMessage(msg)
+	if err != nil {
+		log.Error("unwrap message: %v", err)
+		if response {
+			context.Respond(err)
+		}
+		return
+	}
+
 	da.context.message = m
 	da.context.sender = sender
 	da.context.senderA = senderA
+	da.context.rawMsg = msg
 	defer func() {
 		da.context.message = nil
 		da.context.sender = nil
 		da.context.senderA = ""
+		da.context.rawMsg = nil
+		da.context.metrics.recordMsg(time.Since(start))
+	}()
+
+	defer func() {
+		if r := recover(); r != nil {
+			da.context.metrics.recordPanic()
+			buf := make([]byte, 4096)
+			n := runtime.Stack(buf, false)
+			log.Error("agent OnMessage panic: %v\nStack: %s", r, buf[:n])
+			if response {
+				context.Respond(fmt.Errorf("agent panic: %v", r))
+			}
+		}
 	}()
 
 	var result interface{}
@@ -112,19 +137,15 @@ func (da *defaultActor) onMessage(context actor.Context, msg interface{}) {
 		var discard bool
 		discard, result = da.context.filter(m)
 		if discard {
-			goto RESPONSE
-		}
-	}
-	result = da.agent.OnMessage(m)
-RESPONSE:
-	if response {
-		context.Respond(result)
-	} else if result != nil {
-		m, e := wrapMessage(da.context.Self(), context.Sender(), msg, false)
-		if e == nil {
-			context.Request(context.Sender(), m)
+			if response {
+				context.Respond(result)
+			}
 			return
 		}
-		fmt.Printf("error: %v\n", e)
+	}
+
+	result = da.agent.OnMessage(m)
+	if response {
+		context.Respond(result)
 	}
 }

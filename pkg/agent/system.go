@@ -9,40 +9,51 @@ import (
 )
 
 type System struct {
-	name    string
-	system  *actor.ActorSystem
-	context *actor.RootContext
-	remote  *remote.Remote
-	root    PID
-	opts    Options
+	name     string
+	system   *actor.ActorSystem
+	context  *actor.RootContext
+	remote   *remote.Remote
+	root     PID
+	opts     Options
+	eventBus *eventBus
 }
 
 func (s *System) Root() PID { return s.root }
 
 func NewSystem(opts ...Option) *System {
 	opt := Options{
-		CallTTL: DefaultCallTTL,
-		Agent:   todoAgent,
+		CallTTL:          DefaultCallTTL,
+		Agent:            todoAgent,
+		MaxRetries:       DefaultMaxRetries,
+		SupervisorWindow: DefaultSupervisorWindow,
 	}
 	for _, o := range opts {
 		o(&opt)
 	}
 
 	system := &System{
-		opts: opt,
-		name: opt.Name,
+		opts:     opt,
+		name:     opt.Name,
+		eventBus: newEventBus(),
 	}
 
 	system.system = actor.NewActorSystem()
 	system.context = system.system.Root
 
-	// todo:system 监听死信
-	//system.system.EventStream.Subscribe(func(evt interface{}) {
-	//	if e, ok := evt.(*actor.DeadLetterEvent); ok {
-	//		msgType := reflect.TypeOf(e.Message)
-	//		log.Debug("Dead Letter-Sender:%v,Message:%v,PID:%v", e.Sender, msgType.String(), e.PID)
-	//	}
-	//})
+	dlHandler := opt.DeadLetterHandler
+	system.system.EventStream.Subscribe(func(evt interface{}) {
+		if e, ok := evt.(*actor.DeadLetterEvent); ok {
+			actualMsg := e.Message
+			if lm, ok := actualMsg.(*LocalMessage); ok {
+				actualMsg = lm.msg
+			}
+			if dlHandler != nil {
+				dlHandler(e.PID, actualMsg, e.Sender)
+			} else {
+				log.Warn("dead letter: target=%v, sender=%v, message=%T", e.PID, e.Sender, actualMsg)
+			}
+		}
+	})
 
 	if opt.Host != "" {
 		configure := remote.Configure(opt.Host, opt.Port)
@@ -63,7 +74,7 @@ func (s *System) Start() {
 			return actor.StopDirective
 		}
 	}
-	supervisor := actor.NewOneForOneStrategy(5, time.Second, decider)
+	supervisor := actor.NewOneForOneStrategy(s.opts.MaxRetries, s.opts.SupervisorWindow, decider)
 	props := actor.PropsFromProducer(func() actor.Actor {
 		return &defaultActor{opts: s.opts, system: s}
 	}, actor.WithSupervisor(supervisor))
@@ -82,15 +93,35 @@ func (s *System) Start() {
 func (s *System) Stop() {
 	future := s.context.PoisonFuture(s.root)
 	if err := future.Wait(); err != nil {
-		panic(fmt.Sprintf("agent: stop system(%s) error(%v)", s.name, err))
+		log.Error("agent: stop system(%s) error: %v", s.name, err)
 	}
 	if s.remote != nil {
 		s.remote.Shutdown(true)
 	}
 }
 
+func (s *System) StopGraceful(timeout time.Duration) error {
+	ch := make(chan error, 1)
+	go func() {
+		future := s.context.PoisonFuture(s.root)
+		ch <- future.Wait()
+	}()
+
+	var err error
+	select {
+	case err = <-ch:
+	case <-time.After(timeout):
+		err = fmt.Errorf("agent: stop system(%s) timeout after %v", s.name, timeout)
+	}
+
+	if s.remote != nil {
+		s.remote.Shutdown(true)
+	}
+	return err
+}
+
 func (s *System) Create(name string, agent Agent, opts ...Option) (PID, error) {
-	future := s.system.Root.RequestFuture(s.root, &createMessage{name: name, agent: agent, opts: opts}, time.Second)
+	future := s.system.Root.RequestFuture(s.root, &createMessage{name: name, agent: agent, opts: opts}, s.opts.CallTTL)
 	if result, err := future.Result(); err != nil {
 		return nil, fmt.Errorf("agent: system(%s) create %s error(%v)", s.name, name, err)
 	} else {
@@ -107,8 +138,13 @@ func (s *System) Create(name string, agent Agent, opts ...Option) (PID, error) {
 }
 
 func (s *System) Destroy(pid PID) {
+	if pid == nil {
+		return
+	}
 	future := s.context.PoisonFuture(pid)
-	future.Wait()
+	if err := future.Wait(); err != nil {
+		log.Error("agent: destroy %s error: %v", Address(pid), err)
+	}
 }
 
 func (s *System) Cast(pid PID, message any) {

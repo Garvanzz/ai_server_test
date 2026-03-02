@@ -42,7 +42,12 @@ type Manager struct {
 func (m *Manager) OnInit(app module.App) {
 	m.BaseModule.OnInit(app)
 	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
-	data.Cache, _ = cache.New[int64, any](10000, nil, data.SavePlayerData)
+	data.Cache = cache.New[int64, any](cache.Options[int64, any]{
+		Capacity:      10000,
+		DefaultTTL:    5 * time.Minute,
+		FlushInterval: 30 * time.Second,
+		SaveFunc:      data.SavePlayerData,
+	})
 	data.ServerId = m.App.GetEnv().ID
 
 	activities, err := data.LoadAllActivityData()
@@ -227,9 +232,6 @@ func (m *Manager) saveData() bool {
 		}
 		return true
 	})
-
-	// 保存玩家数据
-	data.Cache.Iterate(data.SavePlayerData)
 
 	return true
 }

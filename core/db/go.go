@@ -4,23 +4,26 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"xfx/pkg/agent"
 	"xfx/pkg/log"
 )
 
+const defaultWorkerCount = 8
+
 type Go struct {
-	pendingGo int64          // 活跃协程计数
-	isRunning bool           // 运行状态
-	taskQueue chan *RedisJob // 任务队列
+	pendingGo int64
+	running   int32 // 原子操作，替代无保护的 bool
+	taskQueue chan *RedisJob
 	system    *agent.System
+	wg        sync.WaitGroup // 等待所有 worker 退出
 }
 
 type RedisJob struct {
 	Pool    *redis.Pool
 	Command string
 	Args    []any
-	Result  chan any
 	Cb      func(any, error)
 }
 
@@ -39,56 +42,53 @@ func NewGo(system *agent.System) *Go {
 }
 
 func (g *Go) start() {
-	if g.isRunning {
+	if !atomic.CompareAndSwapInt32(&g.running, 0, 1) {
 		panic("already running")
 	}
 
-	g.isRunning = true
-	go g.worker()
+	for i := 0; i < defaultWorkerCount; i++ {
+		g.wg.Add(1)
+		go g.worker()
+	}
 }
 
 func (g *Go) stop() {
-	if !g.isRunning {
+	if !atomic.CompareAndSwapInt32(&g.running, 1, 0) {
 		return
 	}
-
-	g.isRunning = false
-
 	close(g.taskQueue)
+	g.wg.Wait()
 }
 
+// worker 从 taskQueue 消费并直接执行，固定数量的 worker 控制并发度
 func (g *Go) worker() {
+	defer g.wg.Done()
 	for job := range g.taskQueue {
-		go g.executeJob(job)
+		g.executeJob(job)
 	}
 }
 
 func (g *Go) executeJob(job *RedisJob) {
+	atomic.AddInt64(&g.pendingGo, 1)
+	defer atomic.AddInt64(&g.pendingGo, -1)
+
 	defer func() {
 		if r := recover(); r != nil {
-			atomic.AddInt64(&g.pendingGo, -1)
-
 			buf := make([]byte, 4096)
 			n := runtime.Stack(buf, false)
-			log.Error("Error: %v\nStack: %s", r, buf[:n])
-			return
+			log.Error("redis async job panic: %v\nStack: %s", r, buf[:n])
 		}
 	}()
-
-	atomic.AddInt64(&g.pendingGo, 1)
 
 	conn := job.Pool.Get()
 	defer conn.Close()
 
 	reply, err := conn.Do(job.Command, job.Args...)
-
-	atomic.AddInt64(&g.pendingGo, -1)
-
 	job.Cb(reply, err)
 }
 
 func (g *Go) submitJob(pool *redis.Pool, command string, args []any, cb func(any, error)) error {
-	if !g.isRunning {
+	if atomic.LoadInt32(&g.running) == 0 {
 		return fmt.Errorf("service not running")
 	}
 
@@ -96,7 +96,6 @@ func (g *Go) submitJob(pool *redis.Pool, command string, args []any, cb func(any
 		Pool:    pool,
 		Command: command,
 		Args:    args,
-		Result:  make(chan any, 1),
 		Cb:      cb,
 	}
 

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	Cache    *cache.AutoTLCache[int64, any]
+	Cache    *cache.WriteBackCache[int64, any]
 	ServerId int
 )
 
@@ -201,8 +201,7 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 		log.Error("load activity player data unmarshal error:%v,%v,%v", err, actId, playerId)
 	}
 
-	// 放到缓存中
-	Cache.Set(key, ret)
+	Cache.SetClean(key, ret)
 	return ret
 }
 

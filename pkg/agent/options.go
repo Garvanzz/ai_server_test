@@ -5,19 +5,26 @@ import (
 )
 
 const (
-	DefaultCallTTL = time.Millisecond * 1000
+	DefaultCallTTL          = time.Millisecond * 1000
+	DefaultMaxRetries       = 5
+	DefaultSupervisorWindow = time.Second
 )
+
+type DeadLetterHandler func(target PID, message interface{}, sender PID)
 
 type Option func(*Options)
 
 type Options struct {
-	Name    string        // 节点名称
-	Host    string        // 节点地址
-	Port    int           // 节点端口
-	CallTTL time.Duration // 发起Call的超时时间
-	Restart bool
-	Agent   Agent
-	Tick    time.Duration
+	Name              string        // 节点名称
+	Host              string        // 节点地址
+	Port              int           // 节点端口
+	CallTTL           time.Duration // 发起Call的超时时间
+	Restart           bool          // panic 时是否重启
+	Agent             Agent
+	Tick              time.Duration
+	MaxRetries        int               // supervisor 最大重试次数
+	SupervisorWindow  time.Duration     // supervisor 重试时间窗口
+	DeadLetterHandler DeadLetterHandler // 自定义死信处理（仅 System 级别）
 }
 
 func WithTick(tick time.Duration) Option {
@@ -59,5 +66,28 @@ func WithHost(v string) Option {
 func WithPort(v int) Option {
 	return func(o *Options) {
 		o.Port = v
+	}
+}
+
+// WithMaxRetries sets the max number of restarts the supervisor allows
+// within the supervisor window before giving up.
+func WithMaxRetries(n int) Option {
+	return func(o *Options) {
+		o.MaxRetries = n
+	}
+}
+
+// WithSupervisorWindow sets the time window for MaxRetries counting.
+func WithSupervisorWindow(d time.Duration) Option {
+	return func(o *Options) {
+		o.SupervisorWindow = d
+	}
+}
+
+// WithDeadLetterHandler sets a custom handler for dead letters (System level).
+// If nil, a default log.Warn handler is used.
+func WithDeadLetterHandler(fn DeadLetterHandler) Option {
+	return func(o *Options) {
+		o.DeadLetterHandler = fn
 	}
 }

@@ -38,7 +38,7 @@ func GetTypedConf[T IActivityConfig](cfgId int64) (map[int64]T, bool) {
 
 	result := make(map[int64]T)
 	for id, t := range activityConfs {
-		if t.GetActivityId() == cfgId {
+		if t.GetActivityId() != cfgId {
 			continue
 		}
 		result[id] = t

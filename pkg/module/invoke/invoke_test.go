@@ -2,55 +2,141 @@ package invoke
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 )
 
-func Func1() {
-	fmt.Println("func1 ========")
-}
+func funcNoReturn() {}
 
-func Func2() int {
-	fmt.Println("func2 ========")
-	return 1
-}
+func funcReturnInt() int { return 42 }
 
-func Func3() (int, int) {
-	fmt.Println("func3 ========")
-	return 1, 2
-}
+func funcReturnError() error { return errors.New("err") }
 
-func Func4() error {
-	fmt.Println("func4 ========")
-	return errors.New("func4 error")
-}
+func funcReturnIntError() (int, error) { return 1, errors.New("func error") }
 
-func Func5() (int, error) {
-	fmt.Println("func5 ========")
-	return 1, errors.New("func5 error")
+func funcReturnIntNilError() (int, error) { return 99, nil }
+
+func funcWithArgs(a int, b string) string { return b }
+
+func funcWithPtrArg(p *int) int {
+	if p == nil {
+		return -1
+	}
+	return *p
 }
 
 func TestInvoke(t *testing.T) {
 	iv := NewInvoker()
-	iv.Register("1", Func1)
-	iv.Register("2", Func2)
-	iv.Register("3", Func3)
-	iv.Register("4", Func4)
-	iv.Register("5", Func5)
+	iv.Register("noReturn", funcNoReturn)
+	iv.Register("retInt", funcReturnInt)
+	iv.Register("retErr", funcReturnError)
+	iv.Register("retIntErr", funcReturnIntError)
+	iv.Register("retIntNil", funcReturnIntNilError)
+	iv.Register("withArgs", funcWithArgs)
+	iv.Register("withPtr", funcWithPtrArg)
 
-	result, err := iv.Invoke("1")
-	fmt.Println(result, err)
+	if r, err := iv.Invoke("noReturn"); r != nil || err != nil {
+		t.Fatalf("noReturn: got (%v, %v)", r, err)
+	}
 
-	result, err = iv.Invoke("2")
-	fmt.Println(result, err)
+	if r, err := iv.Invoke("retInt"); r != 42 || err != nil {
+		t.Fatalf("retInt: got (%v, %v)", r, err)
+	}
 
-	result, err = iv.Invoke("3")
-	fmt.Println(result, err)
+	if r, err := iv.Invoke("retErr"); r != nil || err == nil {
+		t.Fatalf("retErr: got (%v, %v)", r, err)
+	}
 
-	result, err = iv.Invoke("4")
-	fmt.Println(result, err)
-	
-	result, err = iv.Invoke("5")
-	fmt.Println(result, err)
+	if r, err := iv.Invoke("retIntErr"); r != 1 || err == nil {
+		t.Fatalf("retIntErr: got (%v, %v)", r, err)
+	}
+
+	if r, err := iv.Invoke("retIntNil"); r != 99 || err != nil {
+		t.Fatalf("retIntNil: got (%v, %v)", r, err)
+	}
+
+	if r, err := iv.Invoke("withArgs", 10, "hello"); r != "hello" || err != nil {
+		t.Fatalf("withArgs: got (%v, %v)", r, err)
+	}
+
+	if r, err := iv.Invoke("withPtr", nil); r != -1 || err != nil {
+		t.Fatalf("withPtr(nil): got (%v, %v)", r, err)
+	}
+
+	v := 7
+	if r, err := iv.Invoke("withPtr", &v); r != 7 || err != nil {
+		t.Fatalf("withPtr(&7): got (%v, %v)", r, err)
+	}
+}
+
+func TestInvokeArgCountMismatch(t *testing.T) {
+	iv := NewInvoker()
+	iv.Register("withArgs", funcWithArgs)
+	if _, err := iv.Invoke("withArgs", 1); err == nil {
+		t.Fatal("expected error for arg count mismatch")
+	}
+}
+
+func TestInvokeArgTypeMismatch(t *testing.T) {
+	iv := NewInvoker()
+	iv.Register("withArgs", funcWithArgs)
+	if _, err := iv.Invoke("withArgs", "wrong", "hello"); err == nil {
+		t.Fatal("expected error for arg type mismatch")
+	}
+}
+
+func TestInvokeNotFound(t *testing.T) {
+	iv := NewInvoker()
+	if _, err := iv.Invoke("missing"); err == nil {
+		t.Fatal("expected error for missing function")
+	}
+}
+
+func TestRegisterNotAFunction(t *testing.T) {
+	iv := NewInvoker()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for non-function")
+		}
+	}()
+	iv.Register("bad", 123)
+}
+
+func TestRegisterTooManyReturns(t *testing.T) {
+	iv := NewInvoker()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for too many return values")
+		}
+	}()
+	iv.Register("bad", func() (int, int, int) { return 0, 0, 0 })
+}
+
+func TestRegisterSecondReturnNotError(t *testing.T) {
+	iv := NewInvoker()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for non-error second return")
+		}
+	}()
+	iv.Register("bad", func() (int, int) { return 0, 0 })
+}
+
+func TestRegisterDuplicate(t *testing.T) {
+	iv := NewInvoker()
+	iv.Register("fn", funcNoReturn)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for duplicate registration")
+		}
+	}()
+	iv.Register("fn", funcNoReturn)
+}
+
+func TestInvokeNilOnNonPointer(t *testing.T) {
+	iv := NewInvoker()
+	iv.Register("withArgs", funcWithArgs)
+	if _, err := iv.Invoke("withArgs", nil, "hello"); err == nil {
+		t.Fatal("expected error for nil on non-pointer param")
+	}
 }
 

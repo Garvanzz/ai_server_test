@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func tickgo(ctx Context, tick time.Duration) func() {
+func tickgo(ctx *agentContext, tick time.Duration) func() {
 	goctx, gocancel := context.WithCancel(context.Background())
 	go func() {
 		var (
@@ -21,8 +21,7 @@ func tickgo(ctx Context, tick time.Duration) func() {
 			case <-ticker.C:
 				t2 = time.Now()
 				delta, t1 = t2.Sub(t1), t2
-				ctx.Cast(ctx.Self(), tickMessage(delta))
-				// fmt.Printf("* tickgo tick %v\n", delta)
+				ctx.context.Send(ctx.Self(), tickMessage(delta))
 			case <-goctx.Done():
 				break process
 			}

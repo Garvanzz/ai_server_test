@@ -3,10 +3,8 @@ module xfx
 go 1.25.3
 
 require (
-	github.com/alecthomas/log4go v0.0.0-20180109082532-d146e6b86faa
 	github.com/asynkron/protoactor-go v0.0.0-20260118094027-288962e52f3f
 	github.com/charmbracelet/log v0.4.2
-	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-redsync/redsync/v4 v4.15.0
 	github.com/go-sql-driver/mysql v1.9.3
@@ -40,7 +38,6 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect

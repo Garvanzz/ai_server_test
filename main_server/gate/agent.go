@@ -1,7 +1,7 @@
 package mgate
 
 import (
-	"sync/atomic"
+	"sync"
 	"time"
 	"xfx/main_server/invoke"
 	"xfx/main_server/messages"
@@ -21,7 +21,7 @@ type Agent struct {
 	modules.BaseAgent
 	gate      *Gate
 
-	state     int32
+	// state     int32
 	closeOnce sync.Once
     startedCh chan struct{}  // 替换 state int32，用 channel 通知 actor 已就绪
 
@@ -140,9 +140,8 @@ func (a *Agent) Close() error {
 func (a *Agent) OnTick(delta time.Duration) {
 	a.pingTime -= delta
 	if a.pingTime <= 0 {
-		// 超时断开连接
+		// Session.Close → CloseCallback → agent.Close → Context.Stop → OnStop → Disconnect
 		a.GetSession().Close()
-		invoke.LoginClient(a).Disconnect(a.playerId)
 	}
 }
 
@@ -156,7 +155,10 @@ func (a *Agent) OnMessage(msg any) any {
 		a.playerPid = nil
 		a.Send(m)
 		
-		a.Close()
+		// 等待 Kick 包发出后再关闭，最多等 500ms
+		go func() {
+			a.GetSession().CloseWithFlush(500 * time.Millisecond)
+		}()
 	default:
 		// 发给客户端
 		//log.Debug("gate agent sent to client: %v", m)

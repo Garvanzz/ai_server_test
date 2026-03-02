@@ -113,3 +113,15 @@ func (a *ActivityDailyAccRecharge) Inject(data any) {
 }
 
 func (a *ActivityDailyAccRecharge) Extract() any { return a.data }
+
+func init() {
+	RegisterActivity(define.ActivityTypeDailyAccRecharge, &ActivityDesc{
+		NewHandler: func() IActivity { return new(ActivityDailyAccRecharge) },
+		NewActivityData: func() any { return new(model.ActDataDailyAccumulateRecharge) },
+		NewPlayerData: func() any { return new(model.DailyAccumulateRechargePd) },
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.DailyAccumulateRecharge = data.(*proto_activity.DailyAccumulateRecharge)
+		},
+	})
+}
+

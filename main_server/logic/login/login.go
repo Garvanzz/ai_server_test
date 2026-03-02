@@ -170,21 +170,21 @@ func (l *Login) getPlayerPid(dbId int64) agent.PID {
 	return nil
 }
 
-// 玩家登出
+// 玩家登出 — Cast 异步通知 Player，避免阻塞 Login Actor
 func (l *Login) logout(playerId int64) error {
 	pid, ok := l.players[playerId]
 	if ok {
-		l.Context.Call(pid, &messages.Logout{}) // 转发给玩家进程
+		l.Context.Cast(pid, &messages.Logout{})
 		delete(l.players, playerId)
 	}
 	return nil
 }
 
-// 断开连接
+// 断开连接 — Cast 异步通知 Player，避免阻塞 Login Actor
 func (l *Login) disconnect(playerId int64) error {
 	pid, ok := l.players[playerId]
 	if ok {
-		l.Context.Call(pid, &messages.Disconnect{}) // 转发给玩家进程
+		l.Context.Cast(pid, &messages.Disconnect{})
 		delete(l.players, playerId)
 	}
 	return nil

@@ -21,6 +21,7 @@ type Context interface {
 	Self() PID
 	Cast(pid PID, msg interface{})
 	Call(pid PID, msg interface{}) (interface{}, error)
+	CallWithTimeout(pid PID, msg interface{}, timeout time.Duration) (interface{}, error)
 	CallNR(pid PID, msg interface{}) error
 	Watch(pid PID)
 	Unwatch(pid PID)
@@ -29,17 +30,26 @@ type Context interface {
 	SetMessageFilter(MessageFilter)
 	Message() interface{}
 	Sender() PID
+	Metrics() *Metrics
+	// Stash saves the current message for later replay.
+	// Only effective within OnMessage; Call-type messages should not be stashed.
+	Stash()
+	// UnstashAll re-sends all stashed messages back to this actor's mailbox.
+	UnstashAll()
 }
 
 type agentContext struct {
-	context actor.Context
-	system  *System
-	opts    *Options
-	states  map[string]interface{}
-	filter  MessageFilter
-	message interface{}
-	sender  PID
-	senderA string
+	context     actor.Context
+	system      *System
+	opts        *Options
+	states      map[string]interface{}
+	metrics     *Metrics
+	filter      MessageFilter
+	message     interface{}
+	sender      PID
+	senderA     string
+	rawMsg      interface{}
+	stashedMsgs []interface{}
 }
 
 func (c *agentContext) Self() PID {
@@ -93,6 +103,25 @@ func (c *agentContext) CallNR(pid PID, msg interface{}) error {
 	}
 }
 
+func (c *agentContext) CallWithTimeout(pid PID, msg interface{}, timeout time.Duration) (interface{}, error) {
+	if pid == nil {
+		return nil, ErrNilPID
+	}
+	m, err := wrapMessage(c.Self(), pid, msg, true)
+	if err != nil {
+		return nil, err
+	}
+
+	f := c.context.RequestFuture(pid, m, timeout)
+	if result, err := f.Result(); err != nil {
+		return nil, fmt.Errorf("agent context: call error(%v)", err)
+	} else {
+		return result, nil
+	}
+}
+
+func (c *agentContext) Metrics() *Metrics { return c.metrics }
+
 func (c *agentContext) Watch(pid PID)   { c.context.Watch(pid) }
 func (c *agentContext) Unwatch(pid PID) { c.context.Unwatch(pid) }
 func (c *agentContext) Stop()           { c.context.Stop(c.Self()) }
@@ -108,20 +137,20 @@ func (c *agentContext) Get(key string) (interface{}, bool) {
 
 func (c *agentContext) Create(name string, agent Agent, opts ...Option) (PID, error) {
 	opt := Options{
-		CallTTL: DefaultCallTTL,
-		Name:    name,
-		Agent:   agent,
+		CallTTL:          DefaultCallTTL,
+		Name:             name,
+		Agent:            agent,
+		MaxRetries:       DefaultMaxRetries,
+		SupervisorWindow: DefaultSupervisorWindow,
 	}
 	for _, o := range opts {
 		o(&opt)
 	}
 
-	// Name is expect for every agent
 	if opt.Name == "" {
 		return nil, ErrEmptyName
 	}
 
-	// Agent name can't contain ':' or '/' rune
 	if strings.ContainsAny(opt.Name, ":/") {
 		return nil, ErrInvalidName
 	}
@@ -137,7 +166,7 @@ func (c *agentContext) Create(name string, agent Agent, opts ...Option) (PID, er
 			return actor.StopDirective
 		}
 	}
-	supervisor := actor.NewOneForOneStrategy(5, time.Second, decider)
+	supervisor := actor.NewOneForOneStrategy(opt.MaxRetries, opt.SupervisorWindow, decider)
 	props := actor.PropsFromProducer(func() actor.Actor {
 		return &defaultActor{opts: opt, system: c.system}
 	}, actor.WithSupervisor(supervisor))
@@ -166,4 +195,17 @@ func (c *agentContext) Sender() PID {
 		return c.sender
 	}
 	return nil
+}
+
+func (c *agentContext) Stash() {
+	if c.rawMsg != nil {
+		c.stashedMsgs = append(c.stashedMsgs, c.rawMsg)
+	}
+}
+
+func (c *agentContext) UnstashAll() {
+	for _, m := range c.stashedMsgs {
+		c.context.Send(c.Self(), m)
+	}
+	c.stashedMsgs = c.stashedMsgs[:0]
 }

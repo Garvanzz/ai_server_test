@@ -31,7 +31,7 @@ func wrapMessage(fromPid, toPid PID, msg interface{}, response bool) (interface{
 		case proto.Message:
 			name, data, err := serialize.MarshalType(msg)
 			if err != nil {
-				panic(err)
+				return nil, fmt.Errorf("marshal remote message: %w", err)
 			}
 			return &RemoteMessage{
 				TypeName:    name,
@@ -56,19 +56,19 @@ func wrapMessage(fromPid, toPid PID, msg interface{}, response bool) (interface{
 	}
 }
 
-func unwrapMessage(msg interface{}) (interface{}, PID, string, bool) {
+func unwrapMessage(msg interface{}) (interface{}, PID, string, bool, error) {
 	switch m := msg.(type) {
 	case tickMessage:
-		return m, nil, "", false
+		return m, nil, "", false, nil
 	case *RemoteMessage:
 		p, err := serialize.UnmarshalType(m.TypeName, m.MessageData)
 		if err != nil {
-			panic(err)
+			return nil, nil, "", false, fmt.Errorf("unmarshal remote message: %w", err)
 		}
-		return p, nil, m.Sender, m.Response
+		return p, nil, m.Sender, m.Response, nil
 	case *LocalMessage:
-		return m.msg, m.sender, "", m.response
+		return m.msg, m.sender, "", m.response, nil
 	default:
-		return m, nil, "", false
+		return m, nil, "", false, nil
 	}
 }

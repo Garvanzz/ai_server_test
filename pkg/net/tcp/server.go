@@ -1,10 +1,8 @@
 package tcp
 
 import (
-	"fmt"
 	"net"
-	"os"
-	"time"
+	"xfx/pkg/log"
 	proto_id "xfx/proto"
 )
 

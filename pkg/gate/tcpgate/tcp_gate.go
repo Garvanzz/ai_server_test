@@ -25,9 +25,16 @@ func (gt *Gate) OnInit(app module.App) {
 		panic("tcp gate config is nil")
 	}
 
-	host := fmt.Sprintf("0.0.0.0:%d", app.GetEnv().TcpGate.Port)
+	cfg := app.GetEnv().TcpGate
+	host := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
 	log.Debug("tcp连接:%s", host)
-	server, err := tcp.Listen("tcp", host, tcp.ProtocolFunc(codec.NewParser), 2000, tcp.HandlerFunc(gt.handleConnect))
+
+	sendChanSize := cfg.MessageBufferSize
+	if sendChanSize <= 0 {
+		sendChanSize = 2000
+	}
+
+	server, err := tcp.Listen("tcp", host, tcp.ProtocolFunc(codec.NewParser), sendChanSize, tcp.HandlerFunc(gt.handleConnect))
 	if err != nil {
 		panic(err)
 	}

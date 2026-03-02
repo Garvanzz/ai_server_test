@@ -12,6 +12,8 @@ import (
 var CfgMgr *Manager
 var excelMap map[string]int
 
+var numPrefixRe = regexp.MustCompile(`^\d+`)
+
 type Manager struct {
 	AllJson        map[string]any
 	filePath       string
@@ -64,7 +66,7 @@ func (m *Manager) loadFile() map[string]any {
 			}
 
 			excelId := 0
-			match := regexp.MustCompile(`^\d+`).FindString(file.Name())
+			match := numPrefixRe.FindString(file.Name())
 			if match != "" {
 				num, _ := strconv.Atoi(match)
 				excelId = num

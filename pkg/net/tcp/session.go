@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var SessionClosedError = errors.New("session Closed")
@@ -213,4 +214,36 @@ func (session *Session) Get(key string) (any, bool) {
 
 func (session *Session) Delete(key string) {
 	delete(session.state, key)
+}
+
+// CloseWithFlush 等待 sendChan 中所有消息发完后再关闭
+// timeout: 最长等待时间，防止卡死
+func (session *Session) CloseWithFlush(timeout time.Duration) error {
+    if session.sendChan == nil {
+        return session.Close()
+    }
+
+    // 投入一个哨兵 nil，sendLoop 收到后主动关闭
+    session.sendMutex.RLock()
+    if session.IsClosed() {
+        session.sendMutex.RUnlock()
+        return SessionClosedError
+    }
+
+    done := make(chan struct{})
+    // 注册回调，session 真正关闭后通知
+    session.AddCloseCallback(session, "flush", func() {
+        close(done)
+    })
+    session.sendMutex.RUnlock()
+
+    // 等待发送完成或超时
+    timer := time.NewTimer(timeout)
+    defer timer.Stop()
+    select {
+    case <-done:
+        return nil
+    case <-timer.C:
+        return session.Close() // 超时强制关闭
+    }
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/pkg/env"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
 	"xorm.io/xorm"
@@ -41,9 +42,9 @@ func init() {
 func Start(app module.App) {
 	//redis
 	CommonEngine = new(CDBEngine)
-	CommonEngine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum)
+	CommonEngine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
 	CommonEngine.Rs = redsync.New(redigo.NewPool(CommonEngine.Redis))
-	CommonEngine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr)
+	CommonEngine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr, app.GetEnv().Mysql)
 
 	serverItem := new(model.ServerItem)
 	ok, err := CommonEngine.Mysql.Table(define.ServerGroup).Where("id = ?", app.GetEnv().ID).Get(serverItem)
@@ -82,16 +83,31 @@ func Close() {
 	CommonEngine.Close()
 }
 
-func NewMysqlEngine(addr string) *xorm.Engine {
+func NewMysqlEngine(addr string, cfg *env.Mysql) *xorm.Engine {
 	_engine, err := xorm.NewEngine("mysql", addr)
 	if err != nil {
 		panic(err)
 	}
-	_engine.Logger().SetLevel(xlog.LOG_OFF)         //不要日志
-	_engine.ShowSQL(false)                          //不显示命令
-	_engine.SetMaxIdleConns(240)                    //设置pool里可留存的空闲conn
-	_engine.SetMaxOpenConns(1200)                   //设置最大打开连接数 mysql里设置的1752
-	_engine.SetConnMaxLifetime(time.Second * 14400) //超时时间 mysql那边默认是8小时28800 外网设置的是24小时 这里这个值必须小于mysql的时间
+	_engine.Logger().SetLevel(xlog.LOG_OFF)
+	_engine.ShowSQL(false)
+
+	maxIdle := 240
+	maxOpen := 1200
+	maxLife := 14400 * time.Second
+	if cfg != nil {
+		if cfg.MaxIdleConns > 0 {
+			maxIdle = cfg.MaxIdleConns
+		}
+		if cfg.MaxOpenConns > 0 {
+			maxOpen = cfg.MaxOpenConns
+		}
+		if cfg.ConnMaxLifetime > 0 {
+			maxLife = cfg.ConnMaxLifetime
+		}
+	}
+	_engine.SetMaxIdleConns(maxIdle)
+	_engine.SetMaxOpenConns(maxOpen)
+	_engine.SetConnMaxLifetime(maxLife)
 
 	err = _engine.Ping()
 	if err != nil {
@@ -101,15 +117,46 @@ func NewMysqlEngine(addr string) *xorm.Engine {
 	return _engine
 }
 
-func NewRedisPool(host, password string, dataBase int) *redis.Pool {
+func NewRedisPool(host, password string, dataBase int, cfg *env.Redis) *redis.Pool {
+	maxIdle := 200
+	maxActive := 2000
+	idleTimeout := 60 * 60 * time.Second
+	connectTimeout := 5 * time.Second
+	readTimeout := 3 * time.Second
+	writeTimeout := 3 * time.Second
+
+	if cfg != nil {
+		if cfg.MaxIdle > 0 {
+			maxIdle = cfg.MaxIdle
+		}
+		if cfg.MaxActive > 0 {
+			maxActive = cfg.MaxActive
+		}
+		if cfg.IdleTimeout > 0 {
+			idleTimeout = cfg.IdleTimeout
+		}
+		if cfg.ConnectTimeout > 0 {
+			connectTimeout = cfg.ConnectTimeout
+		}
+		if cfg.ReadTimeout > 0 {
+			readTimeout = cfg.ReadTimeout
+		}
+		if cfg.WriteTimeout > 0 {
+			writeTimeout = cfg.WriteTimeout
+		}
+	}
+
 	pool := &redis.Pool{
-		MaxIdle:     200,
-		MaxActive:   2000,
-		IdleTimeout: 60 * 60 * time.Second,
+		MaxIdle:     maxIdle,
+		MaxActive:   maxActive,
+		IdleTimeout: idleTimeout,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", host,
 				redis.DialPassword(password),
 				redis.DialDatabase(dataBase),
+				redis.DialConnectTimeout(connectTimeout),
+				redis.DialReadTimeout(readTimeout),
+				redis.DialWriteTimeout(writeTimeout),
 			)
 			if err != nil {
 				return nil, err
@@ -138,9 +185,9 @@ func NewRedisPool(host, password string, dataBase int) *redis.Pool {
 
 func NewConnect(v model.ServerItem, app module.App) *CDBEngine {
 	dbEngine := new(CDBEngine)
-	dbEngine.Redis = NewRedisPool(fmt.Sprintf("127.0.0.1:%d", v.RedisPort), app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum)
+	dbEngine.Redis = NewRedisPool(fmt.Sprintf("127.0.0.1:%d", v.RedisPort), app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
 	dbEngine.Rs = redsync.New(redigo.NewPool(dbEngine.Redis))
-	dbEngine.Mysql = NewMysqlEngine(v.MysqlAddr)
+	dbEngine.Mysql = NewMysqlEngine(v.MysqlAddr, app.GetEnv().Mysql)
 	return dbEngine
 }
 

@@ -68,13 +68,22 @@ type TcpGate struct {
 }
 
 type Mysql struct {
-	CommonAddr string
+	CommonAddr      string
+	MaxIdleConns    int           `mapstructure:"MaxIdleConns"`
+	MaxOpenConns    int           `mapstructure:"MaxOpenConns"`
+	ConnMaxLifetime time.Duration `mapstructure:"ConnMaxLifetime"`
 }
 
 type Redis struct {
-	Host     string
-	Password string
-	DbNum    int
+	Host           string
+	Password       string
+	DbNum          int
+	MaxIdle        int           `mapstructure:"MaxIdle"`
+	MaxActive      int           `mapstructure:"MaxActive"`
+	IdleTimeout    time.Duration `mapstructure:"IdleTimeout"`
+	ConnectTimeout time.Duration `mapstructure:"ConnectTimeout"`
+	ReadTimeout    time.Duration `mapstructure:"ReadTimeout"`
+	WriteTimeout   time.Duration `mapstructure:"WriteTimeout"`
 }
 
 type Log struct {

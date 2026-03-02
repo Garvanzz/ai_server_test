@@ -33,48 +33,36 @@ var (
 	NilPID   = PID(nil)
 	name2pid map[string]PID
 	addr2pid map[string]PID
-	namelock *sync.RWMutex
-	addrlock *sync.RWMutex
+	pidLock  sync.RWMutex
 )
 
 func init() {
 	name2pid = make(map[string]PID)
 	addr2pid = make(map[string]PID)
-	namelock = new(sync.RWMutex)
-	addrlock = new(sync.RWMutex)
 }
 
 // Lookup is lookup PID by agent name or PID's address
 func Lookup(name string) (PID, bool) {
+	pidLock.RLock()
+	defer pidLock.RUnlock()
 	if strings.ContainsRune(name, ':') {
-		addrlock.RLock()
 		pid, ok := addr2pid[name]
-		addrlock.RUnlock()
-		return pid, ok
-	} else {
-		namelock.RLock()
-		pid, ok := name2pid[name]
-		namelock.RUnlock()
 		return pid, ok
 	}
+	pid, ok := name2pid[name]
+	return pid, ok
 }
 
 func _Store(name string, pid PID) {
-	namelock.Lock()
+	pidLock.Lock()
 	name2pid[name] = pid
-	namelock.Unlock()
-
-	addrlock.Lock()
 	addr2pid[Address(pid)] = pid
-	addrlock.Unlock()
+	pidLock.Unlock()
 }
 
 func _Delete(name string, pid PID) {
-	namelock.Lock()
+	pidLock.Lock()
 	delete(name2pid, name)
-	namelock.Unlock()
-
-	addrlock.Lock()
 	delete(addr2pid, Address(pid))
-	addrlock.Unlock()
+	pidLock.Unlock()
 }
