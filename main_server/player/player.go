@@ -86,11 +86,6 @@ func Born(uid string, serverId int) (*model.Player, error) {
 	base.Init(pl, uid)
 	bag.Init(pl)
 
-	_, err = rdb.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), id)
-	if err != nil {
-		return nil, err
-	}
-
 	return pl, nil
 }
 

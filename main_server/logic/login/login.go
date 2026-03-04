@@ -78,6 +78,8 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 	var pid agent.PID
 	var dbId int64
 	if reply == nil { // 无账号创建及玩家
+		log.Debug("无账号玩家=====")
+
 		playerData, err := player.Born(uid, l.App.GetEnv().ID)
 		if err != nil {
 			log.Error("born db error:%v", err)
@@ -89,11 +91,16 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 		account.NickName = playerData.Base.Name
 		account.RedisId = playerData.Id
 
+		_, err = rdb.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), playerData.Id)
+		if err != nil {
+			return resp, err
+		}
+
 		// 同步到account表
 		conn := db.CommonEngine.Mysql
 		n, err := conn.Table(define.AccountTable).Where("uid = ?", uid).Cols("nick_name", "redis_id").Update(account)
 		if err != nil || n == 0 {
-			log.Error("player born update mysql error:%v,n:%v", err, n)
+			log.Error(" player born update mysql error:%v,n:%v,uid:%v", err, n, uid)
 			return resp, err
 		}
 
@@ -121,6 +128,8 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 			log.Error("login convert player id error:%v", err)
 			return resp, err
 		}
+
+		log.Debug("有账号玩家:%v", dbId)
 
 		var ok = false
 		pid, ok = l.players[dbId]

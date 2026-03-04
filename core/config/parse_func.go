@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"xfx/pkg/log"
 )
 
 // Parse 使用 registry 中的注册信息解析所有 JSON 数据。
@@ -12,7 +11,7 @@ func Parse(data map[string]any) {
 	for jsonName, raw := range data {
 		parser, ok := registry[jsonName]
 		if !ok {
-			log.Warn("config: JSON %q has no registered parser, skipped", jsonName)
+			//log.Warn("config: JSON %q has no registered parser, skipped", jsonName)
 			continue
 		}
 		CfgMgr.AllJson[jsonName] = parser(raw, jsonName)

@@ -6,9 +6,9 @@ import (
 	coreconfig "xfx/core/config"
 	"xfx/core/db"
 	"xfx/core/event"
+	mgate "xfx/main_server/gate"
 	"xfx/main_server/http"
 	"xfx/main_server/launcher"
-	"xfx/main_server/logic/activity"
 	"xfx/main_server/logic/common"
 	"xfx/main_server/logic/login"
 	"xfx/pkg/app"
@@ -30,7 +30,8 @@ func main() {
 		login.Module(),
 		launcher.Module(),
 		common.Module(),
-		activity.Module(),
+		mgate.Module(),
+		//activity.Module(),
 	)
 }
 

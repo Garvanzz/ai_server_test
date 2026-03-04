@@ -3,10 +3,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/go-redsync/redsync/v4"
-	"github.com/go-redsync/redsync/v4/redis/redigo"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
 	"time"
 	"xfx/core/define"
@@ -14,6 +10,11 @@ import (
 	"xfx/pkg/env"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
+
+	"github.com/go-redsync/redsync/v4"
+	"github.com/go-redsync/redsync/v4/redis/redigo"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gomodule/redigo/redis"
 	"xorm.io/xorm"
 	xlog "xorm.io/xorm/log"
 )
@@ -185,7 +186,7 @@ func NewRedisPool(host, password string, dataBase int, cfg *env.Redis) *redis.Po
 
 func NewConnect(v model.ServerItem, app module.App) *CDBEngine {
 	dbEngine := new(CDBEngine)
-	dbEngine.Redis = NewRedisPool(fmt.Sprintf("127.0.0.1:%d", v.RedisPort), app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
+	dbEngine.Redis = NewRedisPool(fmt.Sprintf("172.16.1.50:%d", v.RedisPort), app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
 	dbEngine.Rs = redsync.New(redigo.NewPool(dbEngine.Redis))
 	dbEngine.Mysql = NewMysqlEngine(v.MysqlAddr, app.GetEnv().Mysql)
 	return dbEngine

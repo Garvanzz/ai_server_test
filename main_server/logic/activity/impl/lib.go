@@ -93,3 +93,12 @@ func SetProtoByType(actType string, msg *proto_activity.ActivityData, data proto
 //	return len(weights) - 1
 //
 //}
+
+func SetProtoByType(actType string, msg *proto_activity.ActivityData, d proto.Message) {
+	desc := GetActivityDesc(actType)
+	if desc == nil || desc.SetProto == nil {
+		log.Error("SetProtoByType: unknown type: %v", actType)
+		return
+	}
+	desc.SetProto(msg, d)
+}

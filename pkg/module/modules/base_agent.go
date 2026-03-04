@@ -19,31 +19,44 @@ type BaseAgent struct {
 func (m *BaseAgent) OnInit(app module.App) { m.App = app }
 func (m *BaseAgent) GetApp() module.App    { return m.App }
 
-func (m *BaseAgent) Cast(mod string, msg interface{}) {
-	pid := m.GetApp().GetModule(mod).Self()
+func (m *BaseAgent) Cast(modName string, msg interface{}) {
+	mod := m.GetApp().GetModule(modName)
+	if mod == nil {
+		log.Error("can't find module %s", modName)
+		return
+	}
+	pid := mod.Self()
 	if pid != nil {
 		m.Context.Cast(pid, msg)
 	} else {
-		log.Error("Cast:%v", mod)
+		log.Error("Cast:%v", modName)
 	}
 }
 
-func (m *BaseAgent) Call(mod string, msg interface{}) (interface{}, error) {
-	pid := m.GetApp().GetModule(mod).Self()
-	if pid != nil {
-		return m.Context.Call(pid, msg)
-	} else {
+func (m *BaseAgent) Call(modName string, msg interface{}) (interface{}, error) {
+	mod := m.GetApp().GetModule(modName)
+	if mod == nil {
 		return nil, fmt.Errorf("can't find module %s", mod)
 	}
+	pid := mod.Self()
+	if pid != nil {
+		return m.Context.Call(pid, msg)
+	}
+
+	return nil, fmt.Errorf("can't find module %s", mod)
 }
 
-func (m *BaseAgent) CallNR(mod string, msg interface{}) error {
-	pid := m.GetApp().GetModule(mod).Self()
-	if pid != nil {
-		return m.Context.CallNR(pid, msg)
-	} else {
+func (m *BaseAgent) CallNR(modName string, msg interface{}) error {
+	mod := m.GetApp().GetModule(modName)
+	if mod == nil {
 		return fmt.Errorf("can't find module %s", mod)
 	}
+	pid := mod.Self()
+	if pid != nil {
+		return m.Context.CallNR(pid, msg)
+	}
+
+	return fmt.Errorf("can't find module %s", mod)
 }
 
 func (m *BaseAgent) OnStart(ctx module.Context) {
@@ -63,8 +76,12 @@ func (m *BaseAgent) OnTerminated(pid module.PID, reason int) {}
 func (m *BaseAgent) OnTick(delta time.Duration)              {}
 func (m *BaseAgent) OnMessage(msg interface{}) interface{}   { return nil }
 
-func (m *BaseAgent) Invoke(mod, fn string, args ...interface{}) (interface{}, error) {
-	pid := m.GetApp().GetModule(mod).Self()
+func (m *BaseAgent) Invoke(modName, fn string, args ...interface{}) (interface{}, error) {
+	mod := m.GetApp().GetModule(modName)
+	if mod == nil {
+		return nil, fmt.Errorf("can't find module %s", mod)
+	}
+	pid := mod.Self()
 	if pid == nil {
 		return nil, fmt.Errorf("can't find module(%s) actor", mod)
 	}

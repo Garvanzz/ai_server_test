@@ -69,12 +69,14 @@ import (
 // }
 
 func setActivityHandler(ent *entity) impl.IActivity {
-    desc := impl.GetActivityDesc(ent.Type)
-    if desc == nil {
-        panic(fmt.Sprintf("missing activity handler: %v", ent.Type))
-    }
-    h := desc.NewHandler()
-    // 通过反射或接口注入 BaseInfo
-    h.(impl.BaseInfoSetter).SetBaseInfo(ent)
-    return h
+	desc := impl.GetActivityDesc(ent.Type)
+	if desc == nil {
+		panic(fmt.Sprintf("missing activity handler: %v", ent.Type))
+	}
+	h := desc.NewHandler()
+	// 通过反射或接口注入 BaseInfo
+	h.(impl.BaseInfoSetter).SetBaseInfo(ent)
+	return h
 }
+
+//这里需要给 BaseActivity 加一个 SetBaseInfo 方法，或者保持现有的直接赋值方式（在 NewHandler 闭包里捕获 ent，但 ent 是后传入的，所以用接口注入更干净）。

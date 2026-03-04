@@ -19,11 +19,11 @@ const PingTime = 30 * time.Second
 type Agent struct {
 	tcpgate.Agent // 基础agent实现
 	modules.BaseAgent
-	gate      *Gate
+	gate *Gate
 
 	// state     int32
 	closeOnce sync.Once
-    startedCh chan struct{}  // 替换 state int32，用 channel 通知 actor 已就绪
+	startedCh chan struct{} // 替换 state int32，用 channel 通知 actor 已就绪
 
 	playerId  int64         // 断开连接时给login的回调
 	playerPid agent.PID     // 用于转发网关消息到玩家进程
@@ -31,11 +31,11 @@ type Agent struct {
 }
 
 func NewAgent(gate *Gate) *Agent {
-    a := &Agent{
-        gate:      gate,
-        startedCh: make(chan struct{}),
-    }
-    return a
+	a := &Agent{
+		gate:      gate,
+		startedCh: make(chan struct{}),
+	}
+	return a
 }
 
 func (a *Agent) OnInit(gate gate.Gate, session gate.Session) {
@@ -73,26 +73,25 @@ func (a *Agent) OnRecv(msg any) {
 	// 	}
 	// }
 
-
 	// if a.GetSession().IsClosed() {
-    //     return
-    // }
+	//     return
+	// }
 
-    // 等待 actor 启动，最多等 3 秒，防止死等
-    select {
-    case <-a.startedCh:
-        // actor 已就绪
-    case <-time.After(3 * time.Second):
-        log.Error("* gate agent[%v] wait start timeout, drop msg", a.GetSession().ID())
-        a.GetSession().Close()
-        return
-    }
+	// 等待 actor 启动，最多等 3 秒，防止死等
+	select {
+	case <-a.startedCh:
+		// actor 已就绪
+	case <-time.After(3 * time.Second):
+		log.Error("* gate agent[%v] wait start timeout, drop msg", a.GetSession().ID())
+		a.GetSession().Close()
+		return
+	}
 
-    if a.Context == nil {
-        log.Error("* gate agent[%v] context is nil", a.GetSession().ID())
-        return
-    }
-    a.Context.Cast(a.Context.Self(), &sessionmsg{msg: msg})
+	if a.Context == nil {
+		log.Error("* gate agent[%v] context is nil", a.GetSession().ID())
+		return
+	}
+	a.Context.Cast(a.Context.Self(), &sessionmsg{msg: msg})
 }
 
 func (a *Agent) OnStart(ctx agent.Context) {
@@ -122,19 +121,18 @@ func (a *Agent) OnStop() { // actor stop call
 // 	return nil
 // }
 
-
 func (a *Agent) Close() error {
-    a.closeOnce.Do(func() {
-        log.Debug("game_agent close:%v", a.GetSession().ID())
-        if a.Context == nil {
-            log.Error("game_agent close: context is nil, session:%v", a.GetSession().ID())
-            // Context 为 nil 说明 actor 还未启动，直接关闭 session
-            a.GetSession().Close()
-            return
-        }
-        a.Context.Stop()
-    })
-    return nil
+	a.closeOnce.Do(func() {
+		log.Debug("game_agent close:%v", a.GetSession().ID())
+		if a.Context == nil {
+			log.Error("game_agent close: context is nil, session:%v", a.GetSession().ID())
+			// Context 为 nil 说明 actor 还未启动，直接关闭 session
+			a.GetSession().Close()
+			return
+		}
+		a.Context.Stop()
+	})
+	return nil
 }
 
 func (a *Agent) OnTick(delta time.Duration) {
@@ -154,7 +152,7 @@ func (a *Agent) OnMessage(msg any) any {
 		a.playerId = 0
 		a.playerPid = nil
 		a.Send(m)
-		
+
 		// 等待 Kick 包发出后再关闭，最多等 500ms
 		go func() {
 			a.GetSession().CloseWithFlush(500 * time.Millisecond)

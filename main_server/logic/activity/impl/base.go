@@ -129,3 +129,21 @@ func LoadPd[T comparable](a BaseInfo, playerId int64) T {
 // TODO:
 // handler的数据初始化一直都有 看需要调整不
 // 活动end time的处理
+
+func LoadPd[T comparable](a BaseInfo, playerId int64) T {
+	var zero T
+	d := data.LoadPlayerData[T](a.GetId(), playerId)
+	if d != zero {
+		return d
+	}
+
+	desc := GetActivityDesc(a.GetType())
+	if desc == nil || desc.NewPlayerData == nil {
+		log.Error("LoadPd: no player data factory for type: %v", a.GetType())
+		return zero
+	}
+
+	ret := desc.NewPlayerData()
+	data.SetPlayerData(a.GetId(), playerId, ret)
+	return ret.(T)
+}
