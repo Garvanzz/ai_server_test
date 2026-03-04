@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"github.com/golang/protobuf/proto"
 	"time"
 	"xfx/core/common"
 	"xfx/core/config/conf"
@@ -12,6 +11,8 @@ import (
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 	Proto_Public "xfx/proto/proto_public"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityTheCompetition 巅峰决斗
@@ -253,3 +254,21 @@ func (a *ActivityTheCompetition) Inject(data any) {
 }
 
 func (a *ActivityTheCompetition) Extract() any { return a.data }
+
+func init() {
+	RegisterActivity(define.ActivityTypeTheCompetition, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityTheCompetition) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData: func() any {
+			return &model.ActDataTheCompetition{
+				StakeGroup: make(map[int32]int64),
+				Score:      make(map[int32]int64),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.TheCompetition = data.(*proto_activity.TheCompetition)
+		},
+		InjectFunc:  func(handler IActivity, data any) {},
+		ExtractFunc: func(handler IActivity) any { return nil },
+	})
+}

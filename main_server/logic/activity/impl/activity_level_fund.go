@@ -2,7 +2,6 @@ package impl
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"xfx/core/common"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -10,6 +9,8 @@ import (
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityLevelFund 成长基金
@@ -143,4 +144,22 @@ func (a *ActivityLevelFund) GetAward(ctx *proto_player.Context, req *proto_activ
 
 func (a *ActivityLevelFund) OnClose() {
 	//活动结束补发奖励
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeLevelFund, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityLevelFund) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData: func() any {
+			return &model.FundOptionPd{
+				NormalIds:  make([]int32, 0),
+				AdvanceIds: make([]int32, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.LevelFund = data.(*proto_activity.LevelFund)
+		},
+		InjectFunc:  func(handler IActivity, data any) {},
+		ExtractFunc: func(handler IActivity) any { return nil },
+	})
 }

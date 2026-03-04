@@ -3,7 +3,10 @@ package impl
 import (
 	"xfx/core/config/conf"
 	"xfx/core/define"
+	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityRechargeRank 充值排行榜
@@ -32,4 +35,15 @@ func (a *ActivityRechargeRank) OnClose() {
 	//删除排行榜
 	deleteActivityRank(a, define.RankTypeRecharge)
 	//活动结束，发放奖励
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeRechargeRank, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityRechargeRank) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData:   func() any { return nil },
+		SetProto:        func(msg *proto_activity.ActivityData, data proto.Message) {},
+		InjectFunc:      func(handler IActivity, data any) {},
+		ExtractFunc:     func(handler IActivity) any { return nil },
+	})
 }

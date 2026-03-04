@@ -9,6 +9,7 @@ import (
 	mgate "xfx/main_server/gate"
 	"xfx/main_server/http"
 	"xfx/main_server/launcher"
+	"xfx/main_server/logic/activity"
 	"xfx/main_server/logic/common"
 	"xfx/main_server/logic/login"
 	"xfx/pkg/app"
@@ -31,7 +32,7 @@ func main() {
 		launcher.Module(),
 		common.Module(),
 		mgate.Module(),
-		//activity.Module(),
+		activity.Module(),
 	)
 }
 

@@ -2,7 +2,7 @@ package activity
 
 import (
 	"errors"
-	"github.com/gogo/protobuf/proto"
+	"fmt"
 	"sync"
 	"time"
 	"xfx/core/cache"
@@ -20,6 +20,8 @@ import (
 	"xfx/pkg/module/modules"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 var Mgr *Manager
@@ -70,9 +72,19 @@ func (m *Manager) OnInit(app module.App) {
 		ent.TimeType = activity.TimeType
 		ent.TimeValue = activity.TimeValue
 		ent.mod = Mgr
-		ent.handler = setActivityHandler(ent)
 
-		ent.handler.Inject(data.UnmarshalActivityData(activity))
+		desc := impl.GetActivityDesc(ent.Type)
+		if desc == nil || desc.NewHandler == nil {
+			panic(fmt.Sprintf("missing activity handler: %v", ent.Type))
+		}
+
+		ent.handler = desc.NewHandler()
+		ent.handler.SetBaseInfo(ent)
+
+		if desc.InjectFunc != nil {
+			desc.InjectFunc(ent.handler, impl.UnmarshalActivityData(activity))
+		}
+
 		ent.handler.OnInit()
 
 		existIds[ent.CfgId] = struct{}{}
@@ -108,13 +120,6 @@ func (m *Manager) OnStart(ctx module.Context) {
 func (m *Manager) GetType() string { return define.ModuleActivity }
 
 func (m *Manager) OnTick(delta time.Duration) {
-	// TODO：统一错误处理
-	//defer func() {
-	//	if r := recover(); r != nil {
-	//		log.Error("")
-	//	}
-	//}()
-
 	now := time.Now()
 	if m.lastTick == 0 {
 		m.lastTick = now.Unix()
@@ -224,7 +229,15 @@ func (m *Manager) saveData() bool {
 		actData.CloseTime = ent.CloseTime
 		actData.TimeType = ent.TimeType
 		actData.TimeValue = ent.TimeValue
-		actData.Data = ent.handler.Extract()
+
+		desc := impl.GetActivityDesc(ent.Type)
+		if desc == nil {
+			log.Error("activity saveData: no activity factory for type: %v", actData.Type)
+			return true
+		}
+		if desc.ExtractFunc != nil {
+			actData.Data = desc.ExtractFunc(ent.handler)
+		}
 
 		err := data.SaveActivityData(actData)
 		if err != nil {
@@ -400,9 +413,19 @@ func (m *Manager) register(cfgId int64) *entity {
 	ent.CloseTime = closeTime
 	ent.TimeType = activityConf.ActTime
 	ent.mod = Mgr
-	ent.handler = setActivityHandler(ent)
 
-	ent.handler.Inject(nil)
+	desc := impl.GetActivityDesc(ent.Type)
+	if desc == nil || desc.NewHandler == nil {
+		panic(fmt.Sprintf("missing activity handler: %v", ent.Type))
+	}
+
+	ent.handler = desc.NewHandler()
+	ent.handler.SetBaseInfo(ent)
+
+	if desc.InjectFunc != nil {
+		desc.InjectFunc(ent.handler, desc.NewActivityData())
+	}
+
 	ent.handler.OnInit()
 
 	switch ent.TimeType {

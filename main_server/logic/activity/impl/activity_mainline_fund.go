@@ -2,7 +2,6 @@ package impl
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"xfx/core/common"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -10,6 +9,8 @@ import (
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityMainLineFund 主线基金
@@ -140,4 +141,22 @@ func (a *ActivityMainLineFund) GetAward(ctx *proto_player.Context, req *proto_ac
 
 func (a *ActivityMainLineFund) OnClose() {
 	//活动结束补发奖励
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeMainLineFund, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityMainLineFund) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData: func() any {
+			return &model.FundOptionPd{
+				NormalIds:  make([]int32, 0),
+				AdvanceIds: make([]int32, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.MainLineFund = data.(*proto_activity.MainLineFund)
+		},
+		InjectFunc:  func(handler IActivity, data any) {},
+		ExtractFunc: func(handler IActivity) any { return nil },
+	})
 }

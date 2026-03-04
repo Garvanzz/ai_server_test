@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"github.com/golang/protobuf/proto"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -9,6 +8,8 @@ import (
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityPassport 通行证活动
@@ -188,15 +189,20 @@ func (a *ActivityPassport) OnClose() {
 	// 活动结束处理
 }
 
-func (a *ActivityPassport) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataPassport)
-		return
-	}
-
-	a.data = data.(*model.ActDataPassport)
-}
-
-func (a *ActivityPassport) Extract() any {
-	return a.data
+func init() {
+	RegisterActivity(define.ActivityTypePassport, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityPassport) },
+		NewActivityData: func() any { return new(model.ActDataPassport) },
+		NewPlayerData: func() any {
+			return &model.PassportPd{
+				NormalIds:  make([]int32, 0),
+				AdvanceIds: make([]int32, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.Passport = data.(*proto_activity.Passport)
+		},
+		InjectFunc:  func(handler IActivity, data any) { handler.(*ActivityPassport).data = data.(*model.ActDataPassport) },
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityPassport).data },
+	})
 }

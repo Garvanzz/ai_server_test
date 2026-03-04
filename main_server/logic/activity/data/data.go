@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"xfx/core/cache"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 var (
@@ -101,44 +102,6 @@ func DelActivityData(id int64) {
 	if err != nil {
 		log.Error("DelActivityData error:%v", err)
 	}
-}
-
-func UnmarshalActivityData(actData *model.ActivityData) any {
-	if actData.Data == nil {
-		return nil
-	}
-
-	var d any
-
-	switch actData.Type {
-	case define.ActivityTypeDailyAccRecharge:
-		d = new(model.ActDataDailyAccumulateRecharge)
-	case define.ActivityTypeNormalMonthCard:
-		d = new(model.ActDataMonthCard)
-	case define.ActivityTypeTheCompetition:
-		d = new(model.ActDataTheCompetition)
-	case define.ActivityTypeLadderRace:
-		d = new(model.ActDataLadderRace)
-	case define.ActivityTypeGoFish:
-		d = new(model.ActDataGoFish)
-	default:
-		log.Error("ConvertDataType error:actData.Type:%v", actData.Type)
-		return nil
-	}
-
-	b, err := json.Marshal(actData.Data)
-	if err != nil {
-		log.Error("UnmarshalActivityData error:%v", err)
-		return nil
-	}
-
-	err = json.Unmarshal(b, d)
-	if err != nil {
-		log.Error("convert data type failed for activity type: %v,error:%v", actData.Type, err)
-		return nil
-	}
-
-	return d
 }
 
 // =================================活动数据 END===========================================

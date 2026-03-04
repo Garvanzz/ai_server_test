@@ -1,9 +1,12 @@
 package impl
 
 import (
-	"github.com/golang/protobuf/proto"
 	"time"
+	"xfx/core/define"
+	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivitySeason 赛季活动（纯展示型，无业务逻辑）
@@ -39,10 +42,13 @@ func (a *ActivitySeason) Router(ctx *proto_player.Context, req proto.Message) (a
 	return nil, nil
 }
 
-// Inject 注入活动数据（空实现，无活动专属数据）
-func (a *ActivitySeason) Inject(data any) {}
-
-// Extract 提取活动数据（空实现，无活动专属数据）
-func (a *ActivitySeason) Extract() any {
-	return nil
+func init() {
+	RegisterActivity(define.ActivityTypeSeason, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivitySeason) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData:   func() any { return nil },
+		SetProto:        func(msg *proto_activity.ActivityData, data proto.Message) {},
+		InjectFunc:      func(handler IActivity, data any) {},
+		ExtractFunc:     func(handler IActivity) any { return nil },
+	})
 }

@@ -2,7 +2,10 @@ package impl
 
 import (
 	"xfx/core/define"
+	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityDrawHeroRank 招募排行榜
@@ -29,4 +32,15 @@ func (a *ActivityDrawHeroRank) OnClose() {
 
 	//删除排行榜
 	deleteActivityRank(a, define.RankTypeDrawHero)
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeDrawHeroRank, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityDrawHeroRank) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData:   func() any { return nil },
+		SetProto:        func(msg *proto_activity.ActivityData, data proto.Message) {},
+		InjectFunc:      func(handler IActivity, data any) {},
+		ExtractFunc:     func(handler IActivity) any { return nil },
+	})
 }

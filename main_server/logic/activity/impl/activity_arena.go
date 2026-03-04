@@ -3,8 +3,6 @@ package impl
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
 	"time"
 	"xfx/core/common"
@@ -21,6 +19,9 @@ import (
 	"xfx/proto/proto_lineup"
 	"xfx/proto/proto_player"
 	"xfx/proto/proto_public"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
 )
 
 // ActivityArena 竞技场
@@ -542,4 +543,22 @@ func (a *ActivityArena) OnRankIndex(Id int64) []string {
 	}
 
 	return result
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeArena, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityArena) },
+		NewActivityData: func() any { return nil },
+		NewPlayerData: func() any {
+			return &model.ArenaOptionPd{
+				PlayerIds: make([]int64, 0),
+				LineUp:    make([]model.ArenaLineUpIds, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.Arena = data.(*proto_activity.Arena)
+		},
+		InjectFunc:  func(handler IActivity, data any) {},
+		ExtractFunc: func(handler IActivity) any { return nil },
+	})
 }

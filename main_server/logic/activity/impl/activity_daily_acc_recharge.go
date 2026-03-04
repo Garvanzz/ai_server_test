@@ -2,11 +2,13 @@ package impl
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"time"
 	"xfx/core/common"
 	"xfx/core/config/conf"
+	"xfx/core/define"
 	"xfx/core/model"
+
+	"github.com/golang/protobuf/proto"
 	//"xfx/main_server/logic/activity/data"
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
@@ -116,12 +118,19 @@ func (a *ActivityDailyAccRecharge) Extract() any { return a.data }
 
 func init() {
 	RegisterActivity(define.ActivityTypeDailyAccRecharge, &ActivityDesc{
-		NewHandler: func() IActivity { return new(ActivityDailyAccRecharge) },
+		NewHandler:      func() IActivity { return new(ActivityDailyAccRecharge) },
 		NewActivityData: func() any { return new(model.ActDataDailyAccumulateRecharge) },
-		NewPlayerData: func() any { return new(model.DailyAccumulateRechargePd) },
-		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
-			msg.DailyAccumulateRecharge = data.(*proto_activity.DailyAccumulateRecharge)
+		NewPlayerData: func() any {
+			return &model.DailyAccumulateRechargePd{
+				GetList: make([]int32, 0),
+			}
 		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.ActivityConsume = data.(*proto_activity.DailyAccumulateRecharge)
+		},
+		InjectFunc: func(handler IActivity, data any) {
+			handler.(*ActivityDailyAccRecharge).data = data.(*model.ActDataDailyAccumulateRecharge)
+		},
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityDailyAccRecharge).data },
 	})
 }
-

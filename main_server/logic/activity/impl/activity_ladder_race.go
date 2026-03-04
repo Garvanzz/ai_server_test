@@ -3,8 +3,6 @@ package impl
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/gomodule/redigo/redis"
 	"sort"
 	"strconv"
 	"time"
@@ -22,6 +20,9 @@ import (
 	"xfx/proto/proto_lineup"
 	"xfx/proto/proto_player"
 	"xfx/proto/proto_public"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
 )
 
 // ActivityLadderRace 天梯
@@ -605,3 +606,22 @@ func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 }
 
 func (a *ActivityLadderRace) Extract() any { return a.data }
+
+func init() {
+	RegisterActivity(define.ActivityTypeLadderRace, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityLadderRace) },
+		NewActivityData: func() any { return new(model.ActDataLadderRace) },
+		NewPlayerData: func() any {
+			return &model.LadderRacePd{
+				LineUp: make([]model.LadderRaceIds, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.LadderRace = data.(*proto_activity.LadderRace)
+		},
+		InjectFunc: func(handler IActivity, data any) {
+			handler.(*ActivityLadderRace).data = data.(*model.ActDataLadderRace)
+		},
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityLadderRace).data },
+	})
+}

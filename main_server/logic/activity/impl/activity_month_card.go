@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"github.com/golang/protobuf/proto"
 	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
@@ -10,6 +9,8 @@ import (
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityNormalMonthCard 月卡
@@ -86,4 +87,19 @@ func (a *ActivityNormalMonthCard) Inject(data any) {
 func (a *ActivityNormalMonthCard) Extract() any {
 
 	return a.data
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeNormalMonthCard, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityNormalMonthCard) },
+		NewActivityData: func() any { return new(model.ActDataMonthCard) },
+		NewPlayerData:   func() any { return new(model.MonthCardPd) },
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.MonthCard = data.(*proto_activity.MonthCard)
+		},
+		InjectFunc: func(handler IActivity, data any) {
+			handler.(*ActivityNormalMonthCard).data = data.(*model.ActDataMonthCard)
+		},
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityNormalMonthCard).data },
+	})
 }

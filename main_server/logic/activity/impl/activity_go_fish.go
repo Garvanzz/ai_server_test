@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"github.com/golang/protobuf/proto"
 	"sort"
 	"time"
 	"xfx/core/common"
@@ -13,6 +12,8 @@ import (
 	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ActivityGoFish 钓鱼
@@ -449,4 +450,22 @@ func getFishConfig(typ int32) conf.Fish {
 		}
 	}
 	return conf.Fish{}
+}
+
+func init() {
+	RegisterActivity(define.ActivityTypeGoFish, &ActivityDesc{
+		NewHandler:      func() IActivity { return new(ActivityGoFish) },
+		NewActivityData: func() any { return new(model.ActDataGoFish) },
+		NewPlayerData: func() any {
+			return &model.GoFishPd{
+				Fish:    make(map[int32]int32),
+				GetList: make([]int32, 0),
+			}
+		},
+		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
+			msg.GoFish = data.(*proto_activity.GoFish)
+		},
+		InjectFunc:  func(handler IActivity, data any) { handler.(*ActivityGoFish).data = data.(*model.ActDataGoFish) },
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityGoFish).data },
+	})
 }
