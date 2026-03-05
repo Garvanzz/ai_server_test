@@ -533,16 +533,6 @@ func (a *ActivityLadderRace) OnStop() {
 func (a *ActivityLadderRace) OnClose() {
 }
 
-func (a *ActivityLadderRace) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataLadderRace)
-		a.data.Season = 1
-		return
-	}
-
-	a.data = data.(*model.ActDataLadderRace)
-}
-
 // initRankPlayerFromRedis 从Redis排行榜初始化RankPlayer数据
 func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
@@ -605,8 +595,6 @@ func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 	log.Debug("天梯排行榜已初始化，玩家数:%d", len(a.data.RankPlayer))
 }
 
-func (a *ActivityLadderRace) Extract() any { return a.data }
-
 func init() {
 	RegisterActivity(define.ActivityTypeLadderRace, &ActivityDesc{
 		NewHandler:      func() IActivity { return new(ActivityLadderRace) },
@@ -620,7 +608,13 @@ func init() {
 			msg.LadderRace = data.(*proto_activity.LadderRace)
 		},
 		InjectFunc: func(handler IActivity, data any) {
-			handler.(*ActivityLadderRace).data = data.(*model.ActDataLadderRace)
+			h := handler.(*ActivityLadderRace)
+			if data == nil {
+				h.data = new(model.ActDataLadderRace)
+				h.data.Season = 1
+				return
+			}
+			h.data = data.(*model.ActDataLadderRace)
 		},
 		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityLadderRace).data },
 	})

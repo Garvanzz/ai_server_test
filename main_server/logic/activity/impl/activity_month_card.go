@@ -75,20 +75,6 @@ func (a *ActivityNormalMonthCard) OnClose() {
 	//活动结束补发奖励
 }
 
-func (a *ActivityNormalMonthCard) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataMonthCard)
-		return
-	}
-
-	a.data = data.(*model.ActDataMonthCard)
-}
-
-func (a *ActivityNormalMonthCard) Extract() any {
-
-	return a.data
-}
-
 func init() {
 	RegisterActivity(define.ActivityTypeNormalMonthCard, &ActivityDesc{
 		NewHandler:      func() IActivity { return new(ActivityNormalMonthCard) },
@@ -98,7 +84,12 @@ func init() {
 			msg.MonthCard = data.(*proto_activity.MonthCard)
 		},
 		InjectFunc: func(handler IActivity, data any) {
-			handler.(*ActivityNormalMonthCard).data = data.(*model.ActDataMonthCard)
+			h := handler.(*ActivityNormalMonthCard)
+			if data == nil {
+				h.data = new(model.ActDataMonthCard)
+				return
+			}
+			h.data = data.(*model.ActDataMonthCard)
 		},
 		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityNormalMonthCard).data },
 	})

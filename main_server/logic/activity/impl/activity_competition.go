@@ -243,18 +243,6 @@ func (a *ActivityTheCompetition) OnClose() {
 	deleteActivityRank(a, define.RankTypeTheCompetition)
 }
 
-func (a *ActivityTheCompetition) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataTheCompetition)
-		a.data.StakeGroup = make(map[int32]int64)
-		a.data.Score = make(map[int32]int64)
-		return
-	}
-	a.data = data.(*model.ActDataTheCompetition)
-}
-
-func (a *ActivityTheCompetition) Extract() any { return a.data }
-
 func init() {
 	RegisterActivity(define.ActivityTypeTheCompetition, &ActivityDesc{
 		NewHandler:      func() IActivity { return new(ActivityTheCompetition) },
@@ -268,7 +256,16 @@ func init() {
 		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
 			msg.TheCompetition = data.(*proto_activity.TheCompetition)
 		},
-		InjectFunc:  func(handler IActivity, data any) {},
-		ExtractFunc: func(handler IActivity) any { return nil },
+		InjectFunc: func(handler IActivity, data any) {
+			h := handler.(*ActivityTheCompetition)
+			if data == nil {
+				h.data = new(model.ActDataTheCompetition)
+				h.data.StakeGroup = make(map[int32]int64)
+				h.data.Score = make(map[int32]int64)
+				return
+			}
+			h.data = data.(*model.ActDataTheCompetition)
+		},
+		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityTheCompetition).data },
 	})
 }

@@ -163,18 +163,6 @@ func (a *ActivityGoFish) OnStop() {
 func (a *ActivityGoFish) OnClose() {
 }
 
-func (a *ActivityGoFish) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataGoFish)
-		return
-	}
-
-	a.data = data.(*model.ActDataGoFish)
-	a.data.FireRankAward = false
-}
-
-func (a *ActivityGoFish) Extract() any { return a.data }
-
 func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C2SGoFish) (any, error) {
 	// TODO:需要消耗物品
 	//基本判断在player里面去做
@@ -465,7 +453,16 @@ func init() {
 		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
 			msg.GoFish = data.(*proto_activity.GoFish)
 		},
-		InjectFunc:  func(handler IActivity, data any) { handler.(*ActivityGoFish).data = data.(*model.ActDataGoFish) },
+		InjectFunc: func(handler IActivity, data any) {
+			h := handler.(*ActivityGoFish)
+			if data == nil {
+				h.data = new(model.ActDataGoFish)
+				h.data.FireRankAward = false
+				return
+			}
+			h.data = data.(*model.ActDataGoFish)
+			h.data.FireRankAward = false
+		},
 		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityGoFish).data },
 	})
 }

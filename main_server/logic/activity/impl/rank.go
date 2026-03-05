@@ -197,20 +197,6 @@ func sendRankReward(a BaseInfo, rankType int, ignoreList []int64) {
 	}
 }
 
-func getSubArray(arr []int64, start, end int) []int64 {
-	length := len(arr)
-	if length == 0 || start > end || start < 0 || end < 0 || start > length {
-		return []int64{}
-	}
-
-	end = min(end, length)
-
-	sub := make([]int64, end-start+1)
-	copy(sub, arr[start-1:end])
-
-	return sub
-}
-
 // TODO:
 // dailyaccrecharge 每日累充 每天23 59 补发邮件，没有领取的
 //  normalmonthcard 月卡时间内每日要发邮件

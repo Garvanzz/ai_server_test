@@ -176,4 +176,7 @@ func PurgeActivityPlayerData(actId int64) {
 	if err != nil {
 		log.Error("PurgeActivityPlayerData error:%v", err)
 	}
+
+	// TODO：同步清除缓存中的数据
+	//Cache.SetClean()
 }

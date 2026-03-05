@@ -3,12 +3,29 @@ package impl
 import (
 	"time"
 	"xfx/main_server/invoke"
+	"xfx/pkg/log"
 	"xfx/pkg/module"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
 	"github.com/golang/protobuf/proto"
 )
+
+type EventParams map[string]any
+
+func Key[T any](params EventParams, key string) (T, bool) {
+	v, ok := params[key]
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	result, ok := v.(T)
+	if !ok {
+		log.Error("event params key error:%v", key)
+		return result, false
+	}
+	return result, true
+}
 
 type IActivity interface {
 	OnInit()  // 每次加载完成都会调用一次

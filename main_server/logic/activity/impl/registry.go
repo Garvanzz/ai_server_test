@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 
 	"github.com/golang/protobuf/proto"
@@ -33,4 +34,13 @@ func RegisterActivity(actType string, desc *ActivityDesc) {
 // GetActivityDesc 获取活动描述
 func GetActivityDesc(actType string) *ActivityDesc {
 	return activityRegistry[actType]
+}
+
+func SetProtoByType(actType string, msg *proto_activity.ActivityData, d proto.Message) {
+	desc := GetActivityDesc(actType)
+	if desc == nil || desc.SetProto == nil {
+		log.Error("SetProtoByType: unknown type: %v", actType)
+		return
+	}
+	desc.SetProto(msg, d)
 }

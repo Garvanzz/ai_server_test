@@ -202,7 +202,14 @@ func init() {
 		SetProto: func(msg *proto_activity.ActivityData, data proto.Message) {
 			msg.Passport = data.(*proto_activity.Passport)
 		},
-		InjectFunc:  func(handler IActivity, data any) { handler.(*ActivityPassport).data = data.(*model.ActDataPassport) },
+		InjectFunc: func(handler IActivity, data any) {
+			h := handler.(*ActivityPassport)
+			if data == nil {
+				h.data = new(model.ActDataPassport)
+				return
+			}
+			h.data = data.(*model.ActDataPassport)
+		},
 		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityPassport).data },
 	})
 }

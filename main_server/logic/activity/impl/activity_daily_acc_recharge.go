@@ -106,16 +106,6 @@ func (a *ActivityDailyAccRecharge) OnClose() {
 	//活动结束补发奖励
 }
 
-func (a *ActivityDailyAccRecharge) Inject(data any) {
-	if data == nil {
-		a.data = new(model.ActDataDailyAccumulateRecharge)
-		return
-	}
-	a.data = data.(*model.ActDataDailyAccumulateRecharge)
-}
-
-func (a *ActivityDailyAccRecharge) Extract() any { return a.data }
-
 func init() {
 	RegisterActivity(define.ActivityTypeDailyAccRecharge, &ActivityDesc{
 		NewHandler:      func() IActivity { return new(ActivityDailyAccRecharge) },
@@ -129,7 +119,12 @@ func init() {
 			msg.ActivityConsume = data.(*proto_activity.DailyAccumulateRecharge)
 		},
 		InjectFunc: func(handler IActivity, data any) {
-			handler.(*ActivityDailyAccRecharge).data = data.(*model.ActDataDailyAccumulateRecharge)
+			h := handler.(*ActivityDailyAccRecharge)
+			if data == nil {
+				h.data = new(model.ActDataDailyAccumulateRecharge)
+				return
+			}
+			h.data = data.(*model.ActDataDailyAccumulateRecharge)
 		},
 		ExtractFunc: func(handler IActivity) any { return handler.(*ActivityDailyAccRecharge).data },
 	})
