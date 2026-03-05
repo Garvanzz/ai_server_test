@@ -47,7 +47,7 @@ func GetBattlePlayerData(pl *proto_player.Context, _hero *Hero, skill *Skill, ha
 
 	//流派阵容
 	liupai := make(map[int32]int32)
-	conf := config.CfgMgr.AllJson["Hero"].(map[int64]conf2.Hero)
+	conf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)
 	for _, v := range lineUp {
 		if v <= 0 {
 			continue
@@ -61,7 +61,7 @@ func GetBattlePlayerData(pl *proto_player.Context, _hero *Hero, skill *Skill, ha
 	basicAtkDamage := int32(0)
 	basicSkillDamage := int32(0)
 	jianyiBuffConTime := int32(0)
-	liupaiConfs := config.CfgMgr.AllJson["Liupai"].(map[int64]conf2.Liupai)
+	liupaiConfs := config.CfgMgr.AllJson()["Liupai"].(map[int64]conf2.Liupai)
 	for job, num := range liupai {
 		if num < 4 {
 			continue
@@ -270,14 +270,14 @@ func GetBattleRobotPlayerData(Id int64) *proto_public.BattleHeroData {
 	batData.Items = make([]*proto_public.BattleHeroItemData, 0)
 
 	//获取机器人组
-	robotGroups := config.CfgMgr.AllJson["RobotGroup"].(map[int64]conf2.RobotGroup)
+	robotGroups := config.CfgMgr.AllJson()["RobotGroup"].(map[int64]conf2.RobotGroup)
 	robotGroup, ok := robotGroups[Id]
 	if !ok {
 		log.Error("找不到机器人数据:%v", Id)
 		return batData
 	}
 
-	robots := config.CfgMgr.AllJson["Robot"].(map[int64]conf2.Robot)
+	robots := config.CfgMgr.AllJson()["Robot"].(map[int64]conf2.Robot)
 	for i := 0; i < len(robotGroup.RobotId); i++ {
 		item := new(proto_public.BattleHeroItemData)
 
@@ -499,10 +499,10 @@ func InitAttribute(item *proto_public.BattleHeroItemData) *proto_public.BattleHe
 
 // 角色基础
 func GetBattleAttribute_Basic(item *proto_public.BattleHeroItemData) *proto_public.BattleHeroItemData {
-	attConf := config.CfgMgr.AllJson["HeroBasicAttribute"].(map[int64]conf2.HeroBasicAttribute)[int64(item.Id)]
-	upStarConf := config.CfgMgr.AllJson["HeroUpStar"].(map[int64]conf2.HeroUpStar)[int64(item.Id)]
-	upLevelConf := config.CfgMgr.AllJson["HeroUpLevel"].(map[int64]conf2.HeroUpLevel)[int64(item.Id)]
-	upStageConf := config.CfgMgr.AllJson["HeroUpStage"].(map[int64]conf2.HeroUpStage)[int64(item.Id)]
+	attConf := config.CfgMgr.AllJson()["HeroBasicAttribute"].(map[int64]conf2.HeroBasicAttribute)[int64(item.Id)]
+	upStarConf := config.CfgMgr.AllJson()["HeroUpStar"].(map[int64]conf2.HeroUpStar)[int64(item.Id)]
+	upLevelConf := config.CfgMgr.AllJson()["HeroUpLevel"].(map[int64]conf2.HeroUpLevel)[int64(item.Id)]
+	upStageConf := config.CfgMgr.AllJson()["HeroUpStage"].(map[int64]conf2.HeroUpStage)[int64(item.Id)]
 	_atkBasic := float32(attConf.BasicAtk) *
 		(float32(item.Level) * float32(upLevelConf.AtkRatio) / define.AttributeRate) *
 		(1 + float32(item.Stage)*float32(upStageConf.AtkRatio)/define.AttributeRate) *
@@ -531,9 +531,9 @@ func GetBattleAttribute_Basic(item *proto_public.BattleHeroItemData) *proto_publ
 
 // 修为
 func GetBattleAttribute_XiuWei(item *proto_public.BattleHeroItemData, AtkLevel, DefLevel, HpLevel, ForceLevel int32) *proto_public.BattleHeroItemData {
-	heroConf := config.CfgMgr.AllJson["Hero"].(map[int64]conf2.Hero)[int64(item.Id)]
+	heroConf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)[int64(item.Id)]
 
-	culConfs := config.CfgMgr.AllJson["HeroCultivation"].(map[int64]conf2.HeroCultivation)
+	culConfs := config.CfgMgr.AllJson()["HeroCultivation"].(map[int64]conf2.HeroCultivation)
 	var cultivation conf2.HeroCultivation
 	for _, v := range culConfs {
 		if v.Job == heroConf.Job && v.Stage == item.Stage {
@@ -592,7 +592,7 @@ func GetBattleAttribute_Handbook(item *proto_public.BattleHeroItemData, ids []in
 			continue
 		}
 		//基础
-		conf := config.CfgMgr.AllJson["HandbookAward"].(map[int64]conf2.HandBookAward)[int64(v)]
+		conf := config.CfgMgr.AllJson()["HandbookAward"].(map[int64]conf2.HandBookAward)[int64(v)]
 		item.Attribute.Atk.Sumvalues[int32(proto_public.AttributeType_Basic)] += float32(conf.BasicAtk)
 		item.Attribute.Def.Sumvalues[int32(proto_public.AttributeType_Basic)] += float32(conf.BasicDef)
 		item.Attribute.Hp.Sumvalues[int32(proto_public.AttributeType_Basic)] += float32(conf.BasicHp)
@@ -617,7 +617,7 @@ func GetBattleAttribute_Handbook(item *proto_public.BattleHeroItemData, ids []in
 
 // 功法
 func GetBattleAttribute_Magic(item *proto_public.BattleHeroItemData, ids map[int32]int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["HeroMagicLevel"].(map[int64]conf2.HeroMagicLevel)
+	confs := config.CfgMgr.AllJson()["HeroMagicLevel"].(map[int64]conf2.HeroMagicLevel)
 
 	for k, v := range ids {
 		var conf conf2.HeroMagicLevel
@@ -651,7 +651,7 @@ func GetBattleAttribute_Magic(item *proto_public.BattleHeroItemData, ids map[int
 
 // 附魔
 func GetBattleAttribute_Enchant(item *proto_public.BattleHeroItemData, ids map[int32]int32, level int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["Enchant"].(map[int64]conf2.Enchant)
+	confs := config.CfgMgr.AllJson()["Enchant"].(map[int64]conf2.Enchant)
 
 	for _key, _level := range ids {
 		var conf conf2.Enchant
@@ -681,7 +681,7 @@ func GetBattleAttribute_Enchant(item *proto_public.BattleHeroItemData, ids map[i
 	}
 
 	//总等级
-	stageConfs := config.CfgMgr.AllJson["EnchantStage"].(map[int64]conf2.EnchantStage)
+	stageConfs := config.CfgMgr.AllJson()["EnchantStage"].(map[int64]conf2.EnchantStage)
 	confList := make([]conf2.EnchantStage, 0)
 	for _, v := range stageConfs {
 		confList = append(confList, v)
@@ -717,7 +717,7 @@ func GetBattleAttribute_Enchant(item *proto_public.BattleHeroItemData, ids map[i
 
 // 洗练
 func GetBattleAttribute_Succinct(item *proto_public.BattleHeroItemData, ids []int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["Succinct"].(map[int64]conf2.Succinct)
+	confs := config.CfgMgr.AllJson()["Succinct"].(map[int64]conf2.Succinct)
 
 	for _, _level := range ids {
 		var conf conf2.Succinct
@@ -743,7 +743,7 @@ func GetBattleAttribute_Succinct(item *proto_public.BattleHeroItemData, ids []in
 
 // 坐骑
 func GetBattleAttribute_Mount(item *proto_public.BattleHeroItemData, stage, star int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["MountStage"].(map[int64]conf2.MountStage)
+	confs := config.CfgMgr.AllJson()["MountStage"].(map[int64]conf2.MountStage)
 
 	var conf conf2.MountStage
 	for _, v := range confs {
@@ -765,7 +765,7 @@ func GetBattleAttribute_Mount(item *proto_public.BattleHeroItemData, stage, star
 
 // 坐骑最终加成
 func GetBattleAttribute_MountFinal(item *proto_public.BattleHeroItemData, id, level int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["MountLevel"].(map[int64]conf2.MountLevel)
+	confs := config.CfgMgr.AllJson()["MountLevel"].(map[int64]conf2.MountLevel)
 
 	var conf conf2.MountLevel
 	for _, v := range confs {
@@ -790,7 +790,7 @@ func GetBattleAttribute_MountFinal(item *proto_public.BattleHeroItemData, id, le
 
 // 坐骑赋能
 func GetBattleAttribute_MountEnergy(item *proto_public.BattleHeroItemData, ids map[int32]int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["MountEnergyAttribute"].(map[int64]conf2.MountEnergyAttribute)
+	confs := config.CfgMgr.AllJson()["MountEnergyAttribute"].(map[int64]conf2.MountEnergyAttribute)
 
 	for _typ, _level := range ids {
 		var conf conf2.MountEnergyAttribute
@@ -824,7 +824,7 @@ func GetBattleAttribute_MountEnergy(item *proto_public.BattleHeroItemData, ids m
 
 // 神兵
 func GetBattleAttribute_Weaponry(item *proto_public.BattleHeroItemData, star int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["WeaponryStar"].(map[int64]conf2.WeaponryStar)
+	confs := config.CfgMgr.AllJson()["WeaponryStar"].(map[int64]conf2.WeaponryStar)
 
 	var conf conf2.WeaponryStar
 	for _, v := range confs {
@@ -847,7 +847,7 @@ func GetBattleAttribute_Weaponry(item *proto_public.BattleHeroItemData, star int
 
 // 神兵最终
 func GetBattleAttribute_WeaponryFinal(item *proto_public.BattleHeroItemData, id, level int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["WeaponryLevel"].(map[int64]conf2.WeaponryLevel)
+	confs := config.CfgMgr.AllJson()["WeaponryLevel"].(map[int64]conf2.WeaponryLevel)
 
 	var conf conf2.WeaponryLevel
 	for _, v := range confs {
@@ -871,7 +871,7 @@ func GetBattleAttribute_WeaponryFinal(item *proto_public.BattleHeroItemData, id,
 
 // 背饰灵韵
 func GetBattleAttribute_BraceAura(item *proto_public.BattleHeroItemData, levels map[int32]int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["BraceAura"].(map[int64]conf2.BraceAura)
+	confs := config.CfgMgr.AllJson()["BraceAura"].(map[int64]conf2.BraceAura)
 
 	for k, v := range levels {
 		var conf conf2.BraceAura
@@ -900,7 +900,7 @@ func GetBattleAttribute_BraceAura(item *proto_public.BattleHeroItemData, levels 
 
 // 背饰灵韵等级
 func GetBattleAttribute_BraceAuraLevel(item *proto_public.BattleHeroItemData, levels []int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["BraceAuraStage"].(map[int64]conf2.BraceAuraStage)
+	confs := config.CfgMgr.AllJson()["BraceAuraStage"].(map[int64]conf2.BraceAuraStage)
 	for _, v := range levels {
 		var conf conf2.BraceAuraStage
 		for _, _conf := range confs {
@@ -922,7 +922,7 @@ func GetBattleAttribute_BraceAuraLevel(item *proto_public.BattleHeroItemData, le
 
 // 背饰
 func GetBattleAttribute_Brace(item *proto_public.BattleHeroItemData, levels map[int32]int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["BracesLevel"].(map[int64]conf2.BracesLevel)
+	confs := config.CfgMgr.AllJson()["BracesLevel"].(map[int64]conf2.BracesLevel)
 
 	for _, v := range levels {
 		var conf conf2.BracesLevel
@@ -947,8 +947,8 @@ func GetBattleAttribute_Brace(item *proto_public.BattleHeroItemData, levels map[
 
 // 背饰天赋
 func GetBattleAttribute_BraceTalent(item *proto_public.BattleHeroItemData, ids map[int32]int32, isMainHero bool) *proto_public.BattleHeroItemData {
-	confs_talentLevels := config.CfgMgr.AllJson["BraceTalentLevel"].(map[int64]conf2.BraceTalentLevel)
-	confs_talents := config.CfgMgr.AllJson["BraceTalent"].(map[int64]conf2.BraceTalent)
+	confs_talentLevels := config.CfgMgr.AllJson()["BraceTalentLevel"].(map[int64]conf2.BraceTalentLevel)
+	confs_talents := config.CfgMgr.AllJson()["BraceTalent"].(map[int64]conf2.BraceTalent)
 	for k, v := range ids {
 		if v <= 0 {
 			continue
@@ -1094,7 +1094,7 @@ func GetBattleAttribute_BraceTalent(item *proto_public.BattleHeroItemData, ids m
 
 // 头饰
 func GetBattleAttribute_HeadWear(item *proto_public.BattleHeroItemData, ids map[int32]int32, isMainHero bool) *proto_public.BattleHeroItemData {
-	Headwears := config.CfgMgr.AllJson["Headwear"].(map[int64]conf2.Headwear)
+	Headwears := config.CfgMgr.AllJson()["Headwear"].(map[int64]conf2.Headwear)
 	for k, v := range ids {
 		if v <= 0 {
 			continue
@@ -1235,7 +1235,7 @@ func GetBattleAttribute_HeadWear(item *proto_public.BattleHeroItemData, ids map[
 
 // 时装
 func GetBattleAttribute_Fashion(item *proto_public.BattleHeroItemData, ids map[int32]int32, isMainHero bool) *proto_public.BattleHeroItemData {
-	Fashions := config.CfgMgr.AllJson["Fashion"].(map[int64]conf2.Fashion)
+	Fashions := config.CfgMgr.AllJson()["Fashion"].(map[int64]conf2.Fashion)
 	for k, v := range ids {
 		if v <= 0 {
 			continue
@@ -1376,7 +1376,7 @@ func GetBattleAttribute_Fashion(item *proto_public.BattleHeroItemData, ids map[i
 
 // 装备
 func GetBattleAttribute_Equip(item *proto_public.BattleHeroItemData, equip map[int32]int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["Equip"].(map[int64]conf2.Equip)
+	confs := config.CfgMgr.AllJson()["Equip"].(map[int64]conf2.Equip)
 
 	for id, _level := range equip {
 		var conf conf2.Equip
@@ -1421,7 +1421,7 @@ func GetBattleAttribute_Equip(item *proto_public.BattleHeroItemData, equip map[i
 
 // 天命
 func GetBattleAttribute_Destiny(item *proto_public.BattleHeroItemData, ids []int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["DestinyLevel"].(map[int64]conf2.DestinyLevel)
+	confs := config.CfgMgr.AllJson()["DestinyLevel"].(map[int64]conf2.DestinyLevel)
 
 	for _, v := range ids {
 		var conf conf2.DestinyLevel
@@ -1450,7 +1450,7 @@ func GetBattleAttribute_Destiny(item *proto_public.BattleHeroItemData, ids []int
 
 // 天高阶
 func GetBattleAttribute_DestinyStage(item *proto_public.BattleHeroItemData, ids []int32) *proto_public.BattleHeroItemData {
-	confs := config.CfgMgr.AllJson["DestinyStage"].(map[int64]conf2.DestinyStage)
+	confs := config.CfgMgr.AllJson()["DestinyStage"].(map[int64]conf2.DestinyStage)
 
 	for _, v := range ids {
 		var conf conf2.DestinyStage

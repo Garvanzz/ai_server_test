@@ -43,7 +43,7 @@ func (a *ActivityNormalMonthCard) OnEvent(key string, ctx *proto_player.Context,
 			return
 		}
 
-		confs := config.CfgMgr.AllJson["MonthCard"].(map[int64]conf.MonthCard)
+		confs := config.CfgMgr.AllJson()["MonthCard"].(map[int64]conf.MonthCard)
 		var conf conf.MonthCard
 		for _, v := range confs {
 			if v.Type == define.MonthCard_Month {

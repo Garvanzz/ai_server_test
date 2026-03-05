@@ -267,7 +267,7 @@ func (a *ActivityLadderRace) Battle(ctx *proto_player.Context, req *proto_activi
 	score := pd.Score
 
 	// 步骤1: 计算当前玩家的段位
-	scoreConfigs := config.CfgMgr.AllJson["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
+	scoreConfigs := config.CfgMgr.AllJson()["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
 
 	// 遍历配置找到当前积分对应的段位
 	var currentRank, currentLittleRank int32
@@ -441,7 +441,7 @@ func (a *ActivityLadderRace) BattleReport(ctx *proto_player.Context, req *proto_
 	lastConf := conf.ActLadderRaceScore{}
 	isSuc := req.WinId == ctx.Id
 	// 步骤1: 计算当前玩家的段位
-	scoreConfigs := config.CfgMgr.AllJson["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
+	scoreConfigs := config.CfgMgr.AllJson()["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
 	for _, cfg := range scoreConfigs {
 		if cfg.Score <= int32(score) && cfg.Score > lastConf.Score {
 			lastConf = cfg
@@ -551,7 +551,7 @@ func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 	}
 
 	// 获取段位配置
-	scoreConfigs := config.CfgMgr.AllJson["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
+	scoreConfigs := config.CfgMgr.AllJson()["ActLadderRaceScore"].(map[int64]conf.ActLadderRaceScore)
 
 	// 清空现有数据
 	a.data.RankPlayer = make(map[int64]*model.ActDataLadderRaceRankPlayer)

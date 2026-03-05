@@ -1,6 +1,8 @@
 package event
 
 import (
+	"strconv"
+
 	"xfx/pkg/agent"
 	"xfx/pkg/module"
 )
@@ -8,75 +10,45 @@ import (
 var Router *EventRouter
 
 type EventRouter struct {
-	MapEvents map[int][]module.PID
-	System    *agent.System
+	System *agent.System
 }
 
+// Event 业务层事件 payload，通过 eventbus 投递
 type Event struct {
-	Type int            //类型
-	M    map[string]any //发送内容
+	Type int            // 类型
+	M    map[string]any // 发送内容
+}
+
+// topic 将 int 事件类型映射为 eventbus 的 string topic，避免与其他 topic 冲突
+func topic(evType int) string {
+	return "e:" + strconv.Itoa(evType)
 }
 
 func Init(sys *agent.System) {
-	Router = new(EventRouter)
-	Router.MapEvents = make(map[int][]module.PID)
-	Router.System = sys
+	Router = &EventRouter{System: sys}
 }
 
 func AddEventListener(eventType int, listener module.PID) bool {
-	if Router == nil {
+	if Router == nil || listener == nil {
 		return false
 	}
-
-	listeners, ok := Router.MapEvents[eventType]
-	if !ok {
-		listeners = []module.PID{listener}
-	} else {
-		for _, v := range listeners {
-			if v == listener {
-				return false
-			}
-		}
-
-		listeners = append(listeners, listener)
-	}
-
-	Router.MapEvents[eventType] = listeners
+	Router.System.Subscribe(topic(eventType), listener)
 	return true
 }
 
 func DelEventListener(eventType int, listener module.PID) {
-	if Router == nil {
+	if Router == nil || listener == nil {
 		return
 	}
-
-	listeners, ok := Router.MapEvents[eventType]
-	if ok {
-		for index, v := range listeners {
-			if v == listener {
-				listeners = append(listeners[:index], listeners[index+1:]...)
-				Router.MapEvents[eventType] = listeners
-				return
-			}
-		}
-	}
+	Router.System.Unsubscribe(topic(eventType), listener)
 }
 
 func DoEvent(evType int, data map[string]any) {
 	if Router == nil {
 		return
 	}
-
-	if listeners, ok := Router.MapEvents[evType]; !ok {
-		return
-	} else {
-		event := &Event{
-			Type: evType,
-			M:    data,
-		}
-
-		for _, listener := range listeners {
-			Router.System.Cast(listener, event)
-		}
-	}
+	Router.System.Publish(topic(evType), &Event{
+		Type: evType,
+		M:    data,
+	})
 }

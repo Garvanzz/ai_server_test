@@ -160,7 +160,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 		}
 
 		//奖励
-		confs := config.CfgMgr.AllJson["MonthCard"].(map[int64]conf2.MonthCard)
+		confs := config.CfgMgr.AllJson()["MonthCard"].(map[int64]conf2.MonthCard)
 		conf := conf2.MonthCard{}
 		for _, v := range confs {
 			if v.Type == define.MonthCard_GemAppraisal {
@@ -230,7 +230,7 @@ func (mgr *Manager) matchRobots(mode int, startPower int64, endPower int64, coun
 
 // 匹配机器人
 func (mgr *Manager) matchRobot(mode int, startPower int64, endPower int64) (*model.Robot, error) {
-	robotGroupConfs := config.CfgMgr.AllJson["RobotGroup"].(map[int64]conf2.RobotGroup)
+	robotGroupConfs := config.CfgMgr.AllJson()["RobotGroup"].(map[int64]conf2.RobotGroup)
 
 	var robots []conf2.RobotGroup
 	for _, robotGroupConf := range robotGroupConfs {
@@ -275,7 +275,7 @@ func (mgr *Manager) createRobot() {
 	}
 
 	if len(reply.([]interface{})) == 0 {
-		robotConfs := config.CfgMgr.AllJson["RobotGroup"].(map[int64]conf2.RobotGroup)
+		robotConfs := config.CfgMgr.AllJson()["RobotGroup"].(map[int64]conf2.RobotGroup)
 
 		for _, v := range robotConfs {
 			robot := model.Robot{

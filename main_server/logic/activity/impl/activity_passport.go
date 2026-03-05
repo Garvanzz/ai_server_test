@@ -109,7 +109,7 @@ func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activi
 	pd := LoadPd[*model.PassportPd](a, ctx.Id)
 
 	// 获取所有通行证配置
-	passportConfs := config.CfgMgr.AllJson["ActPassport"].(map[int64]conf.ActPassport)
+	passportConfs := config.CfgMgr.AllJson()["ActPassport"].(map[int64]conf.ActPassport)
 
 	// 收集所有奖励
 	awards := make([]conf.ItemE, 0)
@@ -161,7 +161,7 @@ func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activi
 
 // calculateLevel 根据积分计算等级
 func (a *ActivityPassport) calculateLevel(score int32) int32 {
-	passportConfs := config.CfgMgr.AllJson["ActPassport"].(map[int64]conf.ActPassport)
+	passportConfs := config.CfgMgr.AllJson()["ActPassport"].(map[int64]conf.ActPassport)
 
 	level := int32(0)
 	for _, conf := range passportConfs {

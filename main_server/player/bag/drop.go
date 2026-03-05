@@ -46,7 +46,7 @@ var dropDeal = map[int16]dropFn{
 
 // GetDrop 获取掉落
 func GetDrop(dropId, apppointId int32) []conf.ItemE {
-	dropConf, ok := config.CfgMgr.AllJson["Drop"].(map[int64]conf.Drop)[int64(dropId)]
+	dropConf, ok := config.CfgMgr.AllJson()["Drop"].(map[int64]conf.Drop)[int64(dropId)]
 	if !ok {
 		log.Error("getDrop conf not found %v", dropId)
 		return nil

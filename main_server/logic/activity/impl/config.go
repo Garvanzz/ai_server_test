@@ -11,11 +11,11 @@ type IActivityConfig interface {
 }
 
 func GetAllCommonConf() map[int64]conf.Activity {
-	return config.CfgMgr.AllJson["Activity"].(map[int64]conf.Activity)
+	return config.CfgMgr.AllJson()["Activity"].(map[int64]conf.Activity)
 }
 
 func GetCommonConf(cfgId int64) (conf.Activity, bool) {
-	activityConf, ok := config.CfgMgr.AllJson["Activity"].(map[int64]conf.Activity)[cfgId]
+	activityConf, ok := config.CfgMgr.AllJson()["Activity"].(map[int64]conf.Activity)[cfgId]
 	if !ok {
 		log.Error("register new activity get config id error:%v", cfgId)
 		return activityConf, false
@@ -30,7 +30,7 @@ func GetTypedConf[T IActivityConfig](cfgId int64) (map[int64]T, bool) {
 		return nil, false
 	}
 
-	activityConfs, ok := config.CfgMgr.AllJson[commonConf.Type].(map[int64]T)
+	activityConfs, ok := config.CfgMgr.AllJson()[commonConf.Type].(map[int64]T)
 	if !ok {
 		log.Error("register new activity get config id error:%v", cfgId)
 		return activityConfs, false

@@ -74,7 +74,7 @@ func GetLineupLiupai(lineupSelf, lineupOther []int32) (bool, int32, int32, int32
 	}
 
 	//判断是不是克制关系
-	LiupaiRestrainConfs := config.CfgMgr.AllJson["LiupaiRestrain"].(map[int64]conf2.LiupaiRestrain)
+	LiupaiRestrainConfs := config.CfgMgr.AllJson()["LiupaiRestrain"].(map[int64]conf2.LiupaiRestrain)
 	restrain := false
 	for _, v := range LiupaiRestrainConfs {
 		if v.Job == job && v.Restrain == jobOther {
@@ -114,7 +114,7 @@ func GetLineupLiupai(lineupSelf, lineupOther []int32) (bool, int32, int32, int32
 func getLineUpOtion(lineup []int32) (bool, int32, int32) {
 	liupai := make(map[int32]int32)
 	isLiupai := false
-	conf := config.CfgMgr.AllJson["Hero"].(map[int64]conf2.Hero)
+	conf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)
 	for _, v := range lineup {
 		if v <= 0 {
 			continue
@@ -127,7 +127,7 @@ func getLineUpOtion(lineup []int32) (bool, int32, int32) {
 		liupai[_conf.Job] += 1
 	}
 
-	liupaiConfs := config.CfgMgr.AllJson["Liupai"].(map[int64]conf2.Liupai)
+	liupaiConfs := config.CfgMgr.AllJson()["Liupai"].(map[int64]conf2.Liupai)
 	Job := int32(0)
 	Num := int32(0)
 	for job, num := range liupai {

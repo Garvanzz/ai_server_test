@@ -83,7 +83,7 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 		case define.ItemTypeItem:
 			items[award.ItemId] += award.ItemNum
 			//对道具的判断
-			confItem := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(award.ItemId)]
+			confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(award.ItemId)]
 			//藏品碎片
 			if confItem.Id > 0 && confItem.Type == define.BagItemTypeCollectionPiece {
 				if _, ok := pl.Collection.Collections[confItem.CompositeItem]; ok {
@@ -91,16 +91,16 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 				}
 
 				//自动激活
-				conf := config.CfgMgr.AllJson["Collection"].(map[int64]conf2.Collection)[int64(confItem.CompositeItem)]
+				conf := config.CfgMgr.AllJson()["Collection"].(map[int64]conf2.Collection)[int64(confItem.CompositeItem)]
 				if conf.Id <= 0 {
 					continue
 				}
 
 			}
 		case define.ItemTypeHero:
-			conf := config.CfgMgr.AllJson["Hero"].(map[int64]conf2.Hero)[int64(award.ItemId)]
+			conf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)[int64(award.ItemId)]
 			if _, ok := pl.Hero.Hero[award.ItemId]; ok { // 如果有转换成碎片
-				confItem := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
+				confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
 				items[conf.Fragment] += award.ItemNum * confItem.CompositeNeed
 			} else {
 				pl.Hero.Hero[award.ItemId] = &model.HeroOption{
@@ -114,7 +114,7 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 				}
 
 				//增加图鉴
-				confs := config.CfgMgr.AllJson["Handbook"].(map[int64]conf2.HandBook)
+				confs := config.CfgMgr.AllJson()["Handbook"].(map[int64]conf2.HandBook)
 				conf := conf2.HandBook{}
 				for _, v := range confs {
 					if v.TargetId == award.ItemId {
@@ -139,8 +139,8 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 		case define.ItemTypeSkin:
 		case define.ItemTypePet:
 			if _, ok := pl.Pet.Pets[award.ItemId]; ok { // 如果有转换成碎片
-				conf := config.CfgMgr.AllJson["Pet"].(map[int64]conf2.Pet)[int64(award.ItemId)]
-				confItem := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
+				conf := config.CfgMgr.AllJson()["Pet"].(map[int64]conf2.Pet)[int64(award.ItemId)]
+				confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
 				items[conf.Fragment] += award.ItemNum * confItem.CompositeNeed
 			} else {
 				pl.Pet.Pets[award.ItemId] = &model.PetItem{
@@ -166,7 +166,7 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 		case define.ItemTypePetEquip:
 
 			//增加图鉴
-			//confs := config.CfgMgr.AllJson["PetEquipHandbook"].(map[int64]conf2.PetEquipHandbook)
+			//confs := config.CfgMgr.AllJson()["PetEquipHandbook"].(map[int64]conf2.PetEquipHandbook)
 			//conf := conf2.PetEquipHandbook{}
 			//for _, v := range confs {
 			//	if v.TargetId == award.ItemId {
@@ -231,7 +231,7 @@ func ReqUseItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SUseItem
 	}
 
 	// 判断道具类型
-	itemConfig := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
 	if itemConfig.Type == define.BagItemTypeDropBox && itemConfig.UseValue <= 0 {
 		log.Error("道具不可使用:%v", req.ItemId)
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
@@ -274,7 +274,7 @@ func ReqCompositionItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2
 		return
 	}
 
-	itemConfig := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
 	if itemConfig.IsComposite == false {
 		log.Error("道具不可合成")
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
@@ -331,7 +331,7 @@ func ReqSellItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SSellIt
 		return
 	}
 
-	itemConfig := config.CfgMgr.AllJson["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
 	if itemConfig.IsSell == false {
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(result)

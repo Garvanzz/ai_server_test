@@ -304,7 +304,7 @@ func ReqTransformJob(ctx global.IPlayer, pl *model.Player, req *proto_player.C2S
 	}
 
 	//获取职业
-	confs := config.CfgMgr.AllJson["Hero"].(map[int64]conf.Hero)
+	confs := config.CfgMgr.AllJson()["Hero"].(map[int64]conf.Hero)
 	heroId := int32(0)
 	for _, v := range confs {
 		if v.Job == req.Job && v.Type == 1 {

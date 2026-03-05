@@ -1,6 +1,8 @@
 package invoke
 
 import (
+	"fmt"
+
 	"xfx/main_server/messages"
 )
 
@@ -73,4 +75,17 @@ func Int32(reply any, err error) (int32, error) {
 	default:
 		return 0, nil
 	}
+}
+
+// As 对 invoke 返回值做安全类型断言，类型不匹配时返回 error 而非 panic
+func As[T any](result any) (T, error) {
+	var zero T
+	if result == nil {
+		return zero, nil
+	}
+	v, ok := result.(T)
+	if !ok {
+		return zero, fmt.Errorf("invoke: type assertion failed, expected %T, got %T", zero, result)
+	}
+	return v, nil
 }

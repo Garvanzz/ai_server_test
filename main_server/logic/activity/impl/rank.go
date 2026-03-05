@@ -152,7 +152,7 @@ func sendRankReward(a BaseInfo, rankType int, ignoreList []int64) {
 		ignore[id] = struct{}{}
 	}
 
-	rankAwardConfs := config.CfgMgr.AllJson["RankAward"].(map[int64]conf2.RankAward)
+	rankAwardConfs := config.CfgMgr.AllJson()["RankAward"].(map[int64]conf2.RankAward)
 	for _, rankAwardConf := range rankAwardConfs {
 		if int(rankAwardConf.Type) == rankType {
 

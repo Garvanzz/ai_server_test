@@ -38,7 +38,7 @@ func ToMagicProto(opt *Magic) *proto_magic.MagicOption {
 
 // 获取角色解锁的技能
 func GetHeroSkill(pl *Hero, skill *Skill, heroId int32) map[int32]int32 {
-	heroConf := config.CfgMgr.AllJson["Hero"].(map[int64]conf2.Hero)[int64(heroId)]
+	heroConf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)[int64(heroId)]
 	heroItem := pl.Hero[heroId]
 	unlockSkill := heroConf.SkillUnlock
 	skills := make(map[int32]int32)

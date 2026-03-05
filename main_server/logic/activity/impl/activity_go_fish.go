@@ -30,7 +30,7 @@ func (a *ActivityGoFish) OnStart() {
 	a.data.PoolRefreshTime = time.Now().Unix()
 
 	//这里有点没设计好，先这样吧
-	activityConfs := config.CfgMgr.AllJson["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
 	for _, v := range activityConfs {
 		a.data.StartTime = v.StartTime
 		a.data.EndTime = v.EndTime
@@ -89,7 +89,7 @@ func (a *ActivityGoFish) OnEvent(key string, ctx *proto_player.Context, params E
 
 // 初始鱼池
 func (a *ActivityGoFish) InitPool() {
-	activityConfs := config.CfgMgr.AllJson["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
 	a.data.Pool = make(map[int32]map[int32]int32)
 	for _, v := range activityConfs {
 		if _, ok := a.data.Pool[v.Type]; !ok {
@@ -179,7 +179,7 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 
 	//钓鱼
 	//判断成功率
-	activityConfs := config.CfgMgr.AllJson["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
 	var gofishConf conf.ActGoFish
 	for _, v := range activityConfs {
 		if v.Type == req.PoolType {
@@ -306,7 +306,7 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 
 	for _, v := range ids {
 		//钓到鱼也要增加经验值
-		fishConf := config.CfgMgr.AllJson["Fish"].(map[int64]conf.Fish)[int64(v)]
+		fishConf := config.CfgMgr.AllJson()["Fish"].(map[int64]conf.Fish)[int64(v)]
 		pd.Exp += fishConf.Exp
 
 		if _, ok := pd.Fish[v]; !ok {
@@ -360,7 +360,7 @@ func (a *ActivityGoFish) Sign(ctx *proto_player.Context, req *proto_activity.C2S
 	pd.LastSignTime = time.Now().Unix()
 	pd.SignDay += 1
 
-	fishSignConf, _ := config.CfgMgr.AllJson["FishSign"].(map[int64]conf.FishSign)
+	fishSignConf, _ := config.CfgMgr.AllJson()["FishSign"].(map[int64]conf.FishSign)
 	for _, v := range fishSignConf {
 		if v.Day == pd.SignDay {
 			resp.Award = v.Reward
@@ -379,7 +379,7 @@ func (a *ActivityGoFish) GetAward(ctx *proto_player.Context, req *proto_activity
 	resp := new(model.CommonActivityAwardBack)
 	//判断等级
 	id := int32(0)
-	fishLevelAwardConf, _ := config.CfgMgr.AllJson["FishLevelAward"].(map[int64]conf.FishLevelAward)
+	fishLevelAwardConf, _ := config.CfgMgr.AllJson()["FishLevelAward"].(map[int64]conf.FishLevelAward)
 	var lists []conf.FishLevelAward
 	for _, v := range fishLevelAwardConf {
 		lists = append(lists, v)
@@ -431,7 +431,7 @@ func (a *ActivityGoFish) GetAward(ctx *proto_player.Context, req *proto_activity
 }
 
 func getFishConfig(typ int32) conf.Fish {
-	fishConfs := config.CfgMgr.AllJson["Fish"].(map[int64]conf.Fish)
+	fishConfs := config.CfgMgr.AllJson()["Fish"].(map[int64]conf.Fish)
 	for _, v := range fishConfs {
 		if v.Type == typ {
 			return v

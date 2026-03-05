@@ -351,7 +351,7 @@ func (m *Manager) register(cfgId int64) *entity {
 		return nil
 	}
 
-	activityConf, ok := config.CfgMgr.AllJson["Activity"].(map[int64]conf.Activity)[cfgId]
+	activityConf, ok := config.CfgMgr.AllJson()["Activity"].(map[int64]conf.Activity)[cfgId]
 	if !ok {
 		log.Error("register new activity get config id error:%v", cfgId)
 		return nil

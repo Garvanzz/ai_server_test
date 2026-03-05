@@ -121,6 +121,14 @@ func (a *Agent) OnStop() { // actor stop call
 // 	return nil
 // }
 
+// kickAfterLoginFailure 登录失败后延迟断开连接，让客户端先收到 S2CLogin 再关闭
+func (a *Agent) kickAfterLoginFailure() {
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		a.GetSession().Close()
+	}()
+}
+
 func (a *Agent) Close() error {
 	a.closeOnce.Do(func() {
 		log.Debug("game_agent close:%v", a.GetSession().ID())
@@ -183,22 +191,25 @@ func (a *Agent) OnSessionMessage(msg any) {
 		})
 
 		log.Debug("agent login result : %v", loginResult)
-		if err == nil {
-			a.playerId = loginResult.PlayerId
-			a.playerPid = loginResult.PlayerPid
-			state := Proto_Public.CommonState(loginResult.Result)
-			if state != Proto_Public.CommonState_Success {
-				a.Send(&Proto_Player.S2CLogin{
-					State:      state,
-					ZoneOffset: time.Now().Unix(),
-				})
-				return
-			}
-
-			a.Context.Cast(loginResult.PlayerPid, &messages.LoginSuccess{})
-		} else {
+		if err != nil {
 			a.Send(&Proto_Player.S2CLogin{State: Proto_Public.CommonState_Faild})
+			a.kickAfterLoginFailure()
+			return
 		}
+
+		state := Proto_Public.CommonState(loginResult.Result)
+		if state != Proto_Public.CommonState_Success {
+			a.Send(&Proto_Player.S2CLogin{
+				State:      state,
+				ZoneOffset: time.Now().Unix(),
+			})
+			a.kickAfterLoginFailure()
+			return
+		}
+
+		a.playerId = loginResult.PlayerId
+		a.playerPid = loginResult.PlayerPid
+		a.Context.Cast(loginResult.PlayerPid, &messages.LoginSuccess{})
 	default:
 		// 转给玩家进程
 		if a.playerPid != nil {
