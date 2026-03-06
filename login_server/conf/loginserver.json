@@ -1,18 +1,17 @@
 {
   "Log": {
-    "WriteFile": true,
-    "FilePath": "./log/login_server.log",
+    "WriteFile": false,
+    "FilePath": "./lobby.log",
     "Level": "DEBUG",
-    "Format": "text",
     "Prefix": "",
-    "MaxSize": 1,
-    "MaxBackups": 5,
+    "MaxSize": 100,
+    "MaxBackups": 10,
     "MaxAge": 30,
-    "Compress": false
+    "Compress": true
   },
-  "AccountAddr": "root:@Xiao1998@tcp(47.121.121.101:5001)/wenjiacheng?&charset=utf8mb4&collation=utf8mb4_general_ci",
-  "RedisAddr": "172.16.1.50:6379",
+  "HttpPort": ":9007",
+  "RedisAddr": "127.0.0.1:6379",
   "RedisPassword": "",
-  "RedisDbNum": 1,
-  "HttpPort": ":9033"
+  "RedisDbNum":1,
+  "AccountAddr": "root:@Xiao1998@tcp(47.121.121.101:5001)/wenjiacheng?&charset=utf8mb4&collation=utf8mb4_general_ci"
 }
