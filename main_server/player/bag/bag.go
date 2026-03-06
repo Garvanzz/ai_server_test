@@ -11,6 +11,7 @@ import (
 	"xfx/main_server/global"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_item"
 	"xfx/proto/proto_public"
 )
@@ -83,7 +84,7 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 		case define.ItemTypeItem:
 			items[award.ItemId] += award.ItemNum
 			//对道具的判断
-			confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(award.ItemId)]
+			confItem := config.Item.All()[int64(award.ItemId)]
 			//藏品碎片
 			if confItem.Id > 0 && confItem.Type == define.BagItemTypeCollectionPiece {
 				if _, ok := pl.Collection.Collections[confItem.CompositeItem]; ok {
@@ -91,16 +92,19 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 				}
 
 				//自动激活
-				conf := config.CfgMgr.AllJson()["Collection"].(map[int64]conf2.Collection)[int64(confItem.CompositeItem)]
+				conf := config.Collection.All()[int64(confItem.CompositeItem)]
 				if conf.Id <= 0 {
 					continue
 				}
 
+				if pl.Bag.Items[confItem.Id]+award.ItemNum >= conf.ActiveFragNum {
+					internal.AddCollection(ctx, pl, conf.Id, 1)
+				}
 			}
 		case define.ItemTypeHero:
-			conf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)[int64(award.ItemId)]
+			conf := config.Hero.All()[int64(award.ItemId)]
 			if _, ok := pl.Hero.Hero[award.ItemId]; ok { // 如果有转换成碎片
-				confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
+				confItem := config.Item.All()[int64(conf.Fragment)]
 				items[conf.Fragment] += award.ItemNum * confItem.CompositeNeed
 			} else {
 				pl.Hero.Hero[award.ItemId] = &model.HeroOption{
@@ -113,8 +117,11 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 					Cultivation: make(map[int32]int32),
 				}
 
+				//更新技能
+				internal.CheckHeroSkill(ctx, pl, award.ItemId, 1)
+
 				//增加图鉴
-				confs := config.CfgMgr.AllJson()["Handbook"].(map[int64]conf2.HandBook)
+				confs := config.Handbook.All()
 				conf := conf2.HandBook{}
 				for _, v := range confs {
 					if v.TargetId == award.ItemId {
@@ -135,12 +142,38 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 					pl.Handbook.Handbooks[conf.Id] = hand
 				}
 
+				//同步
+				internal.SyncHeroChange(ctx, pl, award.ItemId)
 			}
 		case define.ItemTypeSkin:
+		case define.ItemTypeEquip:
+			//要对装备赋予等级
+			heroId := int32(pl.GetProp(define.PlayerPropHeroId))
+			mainHero := pl.Hero.Hero[heroId]
+			minLevel := mainHero.Level - 5
+			if minLevel <= 1 {
+				minLevel = 1
+			}
+			maxLevel := mainHero.Level + 5
+			rangeLevel := utils.RandInt(minLevel, maxLevel)
+			//添加装备
+			internal.AddEquips(ctx, pl, award.ItemId, award.ItemNum, rangeLevel)
+		case define.ItemTypeMagic:
+			internal.AddMagic(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeWeaponry:
+			internal.AddWeaponry(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeMount:
+			internal.AddMount(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeCollect:
+			internal.AddCollection(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeBraces:
+			internal.AddBrace(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeLearning:
+			internal.AddLearning(ctx, pl, award.ItemId, award.ItemNum)
 		case define.ItemTypePet:
 			if _, ok := pl.Pet.Pets[award.ItemId]; ok { // 如果有转换成碎片
-				conf := config.CfgMgr.AllJson()["Pet"].(map[int64]conf2.Pet)[int64(award.ItemId)]
-				confItem := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(conf.Fragment)]
+				conf := config.Pet.All()[int64(award.ItemId)]
+				confItem := config.Item.All()[int64(conf.Fragment)]
 				items[conf.Fragment] += award.ItemNum * confItem.CompositeNeed
 			} else {
 				pl.Pet.Pets[award.ItemId] = &model.PetItem{
@@ -153,6 +186,9 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 					SkillIds: make([]int32, 4),
 				}
 
+				//同步
+				internal.SyncPetChange(ctx, pl, award.ItemId)
+
 				//推送恭喜获得
 				newPet := []conf2.ItemE{
 					conf2.ItemE{
@@ -164,6 +200,7 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 				internal.PushPopReward(ctx, global.ItemFormat(newPet))
 			}
 		case define.ItemTypePetEquip:
+			internal.AddPetEquip(ctx, pl, award.ItemId, award.ItemNum)
 
 			//增加图鉴
 			//confs := config.CfgMgr.AllJson()["PetEquipHandbook"].(map[int64]conf2.PetEquipHandbook)
@@ -190,7 +227,25 @@ func AddAward(ctx global.IPlayer, pl *model.Player, awards []conf2.ItemE, isPush
 			////同步
 			//global.SyncPetEquipHandbookChange(ctx, pl, award.ItemId)
 		case define.ItemTypePetSkill:
+		case define.ItemTypeHeadFrame:
+			internal.AddPlayerPropHeadFrame(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeTitle:
+			internal.AddPlayerPropTitle(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeBubble:
+			internal.AddPlayerPropBubble(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemGuildMaterial:
+			internal.AddGuildMaterical(ctx, pl, award.ItemId, award.ItemNum)
 		case define.ItemGuildElement:
+		case define.ItemTypeFish:
+		case define.ItemTypeHeadWear:
+			internal.AddHeadWear(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypeFashion:
+			internal.AddFashion(ctx, pl, award.ItemId, award.ItemNum)
+		case define.ItemTypePassportScore:
+			internal.AddPassportScore(ctx, pl, award.ItemNum)
+			score := make(map[int32]int32)
+			score[award.ItemId] = award.ItemNum
+			internal.PushResPassportScoreChange(ctx, pl, score)
 		}
 	}
 
@@ -224,14 +279,14 @@ func ReqUseItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SUseItem
 		return
 	}
 
-	if req.ItemNum > config.CfgMgr.GetGlobal().UseItemMaxCount {
+	if req.ItemNum > config.Global.Get().UseItemMaxCount {
 		result.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 		ctx.Send(result)
 		return
 	}
 
 	// 判断道具类型
-	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.Item.All()[int64(req.ItemId)]
 	if itemConfig.Type == define.BagItemTypeDropBox && itemConfig.UseValue <= 0 {
 		log.Error("道具不可使用:%v", req.ItemId)
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
@@ -274,7 +329,7 @@ func ReqCompositionItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2
 		return
 	}
 
-	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.Item.All()[int64(req.ItemId)]
 	if itemConfig.IsComposite == false {
 		log.Error("道具不可合成")
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
@@ -331,7 +386,7 @@ func ReqSellItem(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SSellIt
 		return
 	}
 
-	itemConfig := config.CfgMgr.AllJson()["Item"].(map[int64]conf2.Item)[int64(req.ItemId)]
+	itemConfig := config.Item.All()[int64(req.ItemId)]
 	if itemConfig.IsSell == false {
 		result.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(result)

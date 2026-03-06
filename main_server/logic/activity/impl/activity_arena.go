@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 	"xfx/core/common"
+	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -36,7 +36,7 @@ func (a *ActivityArena) OnInit() {
 func (a *ActivityArena) OnStart() {
 	//初始人机
 	log.Debug("初始竞技场人机")
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId())
+	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
 	if !ok {
 		return
 	}
@@ -100,27 +100,27 @@ func (a *ActivityArena) Format(ctx *proto_player.Context) proto.Message {
 	lineUps := getLineUp(ctx.Id, pd.LineUp)
 
 	if pd.LastRefreshTime == 0 {
-		pd.LastRefreshTime = time.Now().Unix()
+		pd.LastRefreshTime = utils.Now().Unix()
 	}
 
-	offseTime := pd.RefreshCD - time.Now().Unix()
+	offseTime := pd.RefreshCD - utils.Now().Unix()
 	if offseTime <= 0 {
 		offseTime = 0
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastRefreshTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastRefreshTime, utils.Now().Unix(), 0) {
 		pd.RefreshTime = 0
-		pd.LastRefreshTime = time.Now().Unix()
+		pd.LastRefreshTime = utils.Now().Unix()
 		offseTime = 0
 	}
 
 	if pd.LastChallengeTime <= 0 {
-		pd.LastChallengeTime = time.Now().Unix()
+		pd.LastChallengeTime = utils.Now().Unix()
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, utils.Now().Unix(), 0) {
 		pd.ChallengeTime = 0
-		pd.LastChallengeTime = time.Now().Unix()
+		pd.LastChallengeTime = utils.Now().Unix()
 	}
 
 	//获取
@@ -149,7 +149,7 @@ func (a *ActivityArena) OnEvent(key string, ctx *proto_player.Context, params Ev
 func (a *ActivityArena) RefreshBattlePlayer(ctx *proto_player.Context, params EventParams) {
 	res := &proto_activity.S2CArenaRefreshBattlePlayer{}
 
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId())
+	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
@@ -166,13 +166,13 @@ func (a *ActivityArena) RefreshBattlePlayer(ctx *proto_player.Context, params Ev
 	pd := LoadPd[*model.ArenaOptionPd](a, ctx.Id)
 
 	if pd.RefreshTime >= arenaConf.RefreshTime {
-		if time.Now().Unix() <= pd.RefreshCD {
+		if utils.Now().Unix() <= pd.RefreshCD {
 			res.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 			invoke.Dispatch(a.Module(), ctx.Id, res)
 			return
 		}
 
-		pd.RefreshCD = time.Now().Unix() + int64(arenaConf.RefreshCD)
+		pd.RefreshCD = utils.Now().Unix() + int64(arenaConf.RefreshCD)
 	} else {
 		pd.RefreshTime += 1
 	}
@@ -432,7 +432,7 @@ func (a *ActivityArena) Battle(ctx *proto_player.Context, req *proto_activity.C2
 		return res, nil
 	}
 
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId())
+	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
@@ -452,12 +452,12 @@ func (a *ActivityArena) Battle(ctx *proto_player.Context, req *proto_activity.C2
 	}
 
 	if pd.LastChallengeTime <= 0 {
-		pd.LastChallengeTime = time.Now().Unix()
+		pd.LastChallengeTime = utils.Now().Unix()
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, utils.Now().Unix(), 0) {
 		pd.ChallengeTime = 0
-		pd.LastChallengeTime = time.Now().Unix()
+		pd.LastChallengeTime = utils.Now().Unix()
 	}
 
 	//判断次数

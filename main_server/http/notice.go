@@ -2,11 +2,11 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
-	"time"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_public"
 )
 
@@ -47,8 +47,8 @@ func (m *HttpModule) GMSendHorse(c *gin.Context) {
 		Channel:    Info.Channel,
 		ServerId:   Info.ServerId,
 		Content:    Info.Content,
-		ExpireTime: time.Now().Unix() + int64(Info.VaildTime),
-		EffectTime: time.Now().Unix(),
+		ExpireTime: utils.Now().Unix() + int64(Info.VaildTime),
+		EffectTime: utils.Now().Unix(),
 		Scene:      Info.Scene,
 		Priority:   Info.Priority,
 		Type:       define.HorseType_System,

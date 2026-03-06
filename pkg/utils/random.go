@@ -116,6 +116,17 @@ func WeightIndex[T ~int | ~int32 | ~int64](arr []T) int {
 	return 0
 }
 
+// SelectByOdds 按概率 upNum/downNum 判定是否命中（几分之几的几率）
+func SelectByOdds(upNum, downNum int32) bool {
+	if downNum < 1 || upNum < 1 {
+		return false
+	}
+	if upNum >= downNum {
+		return true
+	}
+	return (1 + int32(rnd.Float64()*float64(downNum))) <= upNum
+}
+
 // RandInt 生成指定区间随机数
 func RandInt[T ~int | ~int32 | ~int64](min, max T) T {
 	if min >= max {

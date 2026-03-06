@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 	"xfx/core/common"
+	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -64,7 +65,7 @@ func (a *ActivityDailyAccRecharge) Router(ctx *proto_player.Context, req proto.M
 }
 
 func (a *ActivityDailyAccRecharge) GetAward(ctx *proto_player.Context, req *proto_activity.C2SActivityAward) ([]conf.ItemE, error) {
-	consumeConfs, ok := GetTypedConf[conf.ActDailyAccumulateRecharge](a.GetCfgId())
+	consumeConfs, ok := GetTypedConf[conf.ActDailyAccumulateRecharge](a.GetCfgId(), config.ActDailyAccRecharge.All())
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		return nil, errors.New("get activity typed config error")

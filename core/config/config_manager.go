@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"xfx/core/config/conf"
 	"xfx/pkg/log"
 
 	"github.com/fsnotify/fsnotify"
@@ -30,7 +29,6 @@ type ParseFunc func(data map[string]any, dest map[string]any) error
 
 func NewManager(filePath string, reloadOnChange bool, parser ParseFunc) *Manager {
 	s := &Manager{
-		//AllJson:       make(map[string]any),
 		filePath:       filePath,
 		reloadOnChange: reloadOnChange,
 		parserFunc:     parser,
@@ -118,10 +116,6 @@ func (m *Manager) getAll() map[string]any {
 	return data.(map[string]any)
 }
 
-func (m *Manager) AllJson() map[string]any {
-	return m.getAll()
-}
-
 func (m *Manager) loadFile() map[string]any {
 	files, err := os.ReadDir(m.filePath)
 	if err != nil {
@@ -154,8 +148,4 @@ func (m *Manager) loadFile() map[string]any {
 		}
 	}
 	return jsonData
-}
-
-func (m *Manager) GetGlobal() conf.Global {
-	return m.getAll()["Global"].(conf.Global)
 }

@@ -1,5 +1,5 @@
-// invoke_gen 根据 main_server/logic 下各 module 的 Register 调用，生成 main_server/invoke 的强类型 client 代码。
-// 用法: 在项目根目录执行 go run ./main_server/tools/invoke_gen
+// invoke_gen 根据指定输入目录下各 module 的 Register 调用，生成输出目录的强类型 client 代码。
+// 用法: 在项目根目录执行 go run ./main_server/tools/invoke_gen -input main_server/logic -output main_server/invoke
 package main
 
 import (
@@ -16,6 +16,9 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+var inputDir = "../logic"
+var outputDir = "../invoke"
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "invoke_gen: %v\n", err)
@@ -23,13 +26,76 @@ func main() {
 	}
 }
 
+// exeDir 返回当前可执行文件所在目录（便于 exe 放到 run 等目录时，相对路径仍以 exe 所在目录为基准）。
+func exeDir() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(exe), nil
+}
+
+// findGoModRoot 从 dir 开始向上查找包含 go.mod 的目录（项目根）。
+func findGoModRoot(dir string) (string, error) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(abs, "go.mod")); err == nil {
+			return abs, nil
+		}
+		parent := filepath.Dir(abs)
+		if parent == abs {
+			return "", fmt.Errorf("no go.mod found from %s upward", dir)
+		}
+		abs = parent
+	}
+}
+
 func run() error {
-	// 加载 logic 下所有包（含子包如 activity、common、login）
+	exe, err := exeDir()
+	if err != nil {
+		return fmt.Errorf("exe dir: %w", err)
+	}
+	projectRoot, err := findGoModRoot(exe)
+	if err != nil {
+		return err
+	}
+	// 相对路径以 exe 所在目录为基准，这样 exe 放到 main_server/run 时 ../logic、../invoke 仍正确
+	absInput := filepath.Join(exe, inputDir)
+	absOutput := filepath.Join(exe, outputDir)
+	absInput = filepath.Clean(absInput)
+	absOutput = filepath.Clean(absOutput)
+
+	// 相对于项目根的输入路径，用于 packages 和 import prefix
+	relInput, err := filepath.Rel(projectRoot, absInput)
+	if err != nil {
+		return fmt.Errorf("input dir not under project root: %w", err)
+	}
+	relInputSlash := filepath.ToSlash(relInput)
+	if relInputSlash == "." {
+		relInputSlash = ""
+	}
+	loadPattern := "./" + relInputSlash + "/..."
+	if loadPattern == "./..." {
+		loadPattern = "./..."
+	}
+
+	modulePath, err := getModulePath(projectRoot)
+	if err != nil {
+		return fmt.Errorf("get module path: %w", err)
+	}
+	inputPrefix := modulePath + "/"
+	if relInputSlash != "" {
+		inputPrefix += relInputSlash + "/"
+	}
+
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
-		Dir:  ".",
+		Dir:  projectRoot,
 	}
-	pkgs, err := packages.Load(cfg, "./main_server/logic/...")
+	pkgs, err := packages.Load(cfg, loadPattern)
 	if err != nil {
 		return err
 	}
@@ -41,21 +107,24 @@ func run() error {
 		}
 	}
 
-	outDir := filepath.Join("main_server", "invoke")
+	outDir := absOutput
+	pkgName := filepath.Base(outDir)
+	if pkgName == "." || pkgName == "" {
+		pkgName = "invoke"
+	}
 	generated := 0
 
 	for _, pkg := range pkgs {
 		if pkg.Name == "" || len(pkg.GoFiles) == 0 {
 			continue
 		}
-		// 只处理直接子包：activity, common, login（即包含 Register 且含 GetType 的包）
 		pkgPath := pkg.PkgPath
-		if !strings.HasPrefix(pkgPath, "xfx/main_server/logic/") {
+		if !strings.HasPrefix(pkgPath, inputPrefix) {
 			continue
 		}
-		rel := strings.TrimPrefix(pkgPath, "xfx/main_server/logic/")
+		rel := strings.TrimPrefix(pkgPath, inputPrefix)
 		if strings.Contains(rel, "/") {
-			continue // 跳过 logic/activity/impl 等子包
+			continue // 跳过子包，如 logic/activity/impl
 		}
 
 		moduleType, methods, importPaths, err := extractRegisterMethods(pkg)
@@ -71,7 +140,7 @@ func run() error {
 		constructorName := clientName + "Client"
 		outPath := filepath.Join(outDir, rel+".go")
 
-		code, err := generateClient(moduleType, structName, constructorName, methods, importPaths)
+		code, err := generateClient(pkgName, moduleType, structName, constructorName, methods, importPaths)
 		if err != nil {
 			return fmt.Errorf("generate %s: %w", rel, err)
 		}
@@ -89,6 +158,26 @@ func run() error {
 	return nil
 }
 
+// getModulePath 从 projectRoot 的 go.mod 读取 module 路径。
+func getModulePath(projectRoot string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(projectRoot, "go.mod"))
+	if err != nil {
+		return "", err
+	}
+	const prefix = "module "
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, prefix) {
+			name := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+			if idx := strings.IndexAny(name, " \t"); idx >= 0 {
+				name = name[:idx]
+			}
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("go.mod missing module directive")
+}
+
 func toClientName(pkgName string) string {
 	if pkgName == "" {
 		return ""
@@ -98,9 +187,9 @@ func toClientName(pkgName string) string {
 
 // methodSpec 表示一个要生成的 client 方法
 type methodSpec struct {
-	RegisterName string   // 传给 Invoke 的 fn 名，如 "GetActivityStatus"
-	ClientName   string   // 生成的 Go 方法名（PascalCase），如 "GetActivityStatus"
-	Params       []param  // 参数（不含 receiver）
+	RegisterName string  // 传给 Invoke 的 fn 名，如 "GetActivityStatus"
+	ClientName   string  // 生成的 Go 方法名（PascalCase），如 "GetActivityStatus"
+	Params       []param // 参数（不含 receiver）
 	Returns      []returnSpec
 	ReturnsError bool
 }
@@ -189,8 +278,8 @@ func extractRegisterMethods(pkg *packages.Package) (moduleType string, methods [
 				}
 			}
 			methods = append(methods, spec)
-	return true
-	})
+			return true
+		})
 	}
 
 	return moduleType, methods, importPaths, nil
@@ -248,16 +337,35 @@ func toPascalCase(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-func generateClient(moduleType, structName, constructorName string, methods []methodSpec, importPaths map[string]string) ([]byte, error) {
+func generateClient(outPkgName, moduleType, structName, constructorName string, methods []methodSpec, importPaths map[string]string) ([]byte, error) {
 	imports := make(map[string]string)
 	imports["xfx/core/define"] = "define"
 	for path, name := range importPaths {
 		imports[path] = name
 	}
+	// 若方法签名中出现 proto.XXX（如 proto.Message）而 collectPackages 未收集到（接口类型多为 *types.Interface），则补上 proto 包
+	for _, m := range methods {
+		for _, p := range m.Params {
+			if strings.HasPrefix(p.Type, "proto.") {
+				imports["github.com/golang/protobuf/proto"] = "proto"
+				break
+			}
+		}
+		for _, r := range m.Returns {
+			if strings.HasPrefix(r.Type, "proto.") {
+				imports["github.com/golang/protobuf/proto"] = "proto"
+				break
+			}
+		}
+	}
+	// 生成代码中只使用 github.com/golang/protobuf/proto，不使用 gogo 版本
+	delete(imports, "github.com/gogo/protobuf/proto")
+	// 生成代码中会使用 log 打印 Invoke/As 错误
+	imports["xfx/pkg/log"] = "log"
 
 	var buf bytes.Buffer
 	buf.WriteString("// Code generated by main_server/tools/invoke_gen. DO NOT EDIT.\n\n")
-	buf.WriteString("package invoke\n\n")
+	buf.WriteString("package " + outPkgName + "\n\n")
 	buf.WriteString("import (\n")
 	sortedPaths := make([]string, 0, len(imports))
 	for path := range imports {
@@ -325,6 +433,7 @@ func writeMethod(buf *bytes.Buffer, structName string, m methodSpec) error {
 	}
 	buf.WriteString(fmt.Sprintf("\tresult, err := c.invoke.Invoke(c.Type, %q%s)\n", m.RegisterName, invokeArgs))
 	buf.WriteString("\tif err != nil {\n")
+	buf.WriteString(fmt.Sprintf("\t\tlog.Error(\"invoke failed: type=%%s method=%%s err=%%v\", c.Type, %q, err)\n", m.RegisterName))
 	// err != nil 时：返回零值，其中 error 位直接返回 err
 	if len(m.Returns) == 0 {
 		buf.WriteString("\t\treturn\n")
@@ -354,7 +463,7 @@ func writeMethod(buf *bytes.Buffer, structName string, m methodSpec) error {
 	if len(m.Returns) == 1 && m.Returns[0].Type == "error" {
 		buf.WriteString("\tif result == nil {\n\t\treturn nil\n\t}\n")
 		buf.WriteString("\tv, err2 := As[error](result)\n")
-		buf.WriteString("\tif err2 != nil {\n\t\treturn err2\n\t}\n")
+		buf.WriteString(fmt.Sprintf("\tif err2 != nil {\n\t\tlog.Error(\"invoke result type assert failed: type=%%s method=%%s err=%%v\", c.Type, %q, err2)\n\t\treturn err2\n\t}\n", m.RegisterName))
 		buf.WriteString("\treturn v\n}\n\n")
 		return nil
 	}
@@ -374,12 +483,11 @@ func writeMethod(buf *bytes.Buffer, structName string, m methodSpec) error {
 	mainRet := m.Returns[0].Type
 	if m.ReturnsError {
 		buf.WriteString(fmt.Sprintf("\tv, err2 := As[%s](result)\n", mainRet))
-		buf.WriteString("\tif err2 != nil {\n")
-		buf.WriteString(fmt.Sprintf("\t\treturn %s, err2\n", zeroValue(mainRet)))
-		buf.WriteString("\t}\n")
+		buf.WriteString(fmt.Sprintf("\tif err2 != nil {\n\t\tlog.Error(\"invoke result type assert failed: type=%%s method=%%s err=%%v\", c.Type, %q, err2)\n\t\treturn %s, err2\n\t}\n", m.RegisterName, zeroValue(mainRet)))
 		buf.WriteString("\treturn v, nil\n}\n\n")
 	} else {
-		buf.WriteString(fmt.Sprintf("\tv, _ := As[%s](result)\n", mainRet))
+		buf.WriteString(fmt.Sprintf("\tv, err2 := As[%s](result)\n", mainRet))
+		buf.WriteString(fmt.Sprintf("\tif err2 != nil {\n\t\tlog.Error(\"invoke result type assert failed: type=%%s method=%%s err=%%v\", c.Type, %q, err2)\n\t\treturn %s\n\t}\n", m.RegisterName, zeroValue(mainRet)))
 		buf.WriteString("\treturn v\n}\n\n")
 	}
 	return nil
@@ -396,6 +504,24 @@ func zeroValue(typ string) string {
 	case strings.Contains(typ, "int"):
 		return "0"
 	default:
+		// 具名类型：指针/接口别名用 nil，枚举用 0，struct 用 T{}
+		if idx := strings.LastIndex(typ, "."); idx >= 0 {
+			typeName := typ[idx+1:]
+			// 指针类型别名（如 agent.PID -> *actor.PID）零值为 nil
+			if typeName == "PID" || typeName == "Context" {
+				return "nil"
+			}
+			// 枚举/整型风格：含 CODE 或后缀 Id/ID（且非 PID）用 0
+			if strings.Contains(typeName, "CODE") ||
+				strings.HasSuffix(typeName, "Id") || (strings.HasSuffix(typeName, "ID") && typeName != "PID") {
+				return "0"
+			}
+			// 全大写且非 PID：多为枚举，用 0
+			if typeName != "PID" && typeName == strings.ToUpper(typeName) {
+				return "0"
+			}
+			return typ + "{}"
+		}
 		return "nil"
 	}
 }

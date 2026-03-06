@@ -7,6 +7,7 @@ import (
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
+	"xfx/main_server/player/task"
 	"xfx/pkg/agent"
 	"xfx/pkg/log"
 	Proto_Player "xfx/proto/proto_player"
@@ -40,6 +41,12 @@ func Login(ctx global.IPlayer, pl *model.Player) {
 	player.HeroId = int32(pl.GetProp(define.PlayerPropHeroId))
 	resp.Player = player
 	log.Debug("登录回调：%v", resp)
+
+	//任务
+	task.Dispatch(ctx, pl, define.TaskLoginXTimes, 1, 0, true)
+	event.DoEvent(define.EventTypePlayerOnline, map[string]any{
+		"player": pl.ToContext(),
+	})
 
 	ctx.Send(resp)
 }

@@ -164,7 +164,7 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 		log.Error("load activity player data unmarshal error:%v,%v,%v", err, actId, playerId)
 	}
 
-	Cache.SetClean(key, ret)
+	Cache.Set(key, ret)
 	return ret
 }
 

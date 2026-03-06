@@ -1,13 +1,14 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
-	"time"
 	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 邮件
@@ -30,7 +31,7 @@ func (m *HttpModule) GMSendMail(c *gin.Context) {
 	}
 	//判断类型
 	//延时
-	if Info.EffectTime.Unix() > time.Now().Unix() {
+	if Info.EffectTime.Unix() > utils.Now().Unix() {
 		//取ID
 		id, _ := db.CommonEngine.GetDelayMailId()
 
@@ -46,4 +47,5 @@ func (m *HttpModule) GMSendMail(c *gin.Context) {
 			return
 		}
 	}
+	m.httpRetGame(c, SUCCESS, "success")
 }

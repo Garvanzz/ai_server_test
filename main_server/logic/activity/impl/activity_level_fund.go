@@ -3,6 +3,7 @@ package impl
 import (
 	"errors"
 	"xfx/core/common"
+	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -80,7 +81,7 @@ func (a *ActivityLevelFund) GetAward(ctx *proto_player.Context, req *proto_activ
 		return nil, errors.New("get activity typed error")
 	}
 
-	mainLineConfs, ok := GetTypedConf[conf.ActLevelFund](a.GetCfgId())
+	mainLineConfs, ok := GetTypedConf[conf.ActLevelFund](a.GetCfgId(), config.ActLevelFund.All())
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		return nil, errors.New("get activity typed config error")

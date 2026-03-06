@@ -3,24 +3,24 @@ package impl
 import (
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
-	"time"
 	"xfx/core/config"
-	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_player"
 	"xfx/proto/proto_rank"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // updateActivityRank 更新排名
 func updateActivityRank(a BaseInfo, ctx *proto_player.Context, Id int32, score int32, rankType int) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(score) + uTime
 
 	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
@@ -152,7 +152,7 @@ func sendRankReward(a BaseInfo, rankType int, ignoreList []int64) {
 		ignore[id] = struct{}{}
 	}
 
-	rankAwardConfs := config.CfgMgr.AllJson()["RankAward"].(map[int64]conf2.RankAward)
+	rankAwardConfs := config.RankAward.All()
 	for _, rankAwardConf := range rankAwardConfs {
 		if int(rankAwardConf.Type) == rankType {
 

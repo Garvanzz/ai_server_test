@@ -38,6 +38,26 @@ type SysMessage struct {
 	Content interface{}
 }
 
+// SysKick 踢线指令（作为 SysMessage.Content）
+type SysKick struct {
+	Reason string
+}
+
+// SysRefreshActivity 刷新活动指令（作为 SysMessage.Content）
+type SysRefreshActivity struct{}
+
+// SysGrantItemEntry 发放道具条目（与 conf.ItemE 一致，避免 messages 依赖 conf）
+type SysGrantItemEntry struct {
+	ItemId   int32
+	ItemType int32
+	ItemNum  int32
+}
+
+// SysGrantItems GM 发放道具指令（作为 SysMessage.Content）
+type SysGrantItems struct {
+	Items []SysGrantItemEntry
+}
+
 type DispatchMessage struct {
 	Content interface{}
 }

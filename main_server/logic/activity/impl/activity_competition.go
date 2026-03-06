@@ -3,11 +3,13 @@ package impl
 import (
 	"time"
 	"xfx/core/common"
+	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 	Proto_Public "xfx/proto/proto_public"
@@ -35,7 +37,7 @@ func (a *ActivityTheCompetition) Format(ctx *proto_player.Context) proto.Message
 	log.Debug("加载决斗数据:%s", pd)
 
 	isCanStake := false
-	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId())
+	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId(), config.ActTheCompetition.All())
 	if !ok {
 		isCanStake = false
 	}
@@ -51,7 +53,7 @@ func (a *ActivityTheCompetition) Format(ctx *proto_player.Context) proto.Message
 		if err != nil {
 			isCanStake = false
 		} else {
-			if time.Now().Unix() >= openTime.Unix() {
+			if utils.Now().Unix() >= openTime.Unix() {
 				isCanStake = true
 			}
 		}
@@ -83,8 +85,8 @@ func (a *ActivityTheCompetition) OnEvent(key string, ctx *proto_player.Context, 
 func (a *ActivityTheCompetition) chooseGroupId(ctx *proto_player.Context, params EventParams) {
 	res := proto_activity.S2CTheCompetitionChooseGroup{}
 
-	log.Debug("aaa:%v,%v", time.Now().Unix(), a.GetCloseTime())
-	if time.Now().Unix() >= a.GetCloseTime() {
+	log.Debug("aaa:%v,%v", utils.Now().Unix(), a.GetCloseTime())
+	if utils.Now().Unix() >= a.GetCloseTime() {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NOOPENTIME
 		invoke.Dispatch(a.Module(), ctx.Id, res)
 		return
@@ -105,7 +107,7 @@ func (a *ActivityTheCompetition) chooseGroupId(ctx *proto_player.Context, params
 	}
 
 	//判断角色 是不是阵容上的
-	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId())
+	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId(), config.ActTheCompetition.All())
 	if !ok {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NoConfig
 		invoke.Dispatch(a.Module(), ctx.Id, res)
@@ -147,8 +149,8 @@ func (a *ActivityTheCompetition) chooseGroupId(ctx *proto_player.Context, params
 // 押注
 func (a *ActivityTheCompetition) stakeCount(ctx *proto_player.Context, params EventParams) {
 	res := proto_activity.S2CTheCompetitionStake{}
-	log.Debug("bbb:%v,%v", time.Now().Unix(), a.GetCloseTime())
-	if time.Now().Unix() >= a.GetCloseTime() {
+	log.Debug("bbb:%v,%v", utils.Now().Unix(), a.GetCloseTime())
+	if utils.Now().Unix() >= a.GetCloseTime() {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NOOPENTIME
 		invoke.Dispatch(a.Module(), ctx.Id, res)
 		return
@@ -169,7 +171,7 @@ func (a *ActivityTheCompetition) stakeCount(ctx *proto_player.Context, params Ev
 	}
 
 	//判断角色 是不是阵营上的
-	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId())
+	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId(), config.ActTheCompetition.All())
 	if !ok {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NoConfig
 		invoke.Dispatch(a.Module(), ctx.Id, res)
@@ -202,8 +204,8 @@ func (a *ActivityTheCompetition) stakeCount(ctx *proto_player.Context, params Ev
 		invoke.Dispatch(a.Module(), ctx.Id, res)
 		return
 	}
-	log.Debug("bbbccc:%v,%v", time.Now().Unix(), openTime.Unix())
-	if time.Now().Unix() < openTime.Unix() {
+	log.Debug("bbbccc:%v,%v", utils.Now().Unix(), openTime.Unix())
+	if utils.Now().Unix() < openTime.Unix() {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NOOPENTIME
 		invoke.Dispatch(a.Module(), ctx.Id, res)
 		return

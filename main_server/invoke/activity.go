@@ -3,8 +3,9 @@
 package invoke
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"xfx/core/define"
+	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 )
@@ -21,15 +22,10 @@ func ActivityClient(invoker Invoker) ActivityModClient {
 	}
 }
 
-//m.Register("GetActivityStatus", m.OnGetActivityStatus)
-//m.Register("GetActivityStatusByType", m.OnGetActivityStatusByType)
-//m.Register("GetActivityData", m.OnGetActivityData)
-//m.Register("GetActivityDataList", m.OnGetActivityDataList)
-//m.Register("OnRouterMsg", m.OnRouterMsg)
-
 func (c ActivityModClient) GetActivityStatus() ([]*proto_activity.ActivityStatusInfo, error) {
 	result, err := c.invoke.Invoke(c.Type, "GetActivityStatus")
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityStatus", err)
 		return nil, err
 	}
 
@@ -39,6 +35,7 @@ func (c ActivityModClient) GetActivityStatus() ([]*proto_activity.ActivityStatus
 
 	v, err2 := As[[]*proto_activity.ActivityStatusInfo](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityStatus", err2)
 		return nil, err2
 	}
 	return v, nil
@@ -47,6 +44,7 @@ func (c ActivityModClient) GetActivityStatus() ([]*proto_activity.ActivityStatus
 func (c ActivityModClient) GetActivityStatusByType(typ string) (*proto_activity.ActivityStatusInfo, error) {
 	result, err := c.invoke.Invoke(c.Type, "GetActivityStatusByType", typ)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityStatusByType", err)
 		return nil, err
 	}
 
@@ -56,6 +54,7 @@ func (c ActivityModClient) GetActivityStatusByType(typ string) (*proto_activity.
 
 	v, err2 := As[*proto_activity.ActivityStatusInfo](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityStatusByType", err2)
 		return nil, err2
 	}
 	return v, nil
@@ -64,6 +63,7 @@ func (c ActivityModClient) GetActivityStatusByType(typ string) (*proto_activity.
 func (c ActivityModClient) GetActivityData(ctx *proto_player.Context, id int64) (*proto_activity.ActivityData, error) {
 	result, err := c.invoke.Invoke(c.Type, "GetActivityData", ctx, id)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityData", err)
 		return nil, err
 	}
 
@@ -73,6 +73,7 @@ func (c ActivityModClient) GetActivityData(ctx *proto_player.Context, id int64) 
 
 	v, err2 := As[*proto_activity.ActivityData](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityData", err2)
 		return nil, err2
 	}
 	return v, nil
@@ -81,6 +82,7 @@ func (c ActivityModClient) GetActivityData(ctx *proto_player.Context, id int64) 
 func (c ActivityModClient) GetActivityDataList(ctx *proto_player.Context, ids []int64) ([]*proto_activity.ActivityData) {
 	result, err := c.invoke.Invoke(c.Type, "GetActivityDataList", ctx, ids)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityDataList", err)
 		return nil
 	}
 
@@ -88,13 +90,18 @@ func (c ActivityModClient) GetActivityDataList(ctx *proto_player.Context, ids []
 		return nil
 	}
 
-	v, _ := As[[]*proto_activity.ActivityData](result)
+	v, err2 := As[[]*proto_activity.ActivityData](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityDataList", err2)
+		return nil
+	}
 	return v
 }
 
 func (c ActivityModClient) OnRouterMsg(ctx *proto_player.Context, actId int64, req proto.Message) (any, error) {
 	result, err := c.invoke.Invoke(c.Type, "OnRouterMsg", ctx, actId, req)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "OnRouterMsg", err)
 		return nil, err
 	}
 
@@ -104,6 +111,7 @@ func (c ActivityModClient) OnRouterMsg(ctx *proto_player.Context, actId int64, r
 
 	v, err2 := As[any](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "OnRouterMsg", err2)
 		return nil, err2
 	}
 	return v, nil

@@ -5,6 +5,7 @@ package invoke
 import (
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/pkg/log"
 )
 
 type CommonModClient struct {
@@ -22,6 +23,7 @@ func CommonClient(invoker Invoker) CommonModClient {
 func (c CommonModClient) ReleaseRobot(robotId int32) {
 	result, err := c.invoke.Invoke(c.Type, "releaseRobot", robotId)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "releaseRobot", err)
 		return
 	}
 
@@ -32,6 +34,7 @@ func (c CommonModClient) ReleaseRobot(robotId int32) {
 func (c CommonModClient) MatchRobot(mode int, startPower int64, endPower int64) (*model.Robot, error) {
 	result, err := c.invoke.Invoke(c.Type, "matchRobot", mode, startPower, endPower)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "matchRobot", err)
 		return nil, err
 	}
 
@@ -41,6 +44,7 @@ func (c CommonModClient) MatchRobot(mode int, startPower int64, endPower int64) 
 
 	v, err2 := As[*model.Robot](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "matchRobot", err2)
 		return nil, err2
 	}
 	return v, nil
@@ -49,6 +53,7 @@ func (c CommonModClient) MatchRobot(mode int, startPower int64, endPower int64) 
 func (c CommonModClient) MatchRobots(mode int, startPower int64, endPower int64, count int32) ([]*model.Robot, error) {
 	result, err := c.invoke.Invoke(c.Type, "matchRobots", mode, startPower, endPower, count)
 	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "matchRobots", err)
 		return nil, err
 	}
 
@@ -58,6 +63,7 @@ func (c CommonModClient) MatchRobots(mode int, startPower int64, endPower int64,
 
 	v, err2 := As[[]*model.Robot](result)
 	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "matchRobots", err2)
 		return nil, err2
 	}
 	return v, nil

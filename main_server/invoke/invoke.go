@@ -10,7 +10,8 @@ type Invoker interface {
 	Invoke(mod, fn string, args ...any) (any, error)
 }
 
-// DispatchSystemMessage 转发系统消息给玩家
+// DispatchSystemMessage 模块 → 玩家系统指令。玩家进程按 Content 类型处理（踢线、刷新活动等）。
+// 示例：invoke.DispatchSystemMessage(m, playerId, &messages.SysKick{Reason: "重复登录"})
 func DispatchSystemMessage(m Invoker, playerId int64, msg any) {
 	LoginClient(m).CastAgent(playerId, &messages.SysMessage{
 		Content: msg,

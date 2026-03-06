@@ -1,9 +1,9 @@
 package impl
 
 import (
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
+	"xfx/pkg/utils"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
@@ -43,7 +43,7 @@ func (a *ActivityNormalMonthCard) OnEvent(key string, ctx *proto_player.Context,
 			return
 		}
 
-		confs := config.CfgMgr.AllJson()["MonthCard"].(map[int64]conf.MonthCard)
+		confs := config.MonthCard.All()
 		var conf conf.MonthCard
 		for _, v := range confs {
 			if v.Type == define.MonthCard_Month {
@@ -58,7 +58,7 @@ func (a *ActivityNormalMonthCard) OnEvent(key string, ctx *proto_player.Context,
 		pd := LoadPd[*model.MonthCardPd](a, ctx.Id)
 		pd.Day += conf.Day
 		pd.Count += 1
-		pd.LastTime = time.Now().Unix()
+		pd.LastTime = utils.Now().Unix()
 
 		// 推送活动数据
 		a.PushActivityData(ctx.Id, a.Format(ctx))

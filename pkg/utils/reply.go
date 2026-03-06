@@ -1,3 +1,4 @@
+// Redis/redigo 风格 reply 转基础类型（Int64/Int32/String/Bool 等）。当前项目内未使用，保留供 Redis 客户端等场景。
 package utils
 
 import (

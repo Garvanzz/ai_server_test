@@ -1,3 +1,4 @@
+// 时间戳、自然日/周/月判断。常用：CheckIsSameDayBySec, DaysDiff, GetTodayEndMinUnix, GetTodayEndUnixInHour, GetTodayUnixInHour。
 package utils
 
 import (
@@ -6,7 +7,7 @@ import (
 )
 
 func GetTodayEndUnix() int64 {
-	now := time.Now()
+	now := Now()
 	year, month, day := now.Date()
 	today_end := time.Date(year, month, day, 23, 59, 59, 0, time.Local).Unix()
 	return today_end
@@ -14,7 +15,7 @@ func GetTodayEndUnix() int64 {
 
 // 获取当天最后一分钟
 func GetTodayEndMinUnix() int64 {
-	now := time.Now()
+	now := Now()
 	year, month, day := now.Date()
 	today_end := time.Date(year, month, day, 23, 59, 0, 0, time.Local).Unix()
 	return today_end
@@ -39,7 +40,8 @@ func GetTodayEndUnixInHour(now *time.Time, hour int) (int64, error) {
 	}
 
 	if now == nil {
-		*now = time.Now()
+		t := Now()
+		now = &t
 	}
 
 	sec := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.Local).Unix()
@@ -59,7 +61,8 @@ func GetTodayUnixInHour(now *time.Time, hour int) (int64, error) {
 	}
 
 	if now == nil {
-		*now = time.Now()
+		t := Now()
+		now = &t
 	}
 
 	sec := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.Local).Unix()
@@ -96,17 +99,17 @@ func TimestampTodayMillisecond() int64 {
 
 // 获取当前年
 func Year() int {
-	return time.Now().Year()
+	return Now().Year()
 }
 
 // 获取当前月
 func Month() time.Month {
-	return time.Now().Month()
+	return Now().Month()
 }
 
 // 获取当前天
 func Day() int {
-	return time.Now().Day()
+	return Now().Day()
 }
 
 // 计算2个时间之间的自然天数之差
@@ -205,14 +208,7 @@ func IsSameMonthBySec(time1 int64, time2 int64) bool {
 	return IsSameMonth(t1, t2)
 }
 
+// GetTimeNowFormat 返回当前时间的 "2006-01-02 15:04:05" 格式字符串
 func GetTimeNowFormat() string {
-	// 获取当前时间
-	now := time.Now()
-
-	// 构造当天的 00:00:00
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, now.Location())
-
-	// 格式化为 "2006-01-02 15:04:05"
-	formatted := midnight.Format("2006-01-02 15:04:05")
-	return formatted
+	return Now().Format("2006-01-02 15:04:05")
 }

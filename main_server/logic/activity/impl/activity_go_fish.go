@@ -27,10 +27,10 @@ func (a *ActivityGoFish) OnInit() {}
 func (a *ActivityGoFish) OnStart() {
 	// 初始化鱼池
 	a.InitPool()
-	a.data.PoolRefreshTime = time.Now().Unix()
+	a.data.PoolRefreshTime = utils.Now().Unix()
 
 	//这里有点没设计好，先这样吧
-	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.ActGoFish.All()
 	for _, v := range activityConfs {
 		a.data.StartTime = v.StartTime
 		a.data.EndTime = v.EndTime
@@ -44,7 +44,7 @@ func (a *ActivityGoFish) Format(ctx *proto_player.Context) proto.Message {
 
 	//判断签到时间
 	if pd.SignDay >= 7 {
-		if !utils.CheckIsSameDayBySec(pd.LastSignTime, time.Now().Unix(), 0) {
+		if !utils.CheckIsSameDayBySec(pd.LastSignTime, utils.Now().Unix(), 0) {
 			pd.SignDay = 0
 		}
 	}
@@ -61,12 +61,12 @@ func (a *ActivityGoFish) Format(ctx *proto_player.Context) proto.Message {
 		}
 	}
 
-	offseTime := a.data.PoolRefreshTime + 3600 - time.Now().Unix()
+	offseTime := a.data.PoolRefreshTime + 3600 - utils.Now().Unix()
 	if offseTime <= 0 {
 		offseTime = 0
 	}
 	isTodaySign := true
-	if !utils.CheckIsSameDayBySec(pd.LastSignTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastSignTime, utils.Now().Unix(), 0) {
 		isTodaySign = false
 	}
 	return &proto_activity.GoFish{
@@ -89,7 +89,7 @@ func (a *ActivityGoFish) OnEvent(key string, ctx *proto_player.Context, params E
 
 // 初始鱼池
 func (a *ActivityGoFish) InitPool() {
-	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.ActGoFish.All()
 	a.data.Pool = make(map[int32]map[int32]int32)
 	for _, v := range activityConfs {
 		if _, ok := a.data.Pool[v.Type]; !ok {
@@ -116,7 +116,7 @@ func (a *ActivityGoFish) Update(now time.Time) {
 	}
 
 	if a.data.EndTime > 0 {
-		t1 := time.Unix(time.Now().Unix(), int64(0))
+		t1 := time.Unix(utils.Now().Unix(), int64(0))
 		time, _ := utils.GetTodayEndUnixInHour(&t1, int(a.data.EndTime))
 
 		//结束的时候要补发排行榜的邮件
@@ -131,7 +131,7 @@ func (a *ActivityGoFish) Update(now time.Time) {
 	}
 
 	if a.data.StartTime > 0 {
-		t1 := time.Unix(time.Now().Unix(), int64(0))
+		t1 := time.Unix(utils.Now().Unix(), int64(0))
 		time, _ := utils.GetTodayEndUnixInHour(&t1, int(a.data.StartTime))
 
 		if now.Unix() <= time && a.data.FireRankAward {
@@ -179,7 +179,7 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 
 	//钓鱼
 	//判断成功率
-	activityConfs := config.CfgMgr.AllJson()["ActGoFish"].(map[int64]conf.ActGoFish)
+	activityConfs := config.ActGoFish.All()
 	var gofishConf conf.ActGoFish
 	for _, v := range activityConfs {
 		if v.Type == req.PoolType {
@@ -188,7 +188,7 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 		}
 	}
 
-	addRate := config.CfgMgr.GetGlobal().GofishBasicRate
+	addRate := config.Global.Get().GofishBasicRate
 	addRate += gofishConf.PointAddRare * req.PointNum
 	isSuc := false
 	//必成功
@@ -212,9 +212,9 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 
 	var weight []int32
 	if req.CostId == define.ItemIdFishNormal {
-		weight = config.CfgMgr.GetGlobal().GofishWeightNormal
+		weight = config.Global.Get().GofishWeightNormal
 	} else if req.CostId == define.ItemIdFishAdvance {
-		weight = config.CfgMgr.GetGlobal().GofishWeightAdvance
+		weight = config.Global.Get().GofishWeightAdvance
 	}
 	log.Info("weight:%v", weight)
 
@@ -306,7 +306,7 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 
 	for _, v := range ids {
 		//钓到鱼也要增加经验值
-		fishConf := config.CfgMgr.AllJson()["Fish"].(map[int64]conf.Fish)[int64(v)]
+		fishConf := config.Fish.All()[int64(v)]
 		pd.Exp += fishConf.Exp
 
 		if _, ok := pd.Fish[v]; !ok {
@@ -323,10 +323,10 @@ func (a *ActivityGoFish) GoFish(ctx *proto_player.Context, req *proto_activity.C
 	a.data.Pool[req.PoolType] = pool
 
 	//判断是不是在赛事内
-	t1 := time.Unix(time.Now().Unix(), int64(0))
+	t1 := time.Unix(utils.Now().Unix(), int64(0))
 	time1, _ := utils.GetTodayUnixInHour(&t1, int(gofishConf.StartTime))
 	time2, _ := utils.GetTodayUnixInHour(&t1, int(gofishConf.EndTime))
-	if time.Now().Unix() >= time1 && time.Now().Unix() < time2 {
+	if utils.Now().Unix() >= time1 && utils.Now().Unix() < time2 {
 		//进入排行榜
 		updateActivityRank(a, ctx, 0, foundRate*int32(count), define.RankTypeGoFish)
 	}
@@ -353,14 +353,14 @@ func (a *ActivityGoFish) Sign(ctx *proto_player.Context, req *proto_activity.C2S
 	resp := new(model.CommonActivityAwardBack)
 
 	pd := LoadPd[*model.GoFishPd](a, ctx.Id)
-	if utils.CheckIsSameDayBySec(pd.LastSignTime, time.Now().Unix(), 0) {
+	if utils.CheckIsSameDayBySec(pd.LastSignTime, utils.Now().Unix(), 0) {
 		resp.Code = 1
 		return resp, nil
 	}
-	pd.LastSignTime = time.Now().Unix()
+	pd.LastSignTime = utils.Now().Unix()
 	pd.SignDay += 1
 
-	fishSignConf, _ := config.CfgMgr.AllJson()["FishSign"].(map[int64]conf.FishSign)
+	fishSignConf := config.FishSign.All()
 	for _, v := range fishSignConf {
 		if v.Day == pd.SignDay {
 			resp.Award = v.Reward
@@ -379,7 +379,7 @@ func (a *ActivityGoFish) GetAward(ctx *proto_player.Context, req *proto_activity
 	resp := new(model.CommonActivityAwardBack)
 	//判断等级
 	id := int32(0)
-	fishLevelAwardConf, _ := config.CfgMgr.AllJson()["FishLevelAward"].(map[int64]conf.FishLevelAward)
+	fishLevelAwardConf := config.FishLevelAward.All()
 	var lists []conf.FishLevelAward
 	for _, v := range fishLevelAwardConf {
 		lists = append(lists, v)
@@ -431,7 +431,7 @@ func (a *ActivityGoFish) GetAward(ctx *proto_player.Context, req *proto_activity
 }
 
 func getFishConfig(typ int32) conf.Fish {
-	fishConfs := config.CfgMgr.AllJson()["Fish"].(map[int64]conf.Fish)
+	fishConfs := config.Fish.All()
 	for _, v := range fishConfs {
 		if v.Type == typ {
 			return v

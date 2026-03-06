@@ -1,0 +1,63 @@
+# env 配置
+Host = "192.168.2.34"
+ID = 101 # 范围1~1023
+Name = "Lobby"
+Port = 10001
+
+# 服务器配置
+ConfPath = "F:/project/xiuxian/server/core/config/json" # 配置文件路径
+Debug = true # 是否debug模式
+HttpUrl ="0.0.0.0:9099"
+# FPS =  10               # 帧率
+
+# 网关配置
+[Gate]
+Host = "0.0.0.0:8081"
+MaxMessageSize = 4096 # 最大消息包长度
+MessageBufferSize = 1024 # 消息缓冲区大小
+PingPeriod = "0s" # ping超时，单位：秒
+PongWait = "60s" # pong超时, 单位：秒
+WriteWait = "10s" # 写超时，单位：秒
+
+#TCP
+[TcpGate]
+Host = "0.0.0.0:8082"
+MaxMessageSize = 4096 # 最大消息包长度
+MessageBufferSize = 1024 # 消息缓冲区大小
+PingPeriod = "0s" # ping超时，单位：秒
+PongWait = "60s" # pong超时, 单位：秒
+WriteWait = "10s" # 写超时，单位：秒
+
+[Mongo]
+MaxConnIdleTime = "0s"
+MaxPoolSize = 100
+MinPoolSize = 0
+Url = "mongodb://127.0.0.1:27017"
+
+[Redis]
+Hosts = ["127.0.0.1:6200"]
+Password = "Xiao1998"
+PoolSize = 20
+Type = "Normal" # Normal, Cluster, Failover
+
+[Consul]
+Host = "http://127.0.0.1:8500"
+Path = "client"
+ReloadOnChange = true
+
+[Log]
+WriteFile = false
+Path = "./lobby.log"
+MaxSize = 1
+MaxBackups = 5
+MaxAge = 30
+Compress = false
+
+# server list
+#
+[Node]
+[[Node.Lobby]]
+Host = "192.168.2.34"
+ID = 101
+Name = "Lobby1"
+Port = 10001

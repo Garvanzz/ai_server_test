@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"xfx/core/config"
-	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -74,7 +73,7 @@ func GetLineupLiupai(lineupSelf, lineupOther []int32) (bool, int32, int32, int32
 	}
 
 	//判断是不是克制关系
-	LiupaiRestrainConfs := config.CfgMgr.AllJson()["LiupaiRestrain"].(map[int64]conf2.LiupaiRestrain)
+	LiupaiRestrainConfs := config.LiupaiRestrain.All()
 	restrain := false
 	for _, v := range LiupaiRestrainConfs {
 		if v.Job == job && v.Restrain == jobOther {
@@ -114,20 +113,20 @@ func GetLineupLiupai(lineupSelf, lineupOther []int32) (bool, int32, int32, int32
 func getLineUpOtion(lineup []int32) (bool, int32, int32) {
 	liupai := make(map[int32]int32)
 	isLiupai := false
-	conf := config.CfgMgr.AllJson()["Hero"].(map[int64]conf2.Hero)
+	heroAll := config.Hero.All()
 	for _, v := range lineup {
 		if v <= 0 {
 			continue
 		}
 
-		_conf := conf[int64(v)]
+		_conf := heroAll[int64(v)]
 		if _, ok := liupai[_conf.Job]; !ok {
 			liupai[_conf.Job] = 0
 		}
 		liupai[_conf.Job] += 1
 	}
 
-	liupaiConfs := config.CfgMgr.AllJson()["Liupai"].(map[int64]conf2.Liupai)
+	liupaiConfs := config.Liupai.All()
 	Job := int32(0)
 	Num := int32(0)
 	for job, num := range liupai {

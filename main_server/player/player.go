@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 	"xfx/core/config"
-	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -153,7 +152,7 @@ func initPlayerProp(pl *model.Player) {
 func ReqChangePlayerName(ctx global.IPlayer, pl *model.Player, req *proto_player.C2SChangeName) {
 	res := &proto_player.S2CChangeName{}
 
-	conf := config.CfgMgr.GetGlobal().PlayerRename
+	conf := config.Global.Get().PlayerRename
 	costItems := make(map[int32]int32)
 	costItems[conf[0].ItemId] = conf[0].ItemNum
 	if internal.CheckItemsEnough(pl, costItems) == false {
@@ -296,7 +295,7 @@ func ReqTransformJob(ctx global.IPlayer, pl *model.Player, req *proto_player.C2S
 
 	//判定灵玉够不够
 	costItems := make(map[int32]int32)
-	costItems[define.ItemIdBoxLingyu] = config.CfgMgr.GetGlobal().TransformJob
+	costItems[define.ItemIdBoxLingyu] = config.Global.Get().TransformJob
 	if internal.CheckItemsEnough(pl, costItems) == false {
 		res.CODE = proto_player.LOGINERRORCODE_ERROR_ITEMNOENGTH
 		ctx.Send(res)
@@ -304,7 +303,7 @@ func ReqTransformJob(ctx global.IPlayer, pl *model.Player, req *proto_player.C2S
 	}
 
 	//获取职业
-	confs := config.CfgMgr.AllJson()["Hero"].(map[int64]conf.Hero)
+	confs := config.Hero.All()
 	heroId := int32(0)
 	for _, v := range confs {
 		if v.Job == req.Job && v.Type == 1 {

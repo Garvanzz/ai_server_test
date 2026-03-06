@@ -1,27 +1,20 @@
+// Package common 保留对 core 与 main_server 的兼容入口。
+// 通用工具已集中到 xfx/pkg/utils，新代码请直接使用 pkg/utils。
 package common
 
 import (
-	"math/rand"
-	"strconv"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 )
 
-// 获取几分之的几率
+// SelectByOdds 按概率 upNum/downNum 判定是否命中（委托 pkg/utils）
 func SelectByOdds(upNum, downNum int32) bool {
-	if downNum < 1 {
-		return false
-	}
-	if upNum < 1 {
-		return false
-	}
-	if upNum > downNum-1 {
-		return true
-	}
-	return (1 + int32((float64(rand.Int63())/(1<<63))*float64(downNum))) <= upNum
+	return utils.SelectByOdds(upNum, downNum)
 }
 
+// StringToInt64 字符串转 int64，解析失败时打日志并返回 0（业务侧常用语义）
 func StringToInt64(str string) int64 {
-	num, err := strconv.ParseInt(str, 10, 64)
+	num, err := utils.ParseInt64(str)
 	if err != nil {
 		log.Error("字符串转换int64出错：%v", str)
 		return 0
@@ -29,57 +22,27 @@ func StringToInt64(str string) int64 {
 	return num
 }
 
-// 删除切片中的第一个指定值的元素
+// RemoveFirstByValueInt32 删除切片中第一个等于 value 的元素（委托 pkg/utils）
 func RemoveFirstByValueInt32(slice []int32, value int32) []int32 {
-	for i, v := range slice {
-		if v == value {
-			// 删除找到的元素，拼接前后部分
-			return append(slice[:i], slice[i+1:]...)
-		}
-	}
-	return slice // 如果没有找到指定值，返回原切片
+	return utils.RemoveFirstInt32(slice, value)
 }
 
-// 查找数组包含某个值
+// IsHaveValueIntArray 判断切片是否包含指定值（委托 pkg/utils）
 func IsHaveValueIntArray(arr []int32, value int32) bool {
-	for _, v := range arr {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return utils.ContainsInt32(arr, value)
 }
 
-// 查找数组包含某个值
+// IsHaveValueStringArray 判断切片是否包含指定字符串（委托 pkg/utils）
 func IsHaveValueStringArray(arr []string, value string) bool {
-	for _, v := range arr {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return utils.ContainsString(arr, value)
 }
 
-// 查找数组包含某个值
-func IsHaveArrayValueIntArray(arr []int32, value []int32) bool {
-	have := true
-	for _, v := range value {
-		if !IsHaveValueIntArray(arr, v) {
-			have = false
-			break
-		}
-	}
-	return have
+// IsHaveArrayValueIntArray 判断 arr 是否包含 value 中全部元素（委托 pkg/utils）
+func IsHaveArrayValueIntArray(arr, value []int32) bool {
+	return utils.ContainsAllInt32(arr, value)
 }
 
-// 数组是否有相同的值
+// HasDuplicate 检查切片是否有重复值（委托 pkg/utils）
 func HasDuplicate(nums []int32) (bool, int32) {
-	seen := make(map[int32]bool) // 使用 map 记录是否已经出现过
-	for _, num := range nums {
-		if seen[num] { // 如果已经存在，说明有重复
-			return true, num
-		}
-		seen[num] = true // 标记为已出现
-	}
-	return false, 0 // 遍历完没有重复
+	return utils.HasDuplicateInt32(nums)
 }

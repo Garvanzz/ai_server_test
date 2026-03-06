@@ -41,6 +41,9 @@ type Env struct {
 	ConfPath string // 配置路径
 	HttpUrl  string
 
+	// TimeOffsetDays 游戏逻辑时间偏移（天）。仅当 Debug=true 时生效；线上 Debug=false 时忽略，始终用服务器真实时间。
+	TimeOffsetDays int `mapstructure:"TimeOffsetDays"`
+
 	Mysql   *Mysql
 	Redis   *Redis
 	Gate    *Gate    // ws

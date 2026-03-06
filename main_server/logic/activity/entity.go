@@ -8,6 +8,7 @@ import (
 	"xfx/main_server/logic/activity/impl"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
+	"xfx/pkg/utils"
 )
 
 type entity struct {
@@ -37,7 +38,7 @@ func (e *entity) Module() module.Module { return e.mod }
 func (e *entity) checkState() (event string) {
 	event = EventNone
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	switch e.State {
 	case StateWaiting:
 		if (now >= e.StartTime && now < e.EndTime) || e.TimeType == define.ActTimeAlwaysOpen {

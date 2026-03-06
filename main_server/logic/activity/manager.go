@@ -7,7 +7,6 @@ import (
 	"time"
 	"xfx/core/cache"
 	"xfx/core/config"
-	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/event"
@@ -17,6 +16,7 @@ import (
 	"xfx/main_server/logic/activity/impl"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
+	"xfx/pkg/utils"
 	"xfx/pkg/module/modules"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
@@ -120,7 +120,7 @@ func (m *Manager) OnStart(ctx module.Context) {
 func (m *Manager) GetType() string { return define.ModuleActivity }
 
 func (m *Manager) OnTick(delta time.Duration) {
-	now := time.Now()
+	now := utils.Now()
 	if m.lastTick == 0 {
 		m.lastTick = now.Unix()
 	} else {
@@ -351,7 +351,7 @@ func (m *Manager) register(cfgId int64) *entity {
 		return nil
 	}
 
-	activityConf, ok := config.CfgMgr.AllJson()["Activity"].(map[int64]conf.Activity)[cfgId]
+	activityConf, ok := config.Activity.Find(int64(cfgId))
 	if !ok {
 		log.Error("register new activity get config id error:%v", cfgId)
 		return nil

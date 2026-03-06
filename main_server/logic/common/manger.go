@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
 	"time"
 	"xfx/core/config"
@@ -17,6 +16,8 @@ import (
 	"xfx/pkg/module"
 	"xfx/pkg/module/modules"
 	"xfx/pkg/utils"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 var Module = func() module.Module {
@@ -54,7 +55,7 @@ func (mgr *Manager) loadData() {
 	}
 
 	if reply == nil {
-		mgr.LastCheckTime = time.Now().Unix()
+		mgr.LastCheckTime = utils.Now().Unix()
 		mgr.RobotLock = make(map[int32]int64)
 		return
 	}
@@ -69,7 +70,7 @@ func (mgr *Manager) loadData() {
 func (mgr *Manager) GetType() string { return define.ModuleCommon }
 
 func (mgr *Manager) OnTick(delta time.Duration) {
-	now := time.Now()
+	now := utils.Now()
 	if utils.CheckIsSameDayBySec(utils.GetTodayEndMinUnix(), mgr.LastCheckTime, 0) == false {
 		mgr.LastCheckTime = now.Unix()
 
@@ -155,12 +156,12 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 			continue
 		}
 
-		if utils.CheckIsSameDayBySec(tab.GetTime, time.Now().Unix(), 0) {
+		if utils.CheckIsSameDayBySec(tab.GetTime, utils.Now().Unix(), 0) {
 			continue
 		}
 
 		//奖励
-		confs := config.CfgMgr.AllJson()["MonthCard"].(map[int64]conf2.MonthCard)
+		confs := config.MonthCard.All()
 		conf := conf2.MonthCard{}
 		for _, v := range confs {
 			if v.Type == define.MonthCard_GemAppraisal {
@@ -171,7 +172,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 
 		if len(conf.Reward) > 0 {
 			//计算天数差
-			offseDay := utils.DaysDiff(tab.GetTime, time.Now().Unix())
+			offseDay := utils.DaysDiff(tab.GetTime, utils.Now().Unix())
 			for j := 0; j < len(conf.Reward); j++ {
 				conf.Reward[j].ItemNum = conf.Reward[j].ItemNum * offseDay
 			}
@@ -179,7 +180,6 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 			ids := make([]int64, 0)
 			ids = append(ids, tab.DbId)
 
-			//走邮件
 			isSuc := invoke.MailClient(mgr).SendMail(define.PlayerMail, "鉴宝月卡", "鉴宝月卡当日未领补发", "", "", "游戏系统", conf.Reward, ids, int64(0), int32(0), false, []string{})
 			if !isSuc {
 				continue
@@ -187,7 +187,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 		}
 
 		tab.GetDay += 1
-		tab.GetTime = time.Now().Unix()
+		tab.GetTime = utils.Now().Unix()
 
 		js, _ := json.Marshal(tab)
 		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, uid, js)
@@ -230,7 +230,7 @@ func (mgr *Manager) matchRobots(mode int, startPower int64, endPower int64, coun
 
 // 匹配机器人
 func (mgr *Manager) matchRobot(mode int, startPower int64, endPower int64) (*model.Robot, error) {
-	robotGroupConfs := config.CfgMgr.AllJson()["RobotGroup"].(map[int64]conf2.RobotGroup)
+	robotGroupConfs := config.RobotGroup.All()
 
 	var robots []conf2.RobotGroup
 	for _, robotGroupConf := range robotGroupConfs {
@@ -275,7 +275,7 @@ func (mgr *Manager) createRobot() {
 	}
 
 	if len(reply.([]interface{})) == 0 {
-		robotConfs := config.CfgMgr.AllJson()["RobotGroup"].(map[int64]conf2.RobotGroup)
+		robotConfs := config.RobotGroup.All()
 
 		for _, v := range robotConfs {
 			robot := model.Robot{

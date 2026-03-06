@@ -46,7 +46,7 @@ func SyncHorseById(m invoke.Invoker, pid int64, conf conf2.BroadCast, param []in
 // 通告相关-排名更新
 func SyncNotice_RankUpdate(m invoke.Invoker, pl *proto_player.Context, rankType int, rankIndex int64) {
 	//跑马灯
-	confs := config.CfgMgr.AllJson()["BroadCast"].(map[int64]conf2.BroadCast)
+	confs := config.BroadCast.All()
 	for _, v := range confs {
 		if v.Type == define.HorseType_RankUpdate {
 			condition := v.Condition

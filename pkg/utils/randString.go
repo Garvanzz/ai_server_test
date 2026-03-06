@@ -1,3 +1,4 @@
+// 随机字符串生成（多种策略）。当前项目内未直接使用，保留供按需调用；精简时可只保留 RandomAlphanumeric / RandomNumeric。
 package utils
 
 import (
