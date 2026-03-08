@@ -1,29 +1,50 @@
-// 游戏逻辑时间源：支持配置偏移，便于测试/调试时“调时间”。
-// Now() 返回 真实时间 + 偏移。偏移仅在 Debug 模式下由 run 根据 TimeOffsetDays 设置；线上 Debug=false 时偏移为 0，即使用服务器真实时间。
+// 游戏逻辑时间源：支持时间偏移，便于测试/调试时“调时间”。
+// 仅当 SetTimeOffsetEnabled(true)（一般 Debug 模式）时偏移生效，可由 GM 后台设置；正式服应调用 SetTimeOffsetEnabled(false)，此时偏移恒为 0，GM 也无法修改。
 package utils
 
 import (
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var (
-	timeOffset time.Duration
-	offsetMu   sync.RWMutex
+	timeOffsetNanos atomic.Int64
+	// allowTimeOffset 为 true 时允许设置/使用时间偏移（Debug 模式）；为 false 时正式服，偏移恒为 0。
+	allowTimeOffset atomic.Bool
 )
 
-// SetTimeOffset 设置游戏逻辑时间相对真实时间的偏移量，启动时根据配置调用一次即可。
-// 例如 offset = 7*24*time.Hour 表示“当前游戏时间比真实时间快 7 天”。
-func SetTimeOffset(offset time.Duration) {
-	offsetMu.Lock()
-	timeOffset = offset
-	offsetMu.Unlock()
+// SetTimeOffsetEnabled 设置是否允许时间偏移。应在启动时根据配置 Debug 调用一次：正式服传 false，调试服传 true。
+// 正式服下即使 GM 调 SetTimeOffset 也不会生效，Now() 始终为真实时间。
+func SetTimeOffsetEnabled(allow bool) {
+	allowTimeOffset.Store(allow)
+	if !allow {
+		timeOffsetNanos.Store(0)
+	}
 }
 
-// Now 返回当前游戏逻辑时间（真实时间 + 配置的偏移），时间会随系统时钟自然增加。
+// TimeOffsetEnabled 返回当前是否允许时间偏移（一般与 Debug 一致）。供 GM 接口判断是否可设置偏移。
+func TimeOffsetEnabled() bool {
+	return allowTimeOffset.Load()
+}
+
+// SetTimeOffset 设置游戏逻辑时间相对真实时间的偏移量。
+// 仅当 SetTimeOffsetEnabled(true) 时生效；正式服下为 no-op。
+func SetTimeOffset(offset time.Duration) {
+	if !allowTimeOffset.Load() {
+		return
+	}
+	timeOffsetNanos.Store(int64(offset))
+}
+
+// GetTimeOffset 返回当前配置的时间偏移量，供 GM 查询等使用。正式服下恒为 0。
+func GetTimeOffset() time.Duration {
+	if !allowTimeOffset.Load() {
+		return 0
+	}
+	return time.Duration(timeOffsetNanos.Load())
+}
+
+// Now 返回当前游戏逻辑时间（真实时间 + 偏移）。正式服下恒为真实时间。
 func Now() time.Time {
-	offsetMu.RLock()
-	d := timeOffset
-	offsetMu.RUnlock()
-	return time.Now().Add(d)
+	return time.Now().Add(GetTimeOffset())
 }

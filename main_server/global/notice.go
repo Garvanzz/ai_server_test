@@ -1,8 +1,8 @@
 package global
 
 import (
-	"time"
 	"xfx/core/config"
+	"xfx/pkg/utils"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -18,8 +18,8 @@ func SyncHorse(ctx IPlayer, pl *model.Player, conf conf2.BroadCast, param []int3
 		Id:         conf.Id,
 		Channel:    int32(0),
 		ServerId:   int32(pl.Cache.App.GetEnv().ID),
-		EffectTime: time.Now().Unix(),
-		ExpireTime: time.Now().Unix() + 20,
+		EffectTime: utils.Now().Unix(),
+		ExpireTime: utils.Now().Unix() + 20,
 		Value:      param,
 		PlayerInfo: GetPlayerInfo(pl.Id).ToCommonPlayer(),
 	}
@@ -34,8 +34,8 @@ func SyncHorseById(m invoke.Invoker, pid int64, conf conf2.BroadCast, param []in
 		Id:         conf.Id,
 		Channel:    int32(0),
 		ServerId:   int32(serverId),
-		EffectTime: time.Now().Unix(),
-		ExpireTime: time.Now().Unix() + 20,
+		EffectTime: utils.Now().Unix(),
+		ExpireTime: utils.Now().Unix() + 20,
 		Value:      param,
 		PlayerInfo: GetPlayerInfo(pid).ToCommonPlayer(),
 	}

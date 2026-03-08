@@ -2,7 +2,7 @@ package equip
 
 import (
 	"strings"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -37,10 +37,10 @@ func ReqUseEnchant(ctx global.IPlayer, pl *model.Player, req *proto_equip.C2SUse
 	for i := 0; i < len(enlimittyps); i++ {
 		typss := strings.Split(enlimittyps[i], "=")
 		values := strings.Split(typss[1], ",")
-		typInt := common.StringToInt64(typss[0])
+		typInt := utils.MustParseInt64(typss[0])
 		arr := make([]int32, 0)
 		for j := 0; j < len(values); j++ {
-			arr = append(arr, int32(common.StringToInt64(values[j])))
+			arr = append(arr, int32(utils.MustParseInt64(values[j])))
 		}
 		maps[int32(typInt)] = arr
 	}
@@ -112,10 +112,10 @@ func ReqUpLevelEnchant(ctx global.IPlayer, pl *model.Player, req *proto_equip.C2
 	for i := 0; i < len(enlimittyps); i++ {
 		typss := strings.Split(enlimittyps[i], "=")
 		values := strings.Split(typss[1], ",")
-		typInt := common.StringToInt64(typss[0])
+		typInt := utils.MustParseInt64(typss[0])
 		arr := make([]int32, 0)
 		for j := 0; j < len(values); j++ {
-			arr = append(arr, int32(common.StringToInt64(values[j])))
+			arr = append(arr, int32(utils.MustParseInt64(values[j])))
 		}
 		maps[int32(typInt)] = arr
 	}

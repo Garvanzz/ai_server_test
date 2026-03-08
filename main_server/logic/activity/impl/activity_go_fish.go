@@ -3,7 +3,6 @@ package impl
 import (
 	"sort"
 	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -406,7 +405,7 @@ func (a *ActivityGoFish) GetAward(ctx *proto_player.Context, req *proto_activity
 	}
 
 	for _, j := range req.Ids {
-		if common.IsHaveValueIntArray(pd.GetList, j) {
+		if utils.ContainsInt32(pd.GetList, j) {
 			resp.Code = 1
 			return resp, nil
 		}

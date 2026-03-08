@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -81,7 +81,7 @@ func ReqUnLockDestiny(ctx global.IPlayer, pl *model.Player, req *proto_destiny.C
 	res := &proto_destiny.S2CRespUnLockDestiny{}
 
 	//是否解锁
-	if common.IsHaveValueIntArray(pl.Destiny.Ids, req.Id) {
+	if utils.ContainsInt32(pl.Destiny.Ids, req.Id) {
 		res.Code = proto_destiny.ERRORCODEDESTINY_ERROR_AlGetAward
 		ctx.Send(res)
 		return
@@ -98,7 +98,7 @@ func ReqUnLockDestiny(ctx global.IPlayer, pl *model.Player, req *proto_destiny.C
 
 	//前置
 	if conf.FrontId > 0 {
-		if common.IsHaveValueIntArray(pl.Destiny.Ids, conf.FrontId) == false {
+		if utils.ContainsInt32(pl.Destiny.Ids, conf.FrontId) == false {
 			res.Code = proto_destiny.ERRORCODEDESTINY_ERROR_ConditionNo
 			ctx.Send(res)
 			return
@@ -132,7 +132,7 @@ func ReqUnLockSelfDestiny(ctx global.IPlayer, pl *model.Player, req *proto_desti
 	res := &proto_destiny.S2CRespUnlockSelfDestiny{}
 
 	//是否解锁
-	if common.IsHaveValueIntArray(pl.Destiny.SelfIds, req.Id) {
+	if utils.ContainsInt32(pl.Destiny.SelfIds, req.Id) {
 		res.Code = proto_destiny.ERRORCODEDESTINY_ERROR_AlGetAward
 		ctx.Send(res)
 		return
@@ -195,13 +195,13 @@ func ReqOneKeyUnLockDestiny(ctx global.IPlayer, pl *model.Player, req *proto_des
 		conf := config.DestinyLevel.All()[int64(cid)]
 
 		//是否解锁
-		if common.IsHaveValueIntArray(ids, cid) {
+		if utils.ContainsInt32(ids, cid) {
 			continue
 		}
 
 		//前置
 		if conf.FrontId > 0 {
-			if common.IsHaveValueIntArray(ids, conf.FrontId) == false && common.IsHaveValueIntArray(cacheId, conf.FrontId) == false {
+			if utils.ContainsInt32(ids, conf.FrontId) == false && utils.ContainsInt32(cacheId, conf.FrontId) == false {
 				continue
 			}
 		}
@@ -242,7 +242,7 @@ func ReqOneKeyUnLockDestiny(ctx global.IPlayer, pl *model.Player, req *proto_des
 		conf := config.DestinyStage.All()[int64(cid)]
 
 		//是否解锁
-		if common.IsHaveValueIntArray(pl.Destiny.SelfIds, cid) {
+		if utils.ContainsInt32(pl.Destiny.SelfIds, cid) {
 			continue
 		}
 

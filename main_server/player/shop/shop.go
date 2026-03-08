@@ -93,17 +93,17 @@ func refreshShopData(ctx global.IPlayer, pl *model.Player) {
 		case define.ShopLimitTypeNull:
 		case define.ShopLimitTypeYongJiu:
 		case define.ShopLimitTypeDay:
-			if !utils.CheckIsSameDayBySec(time.Now().Unix(), v.LastTime, 0) {
+			if !utils.CheckIsSameDayBySec(utils.Now().Unix(), v.LastTime, 0) {
 				pl.Shop.Shops[shopType].ShopItems = make(map[int]*model.ShopItem)
 				pl.Shop.Shops[shopType].LastTime = utils.TimestampToday()
 			}
 		case define.ShopLimitTypeWeek:
-			if !utils.IsSameWeekBySec(time.Now().Unix(), v.LastTime) {
+			if !utils.IsSameWeekBySec(utils.Now().Unix(), v.LastTime) {
 				pl.Shop.Shops[shopType].ShopItems = make(map[int]*model.ShopItem)
-				pl.Shop.Shops[shopType].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Now(), time.Monday)) //周一的
+				pl.Shop.Shops[shopType].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
 			}
 		case define.ShopLimitTypeMonth:
-			if utils.DaysBetweenTwoTimeUnix(time.Now().Unix(), v.LastTime) > 30 {
+			if utils.DaysBetweenTwoTimeUnix(utils.Now().Unix(), v.LastTime) > 30 {
 				//直接删除
 				delete(pl.Shop.Shops, shopType)
 			}
@@ -120,7 +120,7 @@ func refreshShopData(ctx global.IPlayer, pl *model.Player) {
 
 			if v.LastTime < status.StartTime || v.LastTime > status.EndTime {
 				pl.Shop.Shops[shopType].ShopItems = make(map[int]*model.ShopItem)
-				pl.Shop.Shops[shopType].LastTime = time.Now().Unix()
+				pl.Shop.Shops[shopType].LastTime = utils.Now().Unix()
 			}
 		}
 	}
@@ -171,11 +171,11 @@ func ReqShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SBuy
 		if conf.LimitType == define.ShopLimitTypeDay {
 			pl.Shop.Shops[req.Type].LastTime = utils.TimestampToday()
 		} else if conf.LimitType == define.ShopLimitTypeWeek { //每周限购
-			pl.Shop.Shops[req.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Now(), time.Monday)) //周一的
+			pl.Shop.Shops[req.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
 		} else if conf.LimitType == define.ShopLimitTypeMonth {
-			pl.Shop.Shops[req.Type].LastTime = time.Now().Unix()
+			pl.Shop.Shops[req.Type].LastTime = utils.Now().Unix()
 		} else if conf.LimitType == define.ShopLimitTypeSeason {
-			pl.Shop.Shops[req.Type].LastTime = time.Now().Unix()
+			pl.Shop.Shops[req.Type].LastTime = utils.Now().Unix()
 		}
 
 		pl.Shop.Shops[req.Type].ShopItems[int(req.Id)] = new(model.ShopItem)
@@ -264,11 +264,11 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 		if shopConf.LimitType == define.ShopLimitTypeDay {
 			pl.Shop.Shops[shopConf.Type].LastTime = utils.TimestampToday()
 		} else if shopConf.LimitType == define.ShopLimitTypeWeek { //每周限购
-			pl.Shop.Shops[shopConf.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Now(), time.Monday)) //周一的
+			pl.Shop.Shops[shopConf.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
 		} else if shopConf.LimitType == define.ShopLimitTypeMonth {
-			pl.Shop.Shops[shopConf.Type].LastTime = time.Now().Unix()
+			pl.Shop.Shops[shopConf.Type].LastTime = utils.Now().Unix()
 		} else if shopConf.LimitType == define.ShopLimitTypeSeason {
-			pl.Shop.Shops[shopConf.Type].LastTime = time.Now().Unix()
+			pl.Shop.Shops[shopConf.Type].LastTime = utils.Now().Unix()
 		}
 
 		pl.Shop.Shops[shopConf.Type].ShopItems[int(req.Id)] = new(model.ShopItem)
@@ -453,7 +453,7 @@ func ReqBackShopBuyAward(ctx global.IPlayer, pl *model.Player, req *proto_shop.C
 
 // 生成订单号信息
 func randOrderId() string {
-	time := fmt.Sprintf("%d", time.Now().Unix())
+	time := fmt.Sprintf("%d", utils.Now().Unix())
 	rangNum := fmt.Sprintf("%d", utils.RandInt(0, 1000000))
 	return "hgmgameGm-" + time + "-" + rangNum
 }

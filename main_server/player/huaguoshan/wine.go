@@ -1,8 +1,7 @@
 package huaguoshan
 
 import (
-	"time"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -68,7 +67,7 @@ func ReqStartMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguosha
 	internal.SubItems(ctx, pl, costs)
 
 	// 开始酿造
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	pl.Huaguoshan.Wine.CurMakingWineId = req.Id
 	pl.Huaguoshan.Wine.CurMakingWineStarTime = int32(now)
 	pl.Huaguoshan.Wine.CurMakingWineEndTime = int32(now + int64(wineRackConf.MakeTime))
@@ -98,7 +97,7 @@ func ReqCutMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguoshan.
 		return
 	}
 
-	if !common.IsHaveValueIntArray(pl.Huaguoshan.Wine.OwerWineRack, req.RackId) {
+	if !utils.ContainsInt32(pl.Huaguoshan.Wine.OwerWineRack, req.RackId) {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
@@ -134,7 +133,7 @@ func ReqCollectMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 
 	//检查时间
 	if pl.Huaguoshan.Wine.CurMakingWineId > 0 {
-		now := time.Now().Unix()
+		now := utils.Now().Unix()
 		// 如果已完成，自动收取
 		if now >= int64(pl.Huaguoshan.Wine.CurMakingWineEndTime) {
 			autoCollectWine(ctx, pl)

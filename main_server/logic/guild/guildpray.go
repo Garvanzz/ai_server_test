@@ -2,7 +2,6 @@ package guild
 
 import (
 	"errors"
-	"time"
 	"xfx/core/config"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -31,7 +30,7 @@ func (mgr *Manager) guildPray(ctx *proto_player.Context, index int32) (*model.Pl
 		info.GuildPray = new(model.GuildPrayItem)
 	}
 
-	if !utils.CheckIsSameDayBySec(info.GuildPray.TodayPrayTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(info.GuildPray.TodayPrayTime, utils.Now().Unix(), 0) {
 		info.GuildPray.IsTodayPray = false
 	}
 
@@ -39,7 +38,7 @@ func (mgr *Manager) guildPray(ctx *proto_player.Context, index int32) (*model.Pl
 		return nil, errors.New("today is pray")
 	}
 
-	info.GuildPray.TodayPrayTime = time.Now().Unix()
+	info.GuildPray.TodayPrayTime = utils.Now().Unix()
 	info.GuildPray.IsTodayPray = true
 	info.GuildPray.PrayType = index
 	if index == 3 {

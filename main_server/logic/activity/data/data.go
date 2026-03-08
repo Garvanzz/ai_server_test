@@ -170,13 +170,22 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 
 // PurgeActivityPlayerData 删除活动所有对应玩家数据
 func PurgeActivityPlayerData(actId int64) {
-	rdb, _ := db.GetEngine(ServerId)
-
-	_, err := rdb.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId))
-	if err != nil {
-		log.Error("PurgeActivityPlayerData error:%v", err)
+	var keysToDel []int64
+	if Cache != nil {
+		Cache.Iterate(func(key int64, _ any) bool {
+			if key/define.ActivityPlayerDataBase == actId {
+				keysToDel = append(keysToDel, key)
+			}
+			return true
+		})
+		for _, k := range keysToDel {
+			Cache.Del(k)
+		}
 	}
 
-	// TODO：同步清除缓存中的数据
-	//Cache.SetClean()
+	rdb, _ := db.GetEngine(ServerId)
+	_, err := rdb.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId))
+	if err != nil {
+		log.Error("PurgeActivityPlayerData redis DEL error:%v", err)
+	}
 }

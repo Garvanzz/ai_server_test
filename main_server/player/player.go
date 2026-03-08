@@ -2,8 +2,8 @@ package player
 
 import (
 	"fmt"
-	"time"
 	"xfx/core/config"
+	"xfx/pkg/utils"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -23,7 +23,7 @@ func (pl *PlayerAgent) OnSave(isSync bool) {
 	dbData := fromProps(pl.model)
 
 	//离线时间
-	dbData.OfflineTime = time.Now().Unix()
+	dbData.OfflineTime = utils.Now().Unix()
 
 	rdb, err := db.GetEngineByPlayerId(pl.model.Id)
 	if err != nil {
@@ -141,7 +141,7 @@ func initPlayerProp(pl *model.Player) {
 	pl.Props[define.PlayerPropFaceId] = define.PlayerHeadIcon
 	pl.Props[define.PlayerPropFaceSlotId] = define.PlayerHeadFrame
 	pl.Props[define.PlayerPropHeroId] = define.PlayerHeroID
-	pl.Props[define.PlayerPropOfflineTime] = time.Now().Unix()
+	pl.Props[define.PlayerPropOfflineTime] = utils.Now().Unix()
 	pl.Props[define.PlayerPropBubbleId] = define.PlayerBubbleID
 	pl.Props[define.PlayerPropServerId] = pl.Id / define.PlayerIdBase
 }

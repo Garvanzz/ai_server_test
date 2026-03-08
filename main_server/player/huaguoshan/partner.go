@@ -2,7 +2,6 @@ package huaguoshan
 
 import (
 	"fmt"
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -11,6 +10,7 @@ import (
 	"xfx/main_server/invoke"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_huaguoshan"
 	"xfx/proto/proto_public"
 )
@@ -158,7 +158,7 @@ func ReqLogicPartnerInvite(ctx global.IPlayer, pl *model.Player, req *proto_huag
 	pl.Huaguoshan.Partner.PartnerType = 0
 	pl.Huaguoshan.Partner.LastRelieveTime = 0
 	pl.Huaguoshan.Partner.GiveCount = 0
-	pl.Huaguoshan.Partner.LastGiveResetTime = time.Now().Unix()
+	pl.Huaguoshan.Partner.LastGiveResetTime = utils.Now().Unix()
 	pl.Huaguoshan.Partner.UnlockedSkills = []int32{}
 	pl.Huaguoshan.Partner.UnlockedBraces = []int32{}
 	pl.Huaguoshan.Partner.UnlockedMounts = []int32{}
@@ -202,7 +202,7 @@ func ReqRelievePartner(ctx global.IPlayer, pl *model.Player, req *proto_huaguosh
 	pl.Huaguoshan.Partner.Intimacy = 0
 	pl.Huaguoshan.Partner.IntimacyLevel = 0
 	pl.Huaguoshan.Partner.PartnerType = 0
-	pl.Huaguoshan.Partner.LastRelieveTime = time.Now().Unix()
+	pl.Huaguoshan.Partner.LastRelieveTime = utils.Now().Unix()
 	pl.Huaguoshan.Partner.GiveCount = 0
 	pl.Huaguoshan.Partner.UnlockedSkills = []int32{}
 	pl.Huaguoshan.Partner.UnlockedBraces = []int32{}
@@ -346,7 +346,7 @@ func isInCooldown(partner *model.HuaguoshanPartner) bool {
 	if partner.LastRelieveTime == 0 {
 		return false
 	}
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	day := config.Global.Get().PaternerCoolDown
 	cooldownSeconds := int64(day * 24 * 3600)
 	return now < partner.LastRelieveTime+cooldownSeconds

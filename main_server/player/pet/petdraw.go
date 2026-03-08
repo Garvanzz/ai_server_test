@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -16,6 +15,7 @@ import (
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_equip"
 	"xfx/proto/proto_pet"
 	"xfx/proto/proto_public"
@@ -95,7 +95,7 @@ func drawPoolRefreshState(pl *model.Player) {
 			log.Error("checkCfg parse endTime err:%v", err)
 			continue
 		}
-		if time.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 1 {
+		if utils.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 1 {
 			delete(pl.PetDraw.Pools, k)
 		}
 	}
@@ -121,7 +121,7 @@ func drawPoolRefreshState(pl *model.Player) {
 				log.Error("checkCfg parse endTime err:%v", err)
 				continue
 			}
-			if time.Now().Unix() < startTime.Unix() || time.Now().Unix() >= endTime.Unix() {
+			if utils.Now().Unix() < startTime.Unix() || utils.Now().Unix() >= endTime.Unix() {
 				continue
 			}
 		}
@@ -294,13 +294,13 @@ func ReqpetStageAward(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2SGe
 	}
 
 	//判断领取没
-	if common.IsHaveValueIntArray(confStage.Progress, req.Progress) == false {
+	if utils.ContainsInt32(confStage.Progress, req.Progress) == false {
 		res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(res)
 		return
 	}
 
-	if common.IsHaveValueIntArray(pl.PetDraw.Awards, req.Progress) {
+	if utils.ContainsInt32(pl.PetDraw.Awards, req.Progress) {
 		res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(res)
 		return
@@ -319,9 +319,9 @@ func ReqpetStageAward(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2SGe
 
 	var items []conf2.ItemE
 	items = append(items, conf2.ItemE{
-		ItemType: int32(common.StringToInt64(awards[2])),
-		ItemId:   int32(common.StringToInt64(awards[0])),
-		ItemNum:  int32(common.StringToInt64(awards[1])),
+		ItemType: int32(utils.MustParseInt64(awards[2])),
+		ItemId:   int32(utils.MustParseInt64(awards[0])),
+		ItemNum:  int32(utils.MustParseInt64(awards[1])),
 	})
 	//添加道具
 	bag.AddAward(ctx, pl, items, true)

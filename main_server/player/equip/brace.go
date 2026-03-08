@@ -1,7 +1,7 @@
 package equip
 
 import (
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/define"
@@ -146,7 +146,7 @@ func ReqEquipBraceAuraStageAward(ctx global.IPlayer, pl *model.Player, req *prot
 		}
 	}
 
-	if common.IsHaveValueIntArray(pl.Equip.Brace.GetAuraStageAward, req.Id) == true {
+	if utils.ContainsInt32(pl.Equip.Brace.GetAuraStageAward, req.Id) == true {
 		res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 		ctx.Send(res)
 		return
@@ -391,7 +391,7 @@ func BraceHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.C
 
 	//判断等级是否超出限制
 	for _, v := range req.Id {
-		if !common.IsHaveValueIntArray(ids, v) {
+		if !utils.ContainsInt32(ids, v) {
 			res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 			ctx.Send(res)
 			return
@@ -399,7 +399,7 @@ func BraceHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.C
 
 		//判断有没有领取的
 		if pl.Equip.Brace.HandbookIds != nil {
-			if common.IsHaveValueIntArray(pl.Equip.Brace.HandbookIds, v) {
+			if utils.ContainsInt32(pl.Equip.Brace.HandbookIds, v) {
 				res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 				ctx.Send(res)
 				return

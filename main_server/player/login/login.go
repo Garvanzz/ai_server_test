@@ -1,8 +1,8 @@
 package login
 
 import (
-	"time"
 	"xfx/core/define"
+	"xfx/pkg/utils"
 	"xfx/core/event"
 	"xfx/core/model"
 	"xfx/main_server/global"
@@ -17,11 +17,11 @@ import (
 // Login 登录
 func Login(ctx global.IPlayer, pl *model.Player) {
 	resp := new(Proto_Player.S2CLogin)
-	resp.Timestamp = time.Now().Unix()
+	resp.Timestamp = utils.Now().Unix()
 
 	// TODO: 服务器时间
 	resp.EndTimeUnix = 0
-	resp.ZoneOffset = time.Now().Unix()
+	resp.ZoneOffset = utils.Now().Unix()
 	resp.State = Proto_Public.CommonState_Success
 
 	player := new(Proto_Player.Player)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"strconv"
-	"time"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -13,6 +12,7 @@ import (
 	"xfx/main_server/invoke"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_rank"
 )
 
@@ -403,7 +403,7 @@ func rankDataToProto(ctx global.IPlayer, pl *model.Player, rankType int, reply a
 // 更新战力排行榜
 func UpdatePowerRank(ctx global.IPlayer, pl *model.Player, power int64) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateGuildRank(ctx, 0, pl, _finalAmount, define.RankTypePower)
@@ -412,7 +412,7 @@ func UpdatePowerRank(ctx global.IPlayer, pl *model.Player, power int64) {
 // 更新帮会完美榜单
 func UpdateGuildPerfectRank(ctx global.IPlayer, guildId int32, pl *model.Player, power int32) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateGuildRank(ctx, guildId, pl, _finalAmount, define.RankTypePerfect)
@@ -421,7 +421,7 @@ func UpdateGuildPerfectRank(ctx global.IPlayer, guildId int32, pl *model.Player,
 // 更新帮会成长值榜单
 func UpdateGuildGrowRank(ctx global.IPlayer, guildId int32, pl *model.Player, power int32) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateGuildRank(ctx, guildId, pl, _finalAmount, define.RankTypeGrow)
@@ -430,7 +430,7 @@ func UpdateGuildGrowRank(ctx global.IPlayer, guildId int32, pl *model.Player, po
 // 更新帮会战力榜单
 func UpdateGuildBattleRank(ctx global.IPlayer, guildId int32, pl *model.Player, power int32) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateGuildRank(ctx, guildId, pl, _finalAmount, define.RankTypeGuildBattle)
@@ -439,7 +439,7 @@ func UpdateGuildBattleRank(ctx global.IPlayer, guildId int32, pl *model.Player, 
 // 更新爬塔
 func UpdateClimbTowerRank(ctx global.IPlayer, pl *model.Player, power int32) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateGuildRank(ctx, 0, pl, _finalAmount, define.RankTypeClimbTower)
@@ -448,7 +448,7 @@ func UpdateClimbTowerRank(ctx global.IPlayer, pl *model.Player, power int32) {
 // 更新竞技场
 func UpdateArenaRank(ctx global.IPlayer, ActId int64, pl *model.Player, power int32) {
 	//最终值 = 当前杯数 + (默认1个1和9个9去减 - 当前时间)(时间越早 数值越大) 杯数一般最大就是99999
-	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-time.Now().Unix()), 64)
+	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(power) + uTime
 
 	updateZAddRank(ctx, ActId, pl, _finalAmount, define.RankTypeArena)

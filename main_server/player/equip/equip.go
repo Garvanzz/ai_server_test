@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -405,7 +404,7 @@ func MountHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.C
 
 	//判断等级是否超出限制
 	for _, v := range req.Id {
-		if !common.IsHaveValueIntArray(ids, v) {
+		if !utils.ContainsInt32(ids, v) {
 			res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 			ctx.Send(res)
 			return
@@ -413,7 +412,7 @@ func MountHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.C
 
 		//判断有没有领取的
 		if pl.Equip.Mount.HandbookIds != nil {
-			if common.IsHaveValueIntArray(pl.Equip.Mount.HandbookIds, v) {
+			if utils.ContainsInt32(pl.Equip.Mount.HandbookIds, v) {
 				res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 				ctx.Send(res)
 				return
@@ -722,7 +721,7 @@ func WeaponHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.
 
 	//判断等级是否超出限制
 	for _, v := range req.Id {
-		if !common.IsHaveValueIntArray(ids, v) {
+		if !utils.ContainsInt32(ids, v) {
 			res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 			ctx.Send(res)
 			return
@@ -730,7 +729,7 @@ func WeaponHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.
 
 		//判断有没有领取的
 		if pl.Equip.Weaponry.HandbookIds != nil {
-			if common.IsHaveValueIntArray(pl.Equip.Weaponry.HandbookIds, v) {
+			if utils.ContainsInt32(pl.Equip.Weaponry.HandbookIds, v) {
 				res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 				ctx.Send(res)
 				return

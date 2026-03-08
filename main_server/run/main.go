@@ -58,12 +58,8 @@ func main() {
 func startup(app module.App) {
 	id.Init(uint32(app.GetEnv().ID))
 
-	// 仅在 Debug 模式下启用时间偏移，线上 Debug=false 时始终使用服务器真实时间
-	if app.GetEnv().Debug && app.GetEnv().TimeOffsetDays != 0 {
-		d := app.GetEnv().TimeOffsetDays
-		utils.SetTimeOffset(time.Duration(d) * 24 * time.Hour)
-		log.Info("game time offset: +%d days (debug only)", d)
-	}
+	// 设置时间偏移
+	utils.SetTimeOffsetEnabled(app.GetEnv().Debug)
 
 	db.Start(app)
 

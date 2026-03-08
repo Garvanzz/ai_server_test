@@ -79,16 +79,20 @@ func (m *Manager) OnInit(app module.App) {
 	m.Register("GetSystemMailById", m.GetSystemMailById)
 	m.Register("GetMaxSystemMailId", m.GetMaxSystemMailId)
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	if err != nil {
+		log.Error("mail manager OnInit GetEngine err:%v", err)
+		return
+	}
 	sysMails := make([]*model.SysMailInfo, 0)
-	err := rdb.Mysql.Find(&sysMails)
+	err = rdb.Mysql.Find(&sysMails)
 	if err != nil {
 		log.Error("load sysMails from redis err:", err)
 		return
 	}
 
 	// 加载系统邮件列表
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	for _, mail := range sysMails {
 		if mail.ExpireTime > now {
 			m.Mails[mail.Id] = mail
@@ -167,10 +171,14 @@ func (m *Manager) OnInit(app module.App) {
 func (m *Manager) GetType() string { return define.ModuleMail }
 
 func (m *Manager) OnTick(delta time.Duration) {
-	now := time.Now()
+	now := utils.Now()
 	m.LastUpdateTime = now
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	if err != nil {
+		log.Error("mail manager OnTick GetEngine err:%v", err)
+		return
+	}
 
 	for id, info := range m.DelayMails {
 		if info.startTime <= now.Unix() {
@@ -225,7 +233,11 @@ func (m *Manager) OnSave() {
 		return
 	}
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	if err != nil {
+		log.Error("mail manager OnSave GetEngine err:%v", err)
+		return
+	}
 	_, err = rdb.RedisExec("set", "systemMailId", data)
 	if err != nil {
 		log.Error("mailManager stop set systemMailid error: %v", err)
@@ -260,7 +272,7 @@ func (m *Manager) SendMail(mailType int, CnTitle, CnContent, EnTitle, EnContent,
 		//当天结束时间+ (过期日期-1)*24小时*3600分钟
 		expireTime = utils.GetTodayEndUnix() + ((define.MailExpiration - 1) * 3600 * 24)
 	} else {
-		expireTime = time.Now().Unix() + expireTime
+		expireTime = utils.Now().Unix() + expireTime
 	}
 
 	log.Debug("发送邮件 类型 :%v", mailType)
@@ -281,6 +293,12 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 		gotItem = false
 	}
 
+	// 与 SendMail 一致：expireTime 为 0 时用默认过期时间，否则使用传入的绝对时间戳
+	expTime := expireTime
+	if expTime == 0 {
+		expTime = utils.GetTodayEndUnix() + ((define.MailExpiration - 1) * 3600 * 24)
+	}
+
 	//log.Debug("sendPlayerMail receiverIds:%+v", receiverIds)
 	mailType := define.MailTypeNormal
 	//mailConf, ok := cfg.Configm.GetCfg("ConfMail").(map[int64]global.ConfMailElement)[int64(cfgId)]
@@ -296,9 +314,9 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 				define.LanguageEnglish:            {EnTitle, EnContent},
 				define.LanguageChineseTraditional: {CnTitle, CnContent},
 			},
-			CreateTime: time.Now().Unix(),
+			CreateTime: utils.Now().Unix(),
 			Items:      items,
-			ExpireTime: define.MailExpiration*86400 + time.Now().Unix(), // 根据配置设置过期时间 ,
+			ExpireTime: expTime,
 			CfgId:      cfgId,
 			Params:     params,
 			DbId:       receiverId,
@@ -308,7 +326,11 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 			//AccountId:  receiverId,
 		}
 		log.Info("newMail:%v", newMail)
-		rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+		rdb, err := db.GetEngine(m.App.GetEnv().ID)
+		if err != nil {
+			log.Error("mail manager sendPlayerMail GetEngine err:%v", err)
+			return false
+		}
 
 		num, err := rdb.Mysql.Insert(newMail)
 		if err != nil {
@@ -333,13 +355,17 @@ func (m *Manager) sendSysMail(items []conf.ItemE, CnTitle, CnContent, EnTitle, E
 			define.LanguageEnglish:            {EnTitle, EnContent},
 		},
 		ExpireTime: expireTime,
-		CreateTime: time.Now().Unix(),
+		CreateTime: utils.Now().Unix(),
 		CfgId:      cfgId,
 		Params:     params,
 		SenderName: sendName,
 	}
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	if err != nil {
+		log.Error("mail manager sendSysMail GetEngine err:%v", err)
+		return false
+	}
 	num, err := rdb.Mysql.Insert(newSysMail)
 	if err != nil {
 		log.Error("send sysMail insert mysql error:%s", err)
@@ -388,7 +414,11 @@ func (m *Manager) DeleteDelayMails(id int64) bool {
 
 // 删除db邮件
 func (m *Manager) deleteDBMail(id int64) bool {
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	if err != nil {
+		log.Error("mail manager deleteDBMail GetEngine err:%v", err)
+		return false
+	}
 
 	num, err := rdb.Mysql.Where("id = ?", id).Delete(&model.PlayerMailInfo{})
 	if err != nil {

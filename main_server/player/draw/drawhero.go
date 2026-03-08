@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -25,7 +24,7 @@ import (
 func Init(pl *model.Player) {
 	pl.Draw = new(model.DrawHero)
 	pl.Draw.ToDayIsFree = true
-	pl.Draw.LastTime = time.Now().Unix()
+	pl.Draw.LastTime = utils.Now().Unix()
 	pl.Draw.Pools = make(map[int32]*model.DrawPool)
 	pl.Draw.BigCard = make([]int32, 0)
 
@@ -75,9 +74,9 @@ func Load(pl *model.Player) {
 	}
 
 	//判断每日免费一次这个
-	if !utils.CheckIsSameDayBySec(time.Now().Unix(), m.LastTime, 0) {
+	if !utils.CheckIsSameDayBySec(utils.Now().Unix(), m.LastTime, 0) {
 		m.ToDayIsFree = true
-		m.LastTime = time.Now().Unix()
+		m.LastTime = utils.Now().Unix()
 	}
 	pl.Draw = m
 }
@@ -102,7 +101,7 @@ func drawPoolRefreshState(pl *model.Player) {
 			continue
 		}
 
-		if time.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 1 {
+		if utils.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 1 {
 			delete(pl.Draw.Pools, k)
 		}
 	}
@@ -131,8 +130,8 @@ func drawPoolRefreshState(pl *model.Player) {
 				continue
 			}
 
-			log.Error("卡池:%v, %v, %v, %v, %v", time.Now().Unix(), startTime.Unix(), endTime.Unix(), time.Now().Unix() < startTime.Unix(), time.Now().Unix() >= endTime.Unix())
-			if time.Now().Unix() < startTime.Unix() || time.Now().Unix() >= endTime.Unix() {
+			log.Error("卡池:%v, %v, %v, %v, %v", utils.Now().Unix(), startTime.Unix(), endTime.Unix(), utils.Now().Unix() < startTime.Unix(), utils.Now().Unix() >= endTime.Unix())
+			if utils.Now().Unix() < startTime.Unix() || utils.Now().Unix() >= endTime.Unix() {
 				continue
 			}
 		}
@@ -144,7 +143,7 @@ func drawPoolRefreshState(pl *model.Player) {
 			StageAwards: make([]int32, 0),
 		}
 
-		if common.IsHaveValueIntArray(pl.Draw.BigCard, v.HeroId) == false {
+		if utils.ContainsInt32(pl.Draw.BigCard, v.HeroId) == false {
 			pl.Draw.BigCard = append(pl.Draw.BigCard, v.HeroId)
 		}
 	}
@@ -183,9 +182,9 @@ func ReqDrawCard(ctx global.IPlayer, pl *model.Player, req *proto_draw.C2SDrawCa
 		pl.Draw.ToDayIsFree = false
 		costItems[define.ItemIdDrawCard] -= 0
 	} else {
-		if !utils.CheckIsSameDayBySec(time.Now().Unix(), pl.Draw.LastTime, 0) {
+		if !utils.CheckIsSameDayBySec(utils.Now().Unix(), pl.Draw.LastTime, 0) {
 			pl.Draw.ToDayIsFree = false
-			pl.Draw.LastTime = time.Now().Unix()
+			pl.Draw.LastTime = utils.Now().Unix()
 			costItems[define.ItemIdDrawCard] -= 0
 		}
 	}
@@ -326,7 +325,7 @@ func ReqHeroDrawLevelAward(ctx global.IPlayer, pl *model.Player, req *proto_draw
 	ids := make([]int32, 0)
 	for _, v := range req.Id {
 		//判断领取没
-		if common.IsHaveValueIntArray(pl.Draw.LevelAwards, v) {
+		if utils.ContainsInt32(pl.Draw.LevelAwards, v) {
 			continue
 		}
 
@@ -372,13 +371,13 @@ func ReqHeroDrawStageAward(ctx global.IPlayer, pl *model.Player, req *proto_draw
 	}
 
 	//判断领取没
-	if common.IsHaveValueIntArray(confStage.Progress, req.Progress) == false {
+	if utils.ContainsInt32(confStage.Progress, req.Progress) == false {
 		res.Code = proto_draw.ERRORCODEDRAW_ERROR_NOConfig
 		ctx.Send(res)
 		return
 	}
 
-	if common.IsHaveValueIntArray(pl.Draw.Pools[req.Id].StageAwards, req.Progress) {
+	if utils.ContainsInt32(pl.Draw.Pools[req.Id].StageAwards, req.Progress) {
 		res.Code = proto_draw.ERRORCODEDRAW_ERROR_AlGetAward
 		ctx.Send(res)
 		return
@@ -397,9 +396,9 @@ func ReqHeroDrawStageAward(ctx global.IPlayer, pl *model.Player, req *proto_draw
 
 	var items []conf2.ItemE
 	items = append(items, conf2.ItemE{
-		ItemType: int32(common.StringToInt64(awards[2])),
-		ItemId:   int32(common.StringToInt64(awards[0])),
-		ItemNum:  int32(common.StringToInt64(awards[1])),
+		ItemType: int32(utils.MustParseInt64(awards[2])),
+		ItemId:   int32(utils.MustParseInt64(awards[0])),
+		ItemNum:  int32(utils.MustParseInt64(awards[1])),
 	})
 	//添加道具
 	bag.AddAward(ctx, pl, items, true)

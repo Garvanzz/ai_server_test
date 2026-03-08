@@ -3,7 +3,7 @@ package fashion
 import (
 	"encoding/json"
 	"fmt"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -135,7 +135,7 @@ func FashionHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_fashi
 
 	//判断等级是否超出限制
 	for _, v := range req.Id {
-		if !common.IsHaveValueIntArray(ids, v) {
+		if !utils.ContainsInt32(ids, v) {
 			res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(res)
 			return
@@ -143,7 +143,7 @@ func FashionHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_fashi
 
 		//判断有没有领取的
 		if pl.Fashion.FashionHandbookIds != nil {
-			if common.IsHaveValueIntArray(pl.Fashion.FashionHandbookIds, v) {
+			if utils.ContainsInt32(pl.Fashion.FashionHandbookIds, v) {
 				res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 				ctx.Send(res)
 				return
@@ -226,7 +226,7 @@ func HeadWearHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_fash
 
 	//判断等级是否超出限制
 	for _, v := range req.Id {
-		if !common.IsHaveValueIntArray(ids, v) {
+		if !utils.ContainsInt32(ids, v) {
 			res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(res)
 			return
@@ -234,7 +234,7 @@ func HeadWearHandbookAward(ctx global.IPlayer, pl *model.Player, req *proto_fash
 
 		//判断有没有领取的
 		if pl.Fashion.HeadWearHandbookIds != nil {
-			if common.IsHaveValueIntArray(pl.Fashion.HeadWearHandbookIds, v) {
+			if utils.ContainsInt32(pl.Fashion.HeadWearHandbookIds, v) {
 				res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 				ctx.Send(res)
 				return

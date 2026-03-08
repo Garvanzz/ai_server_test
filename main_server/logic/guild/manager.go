@@ -36,7 +36,7 @@ func init() {
 	Mgr.guilds = make(map[int64]*entity)
 	Mgr.guildList = make([]int64, 0)
 	Mgr.saveFlag = true
-	Mgr.playerSaveTime = time.Now().Unix()
+	Mgr.playerSaveTime = utils.Now().Unix()
 	Mgr.GuildApplication = make(map[int64][]*model.GuildApply)
 }
 
@@ -97,7 +97,7 @@ func (mgr *Manager) OnInit(app module.App) {
 func (mgr *Manager) GetType() string { return define.ModuleGuild }
 
 func (mgr *Manager) OnTick(delta time.Duration) {
-	now := time.Now()
+	now := utils.Now()
 
 	if mgr.lastTickTime == 0 {
 		mgr.lastTickTime = now.Unix()
@@ -258,7 +258,7 @@ func (mgr *Manager) OnCreateGuild(ctx *proto_player.Context, req *proto_guild.C2
 	}
 
 	// 检查是否一小时内退出过帮会
-	//now := time.Now()
+	//now := utils.Now()
 	//if now.Unix() < info.LastQuitTime+define.JoinGuildCD && info.LastQuitTime != 0 {
 	//	log.Error("create guild time limit")
 	//	return false
@@ -379,8 +379,8 @@ func (mgr *Manager) OnDealApply(ctx *proto_player.Context, req *proto_guild.C2SD
 		memInfo.FaceSlotId = tarInfo.FaceSlotId
 		memInfo.Level = tarInfo.Level
 		memInfo.Position = define.GuildOrdinary
-		memInfo.LastLoginTime = time.Now().Unix()
-		memInfo.JoinTime = time.Now().Unix()
+		memInfo.LastLoginTime = utils.Now().Unix()
+		memInfo.JoinTime = utils.Now().Unix()
 
 		ent.guild.MemberData[memInfo.Id] = memInfo
 		ent.setProp(define.GuildPropCurMemberCount, int32(len(ent.guild.MemberData)))
@@ -518,7 +518,7 @@ func (mgr *Manager) OnImpeachMaster(ctx *proto_player.Context, req *proto_guild.
 
 	impeachLimit := config.Global.Get().GuildImpeachOfflineTime
 	// 会长7天未上线
-	if time.Now().Unix()-ownerInfo.LastLoginTime < impeachLimit*86400 && isOnline {
+	if utils.Now().Unix()-ownerInfo.LastLoginTime < impeachLimit*86400 && isOnline {
 		return
 	}
 
@@ -553,7 +553,7 @@ func (mgr *Manager) OnJoinGuild(ctx *proto_player.Context, req *proto_guild.C2SJ
 	}
 
 	// 检查是否一小时内退出过帮会
-	now := time.Now()
+	now := utils.Now()
 	if now.Unix() < info.LastQuitTime+define.JoinGuildCD && info.LastQuitTime != 0 {
 		log.Error("join guild time limit")
 		return
@@ -895,7 +895,7 @@ func (mgr *Manager) OnGetGuildApplyList(ctx *proto_player.Context) (resp *proto_
 		return
 	}
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 
 	applications := mgr.GuildApplication[info.GuildId]
 	list := make([]*proto_guild.Apply, 0)
@@ -1023,7 +1023,7 @@ func (mgr *Manager) OnPlayerGuildDetail(ctx *proto_player.Context, req *proto_gu
 	//签到
 	if info.ToDaySign {
 		//判定时间
-		if !utils.CheckIsSameDayBySec(info.SignTime, time.Now().Unix(), 0) {
+		if !utils.CheckIsSameDayBySec(info.SignTime, utils.Now().Unix(), 0) {
 			info.ToDaySign = false
 			if info.SignDay >= 7 {
 				info.SignDay = 0
@@ -1041,7 +1041,7 @@ func (mgr *Manager) OnPlayerGuildDetail(ctx *proto_player.Context, req *proto_gu
 		info.GuildPray = new(model.GuildPrayItem)
 	}
 
-	if !utils.CheckIsSameDayBySec(info.GuildPray.TodayPrayTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(info.GuildPray.TodayPrayTime, utils.Now().Unix(), 0) {
 		info.GuildPray.IsTodayPray = false
 	}
 
@@ -1233,7 +1233,7 @@ func (mgr *Manager) hasSendApplication(playerId, guildId int64) bool {
 		return false
 	}
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	applications := mgr.GuildApplication[ent.guild.Id]
 	for _, application := range applications {
 		if application.PlayerId == playerId && now < application.Expiration {
@@ -1282,7 +1282,7 @@ func (mgr *Manager) GuildSign(playerId int64) (*model.PlayerGuild, error) {
 	}
 	info.SignDay += 1
 	info.ToDaySign = true
-	info.SignTime = time.Now().Unix()
+	info.SignTime = utils.Now().Unix()
 
 	return info, nil
 }

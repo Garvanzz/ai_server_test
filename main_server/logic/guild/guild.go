@@ -3,9 +3,10 @@ package guild
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"time"
 	"xfx/core/db"
+	"xfx/pkg/utils"
+
+	"github.com/golang/protobuf/proto"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
@@ -19,7 +20,7 @@ func newGuild(name, noticeBoard string, memLimit, banner, bannerColor int32) *mo
 	guild.GuildName = name
 	guild.NoticeBoard = noticeBoard
 	guild.MemberData = make(map[int64]*model.Member)
-	guild.LastRefreshTime = time.Now().Unix()
+	guild.LastRefreshTime = utils.Now().Unix()
 	guild.Props[define.GuildPropMaxMemberCount] = memLimit
 	guild.Props[define.GuildPropBanner] = banner
 	guild.Props[define.GuildPropBannerColor] = bannerColor
@@ -89,8 +90,8 @@ func (ent *entity) addMemberInfo(ctx *proto_player.Context, position int32, info
 	memInfo := new(model.Member)
 	memInfo.Id = info.Id
 	memInfo.Position = position
-	memInfo.LastLoginTime = time.Now().Unix()
-	memInfo.JoinTime = time.Now().Unix()
+	memInfo.LastLoginTime = utils.Now().Unix()
+	memInfo.JoinTime = utils.Now().Unix()
 
 	ent.guild.MemberData[memInfo.Id] = memInfo
 	ent.setProp(define.GuildPropCurMemberCount, int32(len(ent.guild.MemberData)))
@@ -256,7 +257,7 @@ func (ent *entity) onSave() bool {
 
 // tick
 func (ent *entity) update() {
-	now := time.Now()
+	now := utils.Now()
 	if ent.guild.LastRefreshTime == 0 {
 		ent.guild.LastRefreshTime = now.Unix()
 		return
@@ -282,7 +283,7 @@ func (ent *entity) sendGuildApply(guildId int64, ctx *proto_player.Context) {
 	apply.Level = int32(ctx.Level)
 	apply.FaceId = int32(ctx.FaceId)
 	apply.FaceSlotId = int32(ctx.FaceSlotId)
-	apply.Expiration = time.Now().Unix() + define.ApplyKeepTime
+	apply.Expiration = utils.Now().Unix() + define.ApplyKeepTime
 
 	applications = append(applications, apply)
 
@@ -299,7 +300,7 @@ func (ent *entity) addGuildLog(action int32, dbId []int64, params ...string) {
 	guildLog := new(model.GuildLog)
 	guildLog.GuildId = ent.guild.Id
 	guildLog.Action = action
-	guildLog.Timestamp = time.Now().Unix()
+	guildLog.Timestamp = utils.Now().Unix()
 	guildLog.Params = params
 	guildLog.DbId = dbId
 
@@ -338,7 +339,7 @@ func (ent *entity) memInfoToProto(memInfo *model.Member) *proto_guild.MemberInfo
 	if isOnline {
 		lastLoginTime = 0
 	} else {
-		lastLoginTime = time.Now().Unix() - memInfo.LastLoginTime
+		lastLoginTime = utils.Now().Unix() - memInfo.LastLoginTime
 	}
 
 	return &proto_guild.MemberInfo{
@@ -358,7 +359,7 @@ func (ent *entity) ProtoTomemInfo(info *proto_guild.MemberInfo) *model.Member {
 	if isOnline {
 		lastLoginTime = 0
 	} else {
-		lastLoginTime = time.Now().Unix() - info.LastLoginTime
+		lastLoginTime = utils.Now().Unix() - info.LastLoginTime
 	}
 
 	return &model.Member{
@@ -401,7 +402,7 @@ func (ent *entity) boardCast(message proto.Message) {
 //	push.Talk.Header.Type = 2    //类型 2=系统
 //	push.Talk.Player = nil
 //	push.Talk.Msg = ""
-//	push.Talk.Timestamp = time.Now().Unix()
+//	push.Talk.Timestamp = utils.Now().Unix()
 //	push.Talk.Goods = nil
 //	push.Talk.SysMsgId = messageId
 //	push.Talk.SysMsgCN = cn

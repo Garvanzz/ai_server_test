@@ -28,21 +28,17 @@ func main() {
 		})
 	})
 
-	//用group做 直接替代中间件 需要解码通讯的 游戏内专用
 	encryptGroup := r.Group("")
 	encryptGroup.Use(logic.AesDecryptMiddleFuncForGame) //使用解码中间件
 	{
 	}
 
-	//不需要解码的
 	r.POST("/login", logic.Login)                 //登录
 	r.POST("/register", logic.Accountregister)    //注册
 	r.POST("/forceupdate", logic.Forceupdate)     //判断更新
 	r.POST("/getserverlist", logic.GetServerList) //获取服务器列表
 	r.POST("/getnotices", logic.GetNotices)       //获取公告
 
-	//官网相关接口
-	//用group做 直接替代中间件 需要解码通讯的 这里是官网主页专用
 	homeWebGroup := r.Group("")
 	homeWebGroup.Use(logic.AesDecryptMiddleFuncForHomeWeb) //使用解码中间件
 	{

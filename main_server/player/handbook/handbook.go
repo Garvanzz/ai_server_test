@@ -3,7 +3,7 @@ package handbook
 import (
 	"encoding/json"
 	"fmt"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -135,7 +135,7 @@ func ReqHandBookAward(ctx global.IPlayer, pl *model.Player, req *proto_handbook.
 	}
 
 	for _, k := range pl.Handbook.HandbookOption.GetId {
-		if common.IsHaveValueIntArray(req.Id, k) {
+		if utils.ContainsInt32(req.Id, k) {
 			resp.Code = proto_handbook.ERRORCODEHANDBOOK_ERROR_ALGET
 			ctx.Send(resp)
 			return

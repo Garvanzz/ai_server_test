@@ -3,13 +3,13 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"time"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_public"
 )
 
@@ -242,7 +242,7 @@ func processChatTransaction(ctx global.IPlayer, pl *model.Player, realData *mode
 		Status:          2,
 		PriceType:       opt.PriceType,
 		Price:           opt.Price,
-		CreateTime:      time.Now().Unix(),
+		CreateTime:      utils.Now().Unix(),
 		OtherPlayerId:   opt.TargetInfo.PlayerId,
 		OtherPlayerName: opt.TargetInfo.Name,
 	}

@@ -1,8 +1,7 @@
 package huaguoshan
 
 import (
-	"time"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -57,14 +56,14 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 		return
 	}
 
-	if !common.IsHaveValueIntArray(treeConf.Type, req.TreeType) {
+	if !utils.ContainsInt32(treeConf.Type, req.TreeType) {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
 	// 开始第一阶段
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	pl.Huaguoshan.Peach.CurTreeId = req.TreeId
 	pl.Huaguoshan.Peach.CurPlantPeachStage = 1
 	pl.Huaguoshan.Peach.CurPlantPeachStartTime = now
@@ -138,7 +137,7 @@ func waterPeach(ctx global.IPlayer, pl *model.Player) {
 	internal.SubItems(ctx, pl, costs)
 
 	// 缩短当前阶段时间
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	newEndTime := pl.Huaguoshan.Peach.CurPlantPeachEndTime - int64(treeConf.CoolDownTime)
 
 	// 确保不会缩短到当前时间之前
@@ -240,7 +239,7 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	// 检查时间是否已到
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if now < pl.Huaguoshan.Peach.CurPlantPeachEndTime {
 		resp.Code = proto_public.CommonErrorCode_ERR_LIMITTIME
 		ctx.Send(resp)
@@ -282,7 +281,7 @@ func checkAndAdvanceStage(pl *model.Player) {
 	}
 
 	// 检查时间是否已到
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if now >= pl.Huaguoshan.Peach.CurPlantPeachEndTime {
 		return
 	}
@@ -298,7 +297,7 @@ func checkAndAdvanceStage(pl *model.Player) {
 
 // checkAndAdvanceStage 检查并推进阶段
 func checkAndAdvanceStageByConf(pl *model.Player, treeConf *conf.PeachTree) {
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 
 	// 循环检查是否可以进入下一阶段
 	for pl.Huaguoshan.Peach.CurPlantPeachStage < 5 && now >= pl.Huaguoshan.Peach.CurPlantPeachEndTime {

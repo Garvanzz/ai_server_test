@@ -2,6 +2,19 @@ package model
 
 import "xfx/core/config/conf"
 
+// ActivityInfo GM/Invoke 用：活动实例概要（含状态），放在 core/model 避免 invoke 依赖 activity 包导致循环引用
+type ActivityInfo struct {
+	ActId     int64  `json:"act_id"`
+	CfgId     int64  `json:"cfg_id"`
+	Type      string `json:"type"`
+	State     string `json:"state"`
+	StartTime int64  `json:"start_time"`
+	EndTime   int64  `json:"end_time"`
+	CloseTime int64  `json:"close_time"`
+	TimeType  int32  `json:"time_type"`
+	Season    int32  `json:"season"`
+}
+
 type ActivityData struct {
 	Id        int64
 	CfgId     int64

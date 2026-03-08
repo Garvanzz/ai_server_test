@@ -3,8 +3,6 @@ package welfare
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -77,10 +75,10 @@ func ReqDaySignInit(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2S
 
 	//判断一下时间
 	if pl.Welfare.DaySign.FirstDayTime == 0 {
-		pl.Welfare.DaySign.FirstDayTime = time.Now().Unix()
+		pl.Welfare.DaySign.FirstDayTime = utils.Now().Unix()
 	} else {
-		if utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, time.Now().Unix()) > 30 {
-			pl.Welfare.DaySign.FirstDayTime = time.Now().Unix()
+		if utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, utils.Now().Unix()) > 30 {
+			pl.Welfare.DaySign.FirstDayTime = utils.Now().Unix()
 			pl.Welfare.DaySign.IsDaySign = false
 			pl.Welfare.DaySign.Day = make([]int32, 0)
 			pl.Welfare.DaySign.SignTime = 0
@@ -88,7 +86,7 @@ func ReqDaySignInit(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2S
 		}
 	}
 
-	if utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.SignTime, time.Now().Unix()) >= 1 {
+	if utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.SignTime, utils.Now().Unix()) >= 1 {
 		pl.Welfare.DaySign.IsDaySign = false
 	}
 
@@ -102,7 +100,7 @@ func ReqDaySignInit(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2S
 	res.IsSign = pl.Welfare.DaySign.IsDaySign
 	res.AccDay = pl.Welfare.DaySign.AccDay
 	res.Day = pl.Welfare.DaySign.Day
-	res.CurDay = utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, time.Now().Unix()) + 1
+	res.CurDay = utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, utils.Now().Unix()) + 1
 	log.Debug("sign init date: %v", res)
 	ctx.Send(res)
 }
@@ -111,7 +109,7 @@ func ReqDaySignInit(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2S
 func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDayAward) {
 	res := new(proto_welfare.S2CDayAward)
 
-	curday := utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, time.Now().Unix())
+	curday := utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, utils.Now().Unix())
 	if req.Id > curday+1 {
 		res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
 		ctx.Send(res)
@@ -121,7 +119,7 @@ func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDa
 	conf, _ := config.DaySign.Find(int64(req.Id))
 	//补签
 	if req.SignType == define.SignType_BuSignIn {
-		have := common.IsHaveValueIntArray(pl.Welfare.DaySign.Day, req.Id)
+		have := utils.ContainsInt32(pl.Welfare.DaySign.Day, req.Id)
 		if have {
 			res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
 			ctx.Send(res)
@@ -143,7 +141,7 @@ func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDa
 	} else if req.SignType == define.SignType_Normal {
 
 		if pl.Welfare.DaySign.SignTime != 0 {
-			if utils.CheckIsSameDayBySec(pl.Welfare.DaySign.SignTime, time.Now().Unix(), 0) {
+			if utils.CheckIsSameDayBySec(pl.Welfare.DaySign.SignTime, utils.Now().Unix(), 0) {
 				res.Code = proto_welfare.ERRORGAMECODE_ERR_ALSIGN
 				ctx.Send(res)
 				return
@@ -157,7 +155,7 @@ func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDa
 			return
 		}
 
-		have := common.IsHaveValueIntArray(pl.Welfare.DaySign.Day, req.Id)
+		have := utils.ContainsInt32(pl.Welfare.DaySign.Day, req.Id)
 		if have {
 			res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
 			ctx.Send(res)
@@ -165,10 +163,10 @@ func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDa
 		}
 
 		pl.Welfare.DaySign.IsDaySign = true
-		pl.Welfare.DaySign.SignTime = time.Now().Unix()
+		pl.Welfare.DaySign.SignTime = utils.Now().Unix()
 		pl.Welfare.DaySign.Day = append(pl.Welfare.DaySign.Day, req.Id)
 	} else if req.SignType == define.SignType_AccSignIn {
-		have := common.IsHaveValueIntArray(pl.Welfare.DaySign.AccDay, req.Id)
+		have := utils.ContainsInt32(pl.Welfare.DaySign.AccDay, req.Id)
 		if have {
 			res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
 			ctx.Send(res)
@@ -182,7 +180,7 @@ func ReqSignAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SDa
 	bag.AddAward(ctx, pl, conf.Reward, true)
 	res.Code = proto_welfare.ERRORGAMECODE_ERR_Ok
 	res.IsSign = pl.Welfare.DaySign.IsDaySign
-	res.CurDay = utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, time.Now().Unix()) + 1
+	res.CurDay = utils.DaysBetweenTwoTimeUnix(pl.Welfare.DaySign.FirstDayTime, utils.Now().Unix()) + 1
 	res.Day = pl.Welfare.DaySign.Day
 	res.AccDay = pl.Welfare.DaySign.AccDay
 
@@ -220,7 +218,7 @@ func updateMonthCardState(pl *model.Player) {
 				continue
 			}
 
-			if !utils.CheckIsSameDayBySec(v.GetTime, time.Now().Unix(), 0) {
+			if !utils.CheckIsSameDayBySec(v.GetTime, utils.Now().Unix(), 0) {
 				pl.Welfare.MonthCard[key].IsGet = false
 			}
 		}
@@ -278,18 +276,18 @@ func ReqMonthCardGetAward(ctx global.IPlayer, pl *model.Player, req *proto_welfa
 		}
 
 		if monthCard.GetTime <= 0 {
-			monthCard.GetTime = time.Now().Unix()
+			monthCard.GetTime = utils.Now().Unix()
 			monthCard.IsGet = true
 		} else {
 			//判断是否领取
-			if utils.CheckIsSameDayBySec(monthCard.GetTime, time.Now().Unix(), 0) {
+			if utils.CheckIsSameDayBySec(monthCard.GetTime, utils.Now().Unix(), 0) {
 				res.Code = proto_welfare.ERRORGAMECODE_ERR_ALGET
 				ctx.Send(res)
 				return
 			}
 
 			monthCard.IsGet = true
-			monthCard.GetTime = time.Now().Unix()
+			monthCard.GetTime = utils.Now().Unix()
 		}
 
 		//玩家数据
@@ -297,7 +295,7 @@ func ReqMonthCardGetAward(ctx global.IPlayer, pl *model.Player, req *proto_welfa
 
 		//鉴宝月卡表
 		m.GetDay += 1
-		m.GetTime = time.Now().Unix()
+		m.GetTime = utils.Now().Unix()
 		js, _ := json.Marshal(m)
 		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
 
@@ -335,7 +333,7 @@ func ReqFuncOpenInit(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2
 // 功能开启奖励
 func ReqFuncOpenAward(ctx global.IPlayer, pl *model.Player, req *proto_welfare.C2SFunctionAward) {
 	res := new(proto_welfare.S2CFunctionAward)
-	if common.IsHaveValueStringArray(pl.Welfare.FunctionOpen, req.Mod) {
+	if utils.ContainsString(pl.Welfare.FunctionOpen, req.Mod) {
 		res.OpenAward = pl.Welfare.FunctionOpen
 		ctx.Send(res)
 		return

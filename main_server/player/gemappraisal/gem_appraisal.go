@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -16,6 +15,7 @@ import (
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_draw"
 	"xfx/proto/proto_equip"
 	"xfx/proto/proto_public"
@@ -218,7 +218,7 @@ func updatePoolState(pl *model.Player) {
 			log.Error("checkCfg parse endTime err:%v", err)
 			return
 		}
-		if time.Now().Unix() < endTime.Unix() {
+		if utils.Now().Unix() < endTime.Unix() {
 			return
 		}
 
@@ -241,7 +241,7 @@ func updatePoolState(pl *model.Player) {
 				continue
 			}
 
-			if time.Now().Unix() >= startTime.Unix() && time.Now().Unix() < endTime.Unix() {
+			if utils.Now().Unix() >= startTime.Unix() && utils.Now().Unix() < endTime.Unix() {
 				pl.GemAppraisal.PoolId = int(v.Id)
 				pl.GemAppraisal.PoolStarTime = startTime.Unix()
 				pl.GemAppraisal.PoolEndTime = endTime.Unix()
@@ -277,13 +277,13 @@ func ReqGemAppraisalStageAward(ctx global.IPlayer, pl *model.Player, req *proto_
 	}
 
 	//判断领取没
-	if common.IsHaveValueIntArray(confStage.Progress, req.Progress) == false {
+	if utils.ContainsInt32(confStage.Progress, req.Progress) == false {
 		res.Code = proto_draw.ERRORCODEDRAW_ERROR_NOConfig
 		ctx.Send(res)
 		return
 	}
 
-	if common.IsHaveValueIntArray(pl.GemAppraisal.Reward, req.Progress) {
+	if utils.ContainsInt32(pl.GemAppraisal.Reward, req.Progress) {
 		res.Code = proto_draw.ERRORCODEDRAW_ERROR_AlGetAward
 		ctx.Send(res)
 		return
@@ -302,9 +302,9 @@ func ReqGemAppraisalStageAward(ctx global.IPlayer, pl *model.Player, req *proto_
 
 	var items []conf2.ItemE
 	items = append(items, conf2.ItemE{
-		ItemType: int32(common.StringToInt64(awards[2])),
-		ItemId:   int32(common.StringToInt64(awards[0])),
-		ItemNum:  int32(common.StringToInt64(awards[1])),
+		ItemType: int32(utils.MustParseInt64(awards[2])),
+		ItemId:   int32(utils.MustParseInt64(awards[0])),
+		ItemNum:  int32(utils.MustParseInt64(awards[1])),
 	})
 	//添加道具
 	bag.AddAward(ctx, pl, items, true)

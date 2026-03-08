@@ -76,8 +76,8 @@ func ReqInitShenjiDraw(ctx global.IPlayer, pl *model.Player, req *proto_destiny.
 	//纪录
 	for i, v := range pl.ShenjiDraw.Pools {
 		if v.LastRecordTime != 0 {
-			if utils.IsSameWeekBySec(v.LastRecordTime, time.Now().Unix()) == false {
-				pl.ShenjiDraw.Pools[i].LastRecordTime = time.Now().Unix()
+			if utils.IsSameWeekBySec(v.LastRecordTime, utils.Now().Unix()) == false {
+				pl.ShenjiDraw.Pools[i].LastRecordTime = utils.Now().Unix()
 				pl.ShenjiDraw.Pools[i].ShenjiRecords = make([]*model.ShenjiRecord, 0)
 			}
 		}
@@ -97,7 +97,7 @@ func drawPoolRefreshState(pl *model.Player) {
 			log.Error("checkCfg parse endTime err:%v", err)
 			continue
 		}
-		if time.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 2 {
+		if utils.Now().Unix() >= endTime.Unix() && conf.ActivityType == 2 && conf.Type == 2 {
 			delete(pl.ShenjiDraw.Pools, k)
 		}
 	}
@@ -123,7 +123,7 @@ func drawPoolRefreshState(pl *model.Player) {
 				log.Error("checkCfg parse endTime err:%v", err)
 				continue
 			}
-			if time.Now().Unix() < startTime.Unix() || time.Now().Unix() >= endTime.Unix() {
+			if utils.Now().Unix() < startTime.Unix() || utils.Now().Unix() >= endTime.Unix() {
 				continue
 			}
 		}
@@ -194,13 +194,13 @@ func ReqShenjiDraw(ctx global.IPlayer, pl *model.Player, req *proto_destiny.C2SD
 			//记录
 			if pool.ShenjiRecords == nil {
 				pool.ShenjiRecords = make([]*model.ShenjiRecord, 0)
-				pool.LastRecordTime = time.Now().Unix()
+				pool.LastRecordTime = utils.Now().Unix()
 			}
 
 			//跨周
-			if !utils.IsSameWeekBySec(time.Now().Unix(), pool.LastRecordTime) {
+			if !utils.IsSameWeekBySec(utils.Now().Unix(), pool.LastRecordTime) {
 				pool.ShenjiRecords = make([]*model.ShenjiRecord, 0)
-				pool.LastRecordTime = time.Now().Unix()
+				pool.LastRecordTime = utils.Now().Unix()
 			}
 
 			pool.ShenjiRecords = append(pool.ShenjiRecords, &model.ShenjiRecord{

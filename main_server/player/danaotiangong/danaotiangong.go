@@ -3,7 +3,6 @@ package danaotiangong
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -25,7 +24,7 @@ func Init(pl *model.Player) {
 	pl.Danaotiangong.Stage = 1
 	pl.Danaotiangong.Frequency = 1 //默认一周目
 	pl.Danaotiangong.DaychallengeNum = 0
-	pl.Danaotiangong.DaychallengeTime = time.Now().Unix()
+	pl.Danaotiangong.DaychallengeTime = utils.Now().Unix()
 }
 
 func Save(pl *model.Player, isSync bool) {
@@ -126,9 +125,9 @@ func ReqInitDanaotiangong(ctx global.IPlayer, pl *model.Player, req *proto_danao
 	res := &proto_danaotiangong.S2CRespTiangongData{}
 	res.Stage = pl.Danaotiangong.Stage
 	res.Frequency = pl.Danaotiangong.Frequency
-	if !utils.CheckIsSameDayBySec(pl.Danaotiangong.DaychallengeTime, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pl.Danaotiangong.DaychallengeTime, utils.Now().Unix(), 0) {
 		pl.Danaotiangong.DaychallengeNum = 0
-		pl.Danaotiangong.DaychallengeTime = time.Now().Unix()
+		pl.Danaotiangong.DaychallengeTime = utils.Now().Unix()
 	}
 	res.DaychallengeNum = pl.Danaotiangong.DaychallengeNum
 	ctx.Send(res)
@@ -245,7 +244,7 @@ func BattleBack_Danaotiangong(ctx global.IPlayer, pl *model.Player, data interfa
 		Id:         confUproar.BossId,
 		Time:       resq.Time,
 		IsWin:      resq.WinId == pl.Id,
-		CreateTime: time.Now().Unix(),
+		CreateTime: utils.Now().Unix(),
 	})
 
 	//保存战斗记录

@@ -3,7 +3,6 @@ package recruit
 import (
 	"sort"
 	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/define"
@@ -80,12 +79,12 @@ func (mgr *Recruit) OnRecruitHero(typ int32, count int32, miniNum int32, level i
 				if v.Rate >= 6 {
 					//1：角色 2:碎片
 					if v.Type == 1 {
-						if common.IsHaveValueIntArray(heroIds, v.Value) == false {
+						if utils.ContainsInt32(heroIds, v.Value) == false {
 							continue
 						}
 					} else if v.Type == 2 {
 						conf_item := config.Item.All()[int64(v.Value)]
-						if common.IsHaveValueIntArray(heroIds, conf_item.CompositeItem) == false {
+						if utils.ContainsInt32(heroIds, conf_item.CompositeItem) == false {
 							continue
 						}
 					}
@@ -111,7 +110,7 @@ func (mgr *Recruit) OnRecruitHero(typ int32, count int32, miniNum int32, level i
 			continue
 		}
 
-		if v.Type == typ && time.Now().Unix() >= startTime.Unix() && time.Now().Unix() < endTime.Unix() {
+		if v.Type == typ && utils.Now().Unix() >= startTime.Unix() && utils.Now().Unix() < endTime.Unix() {
 			drawConf = v
 			break
 		}
@@ -330,7 +329,7 @@ func (mgr *Recruit) OnRecruitGemAppraisal(typ int32, title int32, count int32, m
 			continue
 		}
 
-		if v.Type == typ && time.Now().Unix() >= startTime.Unix() && time.Now().Unix() < endTime.Unix() {
+		if v.Type == typ && utils.Now().Unix() >= startTime.Unix() && utils.Now().Unix() < endTime.Unix() {
 			drawConf = v
 			break
 		}
@@ -438,7 +437,7 @@ func (mgr *Recruit) OnRecruitPet(typ int32, subType int32, count int32, miniNum 
 			continue
 		}
 
-		if v.Type == typ && time.Now().Unix() >= startTime.Unix() && time.Now().Unix() < endTime.Unix() && v.Param == subType {
+		if v.Type == typ && utils.Now().Unix() >= startTime.Unix() && utils.Now().Unix() < endTime.Unix() && v.Param == subType {
 			drawConf = v
 			break
 		}

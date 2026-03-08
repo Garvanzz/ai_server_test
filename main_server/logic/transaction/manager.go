@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"xfx/core/db"
+	"xfx/pkg/utils"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
@@ -109,7 +110,7 @@ func (m *Manager) loadData() {
 func (m *Manager) GetType() string { return define.ModuleTransaction }
 
 func (m *Manager) OnTick(delta time.Duration) {
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if now-m.lastSaveTime >= 60 {
 		m.saveToRedis()
 		m.lastSaveTime = now
@@ -170,8 +171,8 @@ func (m *Manager) CreateOrder(sellerId int64, sellerName string, attachmentData 
 		Price:          price,
 		Status:         0,
 		Type:           orderType,
-		CreateTime:     time.Now().Unix(),
-		UpdateTime:     time.Now().Unix(),
+		CreateTime:     utils.Now().Unix(),
+		UpdateTime:     utils.Now().Unix(),
 	}
 	m.orders[order.Id] = order
 	m.playerOrders[sellerId] = append(m.playerOrders[sellerId], order.Id)
@@ -214,7 +215,7 @@ func (m *Manager) ProcessOrder(orderId int64, buyerId int64) (*model.Transaction
 	}
 
 	order.Status = 1
-	order.UpdateTime = time.Now().Unix()
+	order.UpdateTime = utils.Now().Unix()
 	m.removeOrderFromPlayer(order.SellerId, orderId)
 	delete(m.orders, orderId)
 	return order, nil
@@ -248,7 +249,7 @@ func (m *Manager) CancelOrder(orderId int64, playerId int64) (*model.Transaction
 	}
 
 	order.Status = 3
-	order.UpdateTime = time.Now().Unix()
+	order.UpdateTime = utils.Now().Unix()
 	m.removeOrderFromPlayer(playerId, orderId)
 	delete(m.orders, orderId)
 	return order, nil

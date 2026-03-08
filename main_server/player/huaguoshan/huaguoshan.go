@@ -3,7 +3,6 @@ package huaguoshan
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -171,7 +170,7 @@ func getPlayerInfo(ctx global.IPlayer, playerId int64) *proto_public.CommonPlaye
 
 // checkDailyReset 检查每日重置
 func checkDailyReset(partner *model.HuaguoshanPartner) {
-	now := time.Now()
+	now := utils.Now()
 	if partner.LastRelieveTime > 0 {
 		if !utils.CheckIsSameDayBySec(partner.LastGiveResetTime, now.Unix(), 0) {
 			partner.GiveCount = 0

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 	"xfx/core/db"
+	"xfx/pkg/utils"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/global"
@@ -74,7 +75,7 @@ func (mgr *Manager) OnTick(delta time.Duration) {
 	//同步开始
 	for roomId, times := range mgr.readyStart {
 		//通知加载游戏
-		if time.Now().Unix()-times >= 10 {
+		if utils.Now().Unix()-times >= 10 {
 			mgr.OnSyncStatLoadGame(roomId)
 			delete(mgr.readyStart, roomId)
 		}
@@ -84,7 +85,7 @@ func (mgr *Manager) OnTick(delta time.Duration) {
 	for id, list := range mgr.playerInvites {
 		k := 0
 		for _, v := range list {
-			if time.Now().Unix()-v.InviteTime < 60*1 {
+			if utils.Now().Unix()-v.InviteTime < 60*1 {
 				list[k] = v
 				k++
 			}
@@ -261,7 +262,7 @@ func (mgr *Manager) OnMatchToRoomInfo(roomId1, roomId2 int32) {
 	invoke.DispatchPlayers(mgr, pushList, res)
 
 	//10秒后开始执行加载
-	mgr.readyStart[roomId1] = time.Now().Unix()
+	mgr.readyStart[roomId1] = utils.Now().Unix()
 }
 
 // SyncRoomInfo 同步房间信息
@@ -558,7 +559,7 @@ func (mgr *Manager) OnSendInvite(gen *proto_player.Context, msg *proto_room.C2SR
 		Receiver:   msg.Id,
 		Sender:     dbId,
 		SenderName: "",
-		InviteTime: time.Now().Unix(),
+		InviteTime: utils.Now().Unix(),
 	}
 
 	inviteList, ok := mgr.playerInvites[msg.Id]

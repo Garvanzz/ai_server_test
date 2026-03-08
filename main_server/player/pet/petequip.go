@@ -1,7 +1,7 @@
 package pet
 
 import (
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/model"
@@ -72,7 +72,7 @@ func ReqPetHandBookAward(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2
 	}
 
 	for _, k := range pl.PetHandbook.PetHandbookOption.GetId {
-		if common.IsHaveValueIntArray(req.Id, k) {
+		if utils.ContainsInt32(req.Id, k) {
 			resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(resp)
 			return
@@ -213,7 +213,7 @@ func ReqPetEquipWear(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2SPet
 
 	//判断是否穿戴
 	pet := pl.Pet.Pets[req.PetId]
-	if common.IsHaveValueIntArray(pet.Equips, req.Id) {
+	if utils.ContainsInt32(pet.Equips, req.Id) {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return

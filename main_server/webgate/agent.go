@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 	"xfx/main_server/invoke"
+	"xfx/pkg/utils"
 	"xfx/main_server/messages"
 	"xfx/pkg/agent"
 	"xfx/pkg/gate"
@@ -121,7 +122,7 @@ func (a *Agent) OnSessionMessage(msg any) {
 	case *Proto_Player.C2SPing:
 		a.pingTime = PingTime
 		a.Send(&Proto_Player.S2CPong{
-			ZoneOffset: time.Now().Unix(),
+			ZoneOffset: utils.Now().Unix(),
 		})
 	case *Proto_Player.C2SLogin: // 登录
 		loginResult, err := invoke.LoginClient(a).Login(&messages.Login{

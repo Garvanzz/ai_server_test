@@ -3,7 +3,6 @@ package task
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -156,7 +155,7 @@ func setTaskInfo(pl *model.Player, taskType int32, extraCondition int32, amount 
 
 // 重置任务
 func resetTask(ctx global.IPlayer, pl *model.Player, taskType int32) {
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 
 	// 初始化任务
 	if pl.Task.DailyResetTime == 0 {

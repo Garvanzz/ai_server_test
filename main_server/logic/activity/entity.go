@@ -49,10 +49,15 @@ func (e *entity) checkState() (event string) {
 	case StateRunning:
 		if e.TimeType == define.ActTimeClose {
 			event = EventClose
-		} else if e.TimeType == define.ActTimeConfigured || e.TimeType == define.ActTimeServerConfigured {
+		} else if e.TimeType == define.ActTimeConfigured || e.TimeType == define.ActTimeServerConfigured || e.TimeType == define.ActTimeSeason {
 			if now < e.StartTime || now > e.EndTime {
 				event = EventClose
 			}
+		}
+	case StateStopped:
+		// 暂停状态下若配置的活动结束时间已过，自动转为 Closed
+		if e.TimeType != define.ActTimeAlwaysOpen && e.EndTime > 0 && now >= e.EndTime {
+			event = EventClose
 		}
 	case StateClosed:
 		if (now >= e.StartTime && now < e.EndTime) || e.TimeType == define.ActTimeAlwaysOpen {
@@ -126,7 +131,8 @@ func (e *entity) determineStateFromConfig(Sid int) (event string) {
 		serverItem := new(model.ServerItem)
 		ok, err := db.CommonEngine.Mysql.Table(define.ServerGroup).Where("id = ?", Sid).Get(serverItem)
 		if !ok || err != nil {
-			panic("mysql数据库连接失败")
+			log.Error("activity determineStateFromConfig mysql error, cfgId:%v, err:%v", e.CfgId, err)
+			return
 		}
 
 		startTime := serverItem.OpenServerTime

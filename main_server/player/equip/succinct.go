@@ -2,14 +2,13 @@ package equip
 
 import (
 	"errors"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
-	"xfx/pkg/utils"
 	"xfx/proto/proto_equip"
 )
 
@@ -101,7 +100,7 @@ func GetSuccinctDropSkill(weight []int32, equipIndex int32) (int32, error) {
 			if len(v.Limit) <= 0 {
 				skillWights = append(skillWights, v.Weight)
 				skillIds = append(skillIds, v.Id)
-			} else if common.IsHaveValueIntArray(v.Limit, equipIndex) == true {
+			} else if utils.ContainsInt32(v.Limit, equipIndex) == true {
 				skillWights = append(skillWights, v.Weight)
 				skillIds = append(skillIds, v.Id)
 			}
@@ -268,7 +267,7 @@ func ReqGetSuccinctAward(ctx global.IPlayer, pl *model.Player, req *proto_equip.
 	}
 
 	//判断领取没有
-	if common.IsHaveValueIntArray(pl.Equip.Succinct.LevelAward, req.Id) {
+	if utils.ContainsInt32(pl.Equip.Succinct.LevelAward, req.Id) {
 		res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 		ctx.Send(res)
 		return

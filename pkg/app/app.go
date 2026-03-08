@@ -50,9 +50,9 @@ func (app *DefaultApp) Run(mods ...module.Module) {
 	}
 
 	app.system = agent.NewSystem(
-		agent.WithName(app.env.Name),
-		agent.WithHost(app.env.Host),
-		agent.WithPort(app.env.Port),
+		agent.WithName(app.env.RemoteName),
+		agent.WithHost(app.env.RemoteHost),
+		agent.WithPort(app.env.RemotePort),
 		agent.WithTick(time.Duration(tick)),
 	)
 	app.system.Start()

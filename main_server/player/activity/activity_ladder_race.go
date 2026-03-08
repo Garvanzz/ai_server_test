@@ -3,8 +3,6 @@ package activity
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -17,6 +15,7 @@ import (
 	"xfx/main_server/player/internal"
 	"xfx/main_server/player/rank"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_game"
 	"xfx/proto/proto_public"
@@ -58,7 +57,7 @@ func ReqActivityLadderRaceSetLineUp(ctx global.IPlayer, pl *model.Player, req *p
 	}
 
 	for _, v := range req.HeroIds {
-		if !common.IsHaveValueIntArray(lineup.HeroId, v) {
+		if !utils.ContainsInt32(lineup.HeroId, v) {
 			res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(res)
 			return
@@ -264,7 +263,7 @@ func BattleBack_Tianti(ctx global.IPlayer, pl *model.Player, data interface{}) {
 			TargetId: Imodel.PlayerId,
 			IsAttack: true,
 			ActId:    Imodel.ActId,
-			Time:     time.Now().Unix(),
+			Time:     utils.Now().Unix(),
 			Rank:     int32(selfRank),
 		}
 		selfRecordJson, _ := json.Marshal(selfRecord)
@@ -278,7 +277,7 @@ func BattleBack_Tianti(ctx global.IPlayer, pl *model.Player, data interface{}) {
 				TargetId: pl.Id,
 				IsAttack: false,
 				ActId:    Imodel.ActId,
-				Time:     time.Now().Unix(),
+				Time:     utils.Now().Unix(),
 				Rank:     int32(targetRank),
 			}
 			targetRecordJson, _ := json.Marshal(targetRecord)

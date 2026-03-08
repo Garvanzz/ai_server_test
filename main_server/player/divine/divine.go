@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"xfx/core/common"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -14,6 +13,7 @@ import (
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_equip"
 )
 
@@ -886,7 +886,7 @@ func ReqOneKeyLearnCompose(ctx global.IPlayer, pl *model.Player, req *proto_equi
 						group = append(group, l)
 
 						if len(group) >= 4 {
-							if ok, _ := common.HasDuplicate(group); ok {
+							if ok, _ := utils.HasDuplicateInt32(group); ok {
 								comIds = append(comIds, group)
 							}
 							group = make([]int32, 0)

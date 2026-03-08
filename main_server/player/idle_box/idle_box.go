@@ -3,7 +3,6 @@ package idle_box
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -13,13 +12,14 @@ import (
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/task"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_idlebox"
 )
 
 func Init(pl *model.Player) {
 	pl.IdleBox = new(model.IdleBox)
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	pl.IdleBox.StartTime = now
 	pl.IdleBox.EndTime = now + int64(config.Global.Get().IdleBoxMaxTime*3600)
 }
@@ -117,7 +117,7 @@ func ReqReceiveReward(ctx global.IPlayer, pl *model.Player, req *proto_idlebox.C
 
 	bag.AddAward(ctx, pl, reward, true)
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	pl.IdleBox.StartTime = now
 	pl.IdleBox.EndTime = now + int64(config.Global.Get().IdleBoxMaxTime*3600)
 
@@ -139,7 +139,7 @@ func ReqGetIdleBoxData(ctx global.IPlayer, pl *model.Player, req *proto_idlebox.
 }
 
 func calcReward(startTime, endTime int64, conf_stage conf2.IdleBox, conf_climb conf2.IdleBox) []conf2.ItemE {
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	t := now
 	if t >= endTime {
 		t = endTime

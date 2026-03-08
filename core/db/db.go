@@ -6,13 +6,10 @@ import (
 	"strconv"
 	"time"
 	"xfx/core/define"
-	"xfx/core/model"
 	"xfx/pkg/env"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
 
-	"github.com/go-redsync/redsync/v4"
-	"github.com/go-redsync/redsync/v4/redis/redigo"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gomodule/redigo/redis"
 	"xorm.io/xorm"
@@ -23,52 +20,29 @@ type IDBSink interface {
 	//OnRet(ret *CDBRet)
 }
 
+// CDBEngine 单服引擎：一进程一 Redis 一 MySQL，连接配置仅来自 env（方案二）
 type CDBEngine struct {
 	Redis *redis.Pool
 	Mysql *xorm.Engine
-	Rs    *redsync.Redsync
 }
 
 var (
-	Engines      map[int]*CDBEngine // 各个区服连接
-	CommonEngine *CDBEngine         // 公用数据库
-	asyncGo      *Go
+	// Engine 全局唯一数据引擎（单服：env 配置的 Redis + MySQL）
+	Engine *CDBEngine
+	// CommonEngine 保留别名，与现有代码兼容，指向 Engine
+	CommonEngine *CDBEngine
+	// currentServerId 本进程服 ID，Start 时从 env 写入；GetEngine 仅在此 ID 时返回引擎
+	currentServerId int
+	asyncGo         *Go
 )
 
-func init() {
-	Engines = make(map[int]*CDBEngine)
-}
-
-// Start 初始服务器列表
+// Start 单服模式：仅用 env 建立本服 Redis 与共享 MySQL，不再读 servergroup 建多连接
 func Start(app module.App) {
-	//redis
-	CommonEngine = new(CDBEngine)
-	CommonEngine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
-	CommonEngine.Rs = redsync.New(redigo.NewPool(CommonEngine.Redis))
-	CommonEngine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr, app.GetEnv().Mysql)
-
-	serverItem := new(model.ServerItem)
-	ok, err := CommonEngine.Mysql.Table(define.ServerGroup).Where("id = ?", app.GetEnv().ID).Get(serverItem)
-	if !ok || err != nil {
-		panic("mysql数据库连接失败")
-	}
-
-	serverItems := make([]model.ServerItem, 0)
-	err = CommonEngine.Mysql.Table(define.ServerGroup).Where("server_group = ?", serverItem.ServerGroup).Find(&serverItems)
-	if err != nil {
-		fmt.Println(err)
-		panic("mysql数据库连接失败")
-	}
-
-	// 连接对应的数据库
-	for _, v := range serverItems {
-		//判断服务器状态
-		if v.ServerState != define.ServerStateNormal && v.ServerState != define.ServerStateYongji && v.ServerState != define.ServerStateBaoMan {
-			continue
-		}
-
-		Engines[int(v.Id)] = NewConnect(v, app)
-	}
+	currentServerId = app.GetEnv().ID
+	Engine = new(CDBEngine)
+	Engine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
+	Engine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr, app.GetEnv().Mysql)
+	CommonEngine = Engine
 
 	asyncGo = NewGo(app.System())
 	asyncGo.start()
@@ -76,12 +50,16 @@ func Start(app module.App) {
 
 func Close() {
 	asyncGo.stop()
-
-	for _, _engine := range Engines {
-		_engine.Close()
+	if Engine != nil {
+		if Engine.Redis != nil {
+			Engine.Redis.Close()
+		}
+		if Engine.Mysql != nil {
+			_ = Engine.Mysql.Close()
+		}
+		Engine = nil
+		CommonEngine = nil
 	}
-
-	CommonEngine.Close()
 }
 
 func NewMysqlEngine(addr string, cfg *env.Mysql) *xorm.Engine {
@@ -184,33 +162,23 @@ func NewRedisPool(host, password string, dataBase int, cfg *env.Redis) *redis.Po
 	return pool
 }
 
-func NewConnect(v model.ServerItem, app module.App) *CDBEngine {
-	dbEngine := new(CDBEngine)
-	dbEngine.Redis = NewRedisPool(fmt.Sprintf("172.16.1.50:%d", v.RedisPort), app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
-	dbEngine.Rs = redsync.New(redigo.NewPool(dbEngine.Redis))
-	dbEngine.Mysql = NewMysqlEngine(v.MysqlAddr, app.GetEnv().Mysql)
-	return dbEngine
-}
-
-// GetEngine 根据服务器id获取数据库
+// GetEngine 根据服务器 id 取引擎。单服模式：仅当 serverId == 本进程 env.ID 时返回 Engine
 func GetEngine(serverId int) (*CDBEngine, error) {
-	_engine, ok := Engines[serverId]
-	if !ok {
-		return nil, errors.New("no this server:" + strconv.Itoa(serverId))
+	if Engine == nil {
+		return nil, errors.New("db: not started")
 	}
-
-	return _engine, nil
+	if serverId != currentServerId {
+		return nil, errors.New("db: no this server:" + strconv.Itoa(serverId))
+	}
+	return Engine, nil
 }
 
-// GetEngineByPlayerId 通过玩家id获取数据库
+// GetEngineByPlayerId 通过玩家 id 取引擎。单服模式：仅有一个 Engine，直接返回
 func GetEngineByPlayerId(playerId int64) (*CDBEngine, error) {
-	serverId := playerId / define.PlayerIdBase
-	_engine, ok := Engines[int(serverId)]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("get server id error:%d", serverId))
+	if Engine == nil {
+		return nil, errors.New("db: not started")
 	}
-
-	return _engine, nil
+	return Engine, nil
 }
 
 // GetEquipId 获取唯一装备id
@@ -244,17 +212,16 @@ func (c *CDBEngine) GetRoomId() (id int64, err error) {
 	return redis.Int64(c.RedisExec("INCRBY", "roomId", 1))
 }
 
-// GetRedisMutex 获取redis锁
-func (c *CDBEngine) GetRedisMutex(key string) *redsync.Mutex {
-	return c.Rs.NewMutex(key)
-}
-
+// Close 关闭该引擎的 Redis 与 MySQL（单服时一般由 db.Close() 统一关闭全局 Engine）
 func (c *CDBEngine) Close() {
+	if c == nil {
+		return
+	}
 	if c.Redis != nil {
 		c.Redis.Close()
 	}
 	if c.Mysql != nil {
-		c.Mysql.Close()
+		_ = c.Mysql.Close()
 	}
 }
 

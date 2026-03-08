@@ -16,8 +16,8 @@ import (
 	"xfx/main_server/logic/activity/impl"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
-	"xfx/pkg/utils"
 	"xfx/pkg/module/modules"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
@@ -108,6 +108,18 @@ func (m *Manager) OnInit(app module.App) {
 	m.Register("GetActivityData", m.OnGetActivityData)
 	m.Register("GetActivityDataList", m.OnGetActivityDataList)
 	m.Register("OnRouterMsg", m.OnRouterMsg)
+
+	// GM 后台接口
+	m.Register("ListAllActivities", m.OnListAllActivities)
+	m.Register("GetActivityByActId", m.OnGetActivityByActId)
+	m.Register("GetActivityByCfgId", m.OnGetActivityByCfgId)
+	m.Register("StopActivity", m.OnStopActivity)
+	m.Register("RecoverActivity", m.OnRecoverActivity)
+	m.Register("CloseActivity", m.OnCloseActivity)
+	m.Register("RestartActivity", m.OnRestartActivity)
+	m.Register("RemoveActivity", m.OnRemoveActivity)
+	m.Register("CloseActivityByCfgId", m.OnCloseActivityByCfgId)
+	m.Register("StopActivityByType", m.OnStopActivityByType)
 }
 
 func (m *Manager) OnStart(ctx module.Context) {
@@ -115,6 +127,7 @@ func (m *Manager) OnStart(ctx module.Context) {
 	event.AddEventListener(define.EventTypeActivity, m.Self())
 	event.AddEventListener(define.EventTypePlayerOnline, m.Self())
 	event.AddEventListener(define.EventTypePlayerOffline, m.Self())
+	event.AddEventListener(define.EventTypeConfigReload, m.Self())
 }
 
 func (m *Manager) GetType() string { return define.ModuleActivity }
@@ -146,7 +159,7 @@ func (m *Manager) OnTick(delta time.Duration) {
 			return true
 		}
 
-		if ent.State == StateStopped || ent.State == StateClosed {
+		if ent.State == StateClosed {
 			return true
 		}
 
@@ -170,30 +183,45 @@ func (m *Manager) OnTick(delta time.Duration) {
 }
 
 // OnEvent 事件回调
-func (m *Manager) OnEvent(event *event.Event) {
-	if event == nil {
+func (m *Manager) OnEvent(ev *event.Event) {
+	if ev == nil {
 		return
 	}
-
-	if event.M == nil {
+	if ev.Type == define.EventTypeConfigReload {
+		m.resetAllConfigChecked()
+		return
+	}
+	if ev.M == nil {
 		return
 	}
 
 	// 玩家基础信息
-	ctx, ok := event.M["player"].(*proto_player.Context)
+	ctx, ok := ev.M["player"].(*proto_player.Context)
 	if !ok {
 		log.Error("activity event find no player data")
 		return
 	}
 
-	switch event.Type {
+	switch ev.Type {
 	case define.EventTypeActivity:
-		m.notify(ctx, event.M)
+		m.notify(ctx, ev.M)
 	case define.EventTypePlayerOffline:
 	case define.EventTypePlayerOnline:
-		event.M["key"] = "player_online"
-		m.notify(ctx, event.M)
+		ev.M["key"] = "player_online"
+		m.notify(ctx, ev.M)
+	default:
 	}
+}
+
+// 重置所有配置检查标记
+func (m *Manager) resetAllConfigChecked() {
+	m.entities.Range(func(_ any, value any) bool {
+		if ent, ok := value.(*entity); ok {
+			ent.checked = false
+		}
+		return true
+	})
+	log.Info("activity: config reload notified, all entity checked reset")
 }
 
 func (m *Manager) OnMessage(msg any) any {
@@ -210,6 +238,7 @@ func (m *Manager) OnStop() {
 	event.DelEventListener(define.EventTypeActivity, m.Self())
 	event.DelEventListener(define.EventTypePlayerOnline, m.Self())
 	event.DelEventListener(define.EventTypePlayerOffline, m.Self())
+	event.DelEventListener(define.EventTypeConfigReload, m.Self())
 
 	m.saveData()
 	data.Cache.Close()
@@ -291,6 +320,8 @@ func (m *Manager) Action(action string, fromState string, toState string, args [
 	case ActionRestart:
 		// closed - waiting
 		// stopped - waiting
+
+		data.PurgeActivityPlayerData(ent.Id)
 		m.entities.Delete(ent.Id)
 		data.DelActivityData(ent.Id) // 清空活动数据
 
@@ -569,81 +600,184 @@ func (m *Manager) OnRouterMsg(ctx *proto_player.Context, actId int64, req proto.
 	return ent.handler.Router(ctx, req)
 }
 
-// TODO:后台接口
-//func (m *Manager) StopActivity(id int32) bool {
-//	v, ok := m.entities.Load(id)
-//	if !ok {
-//		log.Debug("stop activity id error:%v", id)
-//		return false
-//	}
-//
-//	entity := v.(*entity)
-//
-//	if !entity.isActive() {
-//		return false
-//	}
-//
-//	if err := m.sm.Trigger(entity.State, EventStop, entity); err != nil {
-//		log.Error("%v", err)
-//		return false
-//	}
-//
-//	return true
-//}
+func entityToInfo(ent *entity) *model.ActivityInfo {
+	if ent == nil {
+		return nil
+	}
+	return &model.ActivityInfo{
+		ActId:     ent.Id,
+		CfgId:     ent.CfgId,
+		Type:      ent.Type,
+		State:     ent.State,
+		StartTime: ent.StartTime,
+		EndTime:   ent.EndTime,
+		CloseTime: ent.CloseTime,
+		TimeType:  ent.TimeType,
+		Season:    ent.TimeValue,
+	}
+}
 
-// TODO:后台接口
-//func (m *Manager) RecoverActivity(id int32) bool {
-//	v, ok := m.entities.Load(id)
-//	if !ok {
-//		log.Debug("recover activity id error:%v", id)
-//		return false
-//	}
-//
-//	entity := v.(*entity)
-//
-//	if entity.State != StateStopped {
-//		log.Error("recover activity state error:%v", entity.State)
-//		return false
-//	}
-//func (m *ActivityManager) RemoveActivity(id int32) {
-//	if entity, ok := m.GetActivity(id); ok {
-//		ctx := m.createActivityContext(id)
-//		if err := entity.handler.OnClose(ctx); err != nil {
-//			log.Warn().Err(err).Int32("activityID", id).Msg("Activity close error during removal")
-//		}
-//		m.cleanupActivityResources(id)
-//		m.entities.Delete(id)
-//	}
-//}
-//
-//	err := m.sm.Trigger(entity.State, EventRecover, entity)
-//	if err != nil {
-//		log.Error("%v", err)
-//		return false
-//	}
-//
-//	return true
-//}
+func (m *Manager) getEntityByActId(actId int64) *entity {
+	v, ok := m.entities.Load(actId)
+	if !ok {
+		return nil
+	}
+	ent, _ := v.(*entity)
+	return ent
+}
 
-// TODO:  删除活动 后台接口
-//func (m *Manager) DelActivity(id int32) bool {
-//	v, ok := m.entities.Load(id)
-//	if !ok {
-//		log.Debug("del activity id error:%v", id)
-//		return false
-//	}
-//
-//	entity := v.(*entity)
-//
-//	if entity.State == StateRunning {
-//		err := m.sm.Trigger(entity.State, EventStop, entity)
-//		if err != nil {
-//			log.Error("%v", err)
-//			return false
-//		}
-//	}
-//
-//	data.DelData(id)
-//	m.entities.Delete(id)
-//	return true
-//}
+func (m *Manager) getEntityByCfgId(cfgId int64) *entity {
+	var found *entity
+	m.entities.Range(func(_, value any) bool {
+		ent := value.(*entity)
+		if ent.CfgId != cfgId {
+			return true
+		}
+		if ent.State == StateRunning {
+			found = ent
+			return false
+		}
+		if found == nil {
+			found = ent
+		}
+		return true
+	})
+	return found
+}
+
+func (m *Manager) getEntityByType(typ string) *entity {
+	var found *entity
+	m.entities.Range(func(_, value any) bool {
+		ent := value.(*entity)
+		if ent.Type == typ && ent.State == StateRunning {
+			found = ent
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+// ==================== GM 后台接口 ====================
+
+// OnListAllActivities 列出所有活动（含状态），供 GM 后台展示
+func (m *Manager) OnListAllActivities() ([]*model.ActivityInfo, error) {
+	list := make([]*model.ActivityInfo, 0)
+	m.entities.Range(func(_, value any) bool {
+		list = append(list, entityToInfo(value.(*entity)))
+		return true
+	})
+	return list, nil
+}
+
+// OnGetActivityByActId 按活动实例 ID 查询
+func (m *Manager) OnGetActivityByActId(actId int64) (*model.ActivityInfo, error) {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return nil, errors.New("activity not found")
+	}
+	return entityToInfo(ent), nil
+}
+
+// OnGetActivityByCfgId 按配置 ID 查询，优先返回 Running 的实例
+func (m *Manager) OnGetActivityByCfgId(cfgId int64) (*model.ActivityInfo, error) {
+	ent := m.getEntityByCfgId(cfgId)
+	if ent == nil {
+		return nil, errors.New("activity not found")
+	}
+	return entityToInfo(ent), nil
+}
+
+// OnStopActivity 暂停活动（Running -> Stopped）
+func (m *Manager) OnStopActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State != StateRunning {
+		return fmt.Errorf("invalid state for stop: want running, got %s", ent.State)
+	}
+	if err := m.sm.Trigger(ent.State, EventStop, ent); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnRecoverActivity 恢复活动（Stopped -> Running）
+func (m *Manager) OnRecoverActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State != StateStopped {
+		return fmt.Errorf("invalid state for recover: want stopped, got %s", ent.State)
+	}
+	if err := m.sm.Trigger(ent.State, EventRecover, ent); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnCloseActivity 强制结束活动（Waiting/Running/Stopped -> Closed）
+func (m *Manager) OnCloseActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State == StateClosed {
+		return errors.New("activity already closed")
+	}
+	if err := m.sm.Trigger(ent.State, EventClose, ent); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnRestartActivity 重启活动（Stopped/Closed -> Waiting，分配新 actId）
+func (m *Manager) OnRestartActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State != StateStopped && ent.State != StateClosed {
+		return fmt.Errorf("invalid state for restart: want stopped or closed, got %s", ent.State)
+	}
+	if err := m.sm.Trigger(ent.State, EventRestart, ent); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnRemoveActivity 彻底移除活动
+func (m *Manager) OnRemoveActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State == StateRunning || ent.State == StateStopped {
+		if err := m.sm.Trigger(ent.State, EventClose, ent); err != nil {
+			return err
+		}
+	}
+	m.entities.Delete(actId)
+	data.DelActivityData(actId)
+	return nil
+}
+
+// OnCloseActivityByCfgId 按配置 ID 强制结束活动
+func (m *Manager) OnCloseActivityByCfgId(cfgId int64) error {
+	ent := m.getEntityByCfgId(cfgId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	return m.OnCloseActivity(ent.Id)
+}
+
+// OnStopActivityByType 按类型暂停活动（该类型当前 Running 的实例）
+func (m *Manager) OnStopActivityByType(typ string) error {
+	ent := m.getEntityByType(typ)
+	if ent == nil {
+		return errors.New("activity not found or not running")
+	}
+	return m.OnStopActivity(ent.Id)
+}

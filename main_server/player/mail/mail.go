@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"time"
 	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -51,7 +50,7 @@ func ReqOpenMail(ctx global.IPlayer, pl *model.Player, req *proto_mail.C2SOpenMa
 			continue
 		}
 
-		mail.OpenTime = time.Now().Unix()
+		mail.OpenTime = utils.Now().Unix()
 		if ok := updateDBMail(pl.Cache.App.GetEnv().ID, mail); ok {
 			resp.Mail = append(resp.Mail, mail.ToProto())
 		}
@@ -165,7 +164,7 @@ func ReqCollectMailItem(ctx global.IPlayer, pl *model.Player, req *proto_mail.C2
 			return
 		}
 
-		if time.Now().Unix() >= mail.ExpireTime {
+		if utils.Now().Unix() >= mail.ExpireTime {
 			return
 		}
 
@@ -219,7 +218,7 @@ func ReqCollectAllMailItems(ctx global.IPlayer, pl *model.Player, req *proto_mai
 	items := make([]conf.ItemE, 0)
 	ret := make([]*proto_mail.Mail, 0)
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	for _, mail := range mails {
 		if mail.OpenTime != 0 && mail.GotItem {
 			continue
@@ -234,7 +233,7 @@ func ReqCollectAllMailItems(ctx global.IPlayer, pl *model.Player, req *proto_mai
 		}
 
 		if mail.OpenTime == 0 {
-			mail.OpenTime = time.Now().Unix()
+			mail.OpenTime = utils.Now().Unix()
 		}
 
 		mail.GotItem = true
@@ -280,7 +279,7 @@ func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 		return
 	}
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	for i := curSysId + 1; i <= maxSystemMailId; i++ {
 		sysMail := invoke.MailClient(ctx).GetSystemMailById(i)
 		if sysMail == nil {
@@ -357,7 +356,7 @@ func getMailsFromDB(serverId int, dbId int64) []*model.PlayerMailInfo {
 	}
 	conn := rdb.Mysql
 
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 
 	mails := make([]*model.PlayerMailInfo, 0)
 	sql := fmt.Sprintf("select * from %s where (db_id = %d AND sys_id = %d) OR sys_id = %d ORDER BY id DESC limit %d",

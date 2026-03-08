@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"xfx/core/define"
+	"xfx/core/event"
 	"xfx/pkg/log"
 
 	"github.com/fsnotify/fsnotify"
@@ -74,6 +76,9 @@ func (m *Manager) Reload() {
 	m.configData.Store(newAllJson)
 	// log.Info("Configurations hot-reloaded successfully!")
 	fmt.Println("Configurations hot-reloaded successfully!")
+
+	// 5. 通知各模块配置已热更，可重新拉取配置（如活动模块会重置 checked 并在下一 tick 重算时间）
+	event.DoEvent(define.EventTypeConfigReload, nil)
 }
 
 // 监听文件变化

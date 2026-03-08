@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -50,7 +50,7 @@ func CollectionSlotHero(ctx global.IPlayer, pl *model.Player) {
 			continue
 		}
 
-		if !common.IsHaveValueIntArray(lineup.HeroId, heroId) {
+		if !utils.ContainsInt32(lineup.HeroId, heroId) {
 			pl.Collection.Heros[j] = 0
 		}
 	}
@@ -65,7 +65,7 @@ func CollectionSlotHero(ctx global.IPlayer, pl *model.Player) {
 			continue
 		}
 
-		if !common.IsHaveValueIntArray(pl.Collection.Heros, lineup.HeroId[k]) {
+		if !utils.ContainsInt32(pl.Collection.Heros, lineup.HeroId[k]) {
 			for l := 0; l < len(pl.Collection.Heros); l++ {
 				if pl.Collection.Heros[l] == 0 {
 					pl.Collection.Heros[l] = lineup.HeroId[k]

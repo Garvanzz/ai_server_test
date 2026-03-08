@@ -14,18 +14,41 @@ func (m *HttpModule) register() {
 		})
 	})
 
-	// GM 接口：建议内网访问 + 鉴权（见 gmAuth 中间件）。按需扩展踢人、封禁、重载配置等。
+	// GM 接口：建议内网访问 + 鉴权（见 gmAuth 中间件）
 	gm := m.router.Group("/gm")
 	gm.Use(m.gmAuth())
 	{
+		// 邮件
 		gm.POST("/mail", m.GMSendMail)
+
+		// 公告
 		gm.POST("/notice", m.GMSendNotice)
 		gm.POST("/horse", m.GMSendHorse)
+
+		// 玩家管理
 		gm.POST("/kick", m.GMKick)
+
+		// 背包
 		gm.POST("/item", m.GMGrantItem)
+
+		// 时间调试（游戏逻辑时间偏移）
+		gm.GET("/time", m.GMTimeGet)
+		gm.POST("/time/set_offset", m.GMTimeSetOffset)
+
+		// 活动 GM
+		gm.GET("/activity/list", m.GMActivityList)
+		gm.POST("/activity/get_by_act_id", m.GMActivityGetByActId)
+		gm.POST("/activity/get_by_cfg_id", m.GMActivityGetByCfgId)
+		gm.POST("/activity/stop", m.GMActivityStop)
+		gm.POST("/activity/recover", m.GMActivityRecover)
+		gm.POST("/activity/close", m.GMActivityClose)
+		gm.POST("/activity/restart", m.GMActivityRestart)
+		gm.POST("/activity/remove", m.GMActivityRemove)
+		gm.POST("/activity/close_by_cfg_id", m.GMActivityCloseByCfgId)
+		gm.POST("/activity/stop_by_type", m.GMActivityStopByType)
 	}
 
-	// 兼容旧路径，后续可删
+	// TODO:兼容旧路径，后续可删
 	api := m.router.Group("api")
 	api.Use(m.gmAuth())
 	{

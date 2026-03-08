@@ -2,14 +2,13 @@ package impl
 
 import (
 	"time"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
-	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 	Proto_Public "xfx/proto/proto_public"
@@ -116,7 +115,7 @@ func (a *ActivityTheCompetition) chooseGroupId(ctx *proto_player.Context, params
 
 	var conf conf.ActTheCompetition
 	for _, v := range confthe {
-		if common.IsHaveValueIntArray(v.GroupIds, req.Id) {
+		if utils.ContainsInt32(v.GroupIds, req.Id) {
 			conf = v
 			break
 		}
@@ -211,7 +210,7 @@ func (a *ActivityTheCompetition) stakeCount(ctx *proto_player.Context, params Ev
 		return
 	}
 
-	if !common.IsHaveValueIntArray(conf.Stake, req.Count) {
+	if !utils.ContainsInt32(conf.Stake, req.Count) {
 		res.Code = Proto_Public.CommonErrorCode_ERR_NoConfig
 		invoke.Dispatch(a.Module(), ctx.Id, res)
 		return

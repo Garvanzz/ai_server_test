@@ -13,7 +13,7 @@
 
 | 文件/子包 | 说明 | 项目内使用情况 |
 |-----------|------|----------------|
-| **clock.go** | 游戏逻辑时间源 | `Now()` 返回 真实时间 + 配置偏移；`SetTimeOffset(d)` 启动时由 run 根据 env `TimeOffsetDays` 调用。业务取“当前游戏时间”请用 `utils.Now()`。 |
+| **clock.go** | 游戏逻辑时间源 | `Now()` 返回 真实时间 + 偏移；偏移由 GM 后台 POST `/gm/time/set_offset` 设置。业务取“当前游戏时间”请用 `utils.Now()`。 |
 | **time.go** | 时间戳、自然日/周/月判断 | 内部已统一用 `Now()`。**常用**：`CheckIsSameDayBySec`、`DaysDiff`、`GetTodayEndMinUnix`、`GetTodayEndUnixInHour`、`GetTodayUnixInHour`。其余保留作扩展。 |
 | **random.go** | 随机数、加权随机、概率 | **常用**：`RandInt`、`WeightedRandom`、`WeightIndex`、`MicsSlice`、`SelectByOdds`。`Random(length)`、`UpdateRand` 当前未用，保留。 |
 | **randString.go** | 随机字符串（多种策略） | **当前未使用**。若只需简单随机串，可只保留 `RandomAlphanumeric` / `RandomNumeric`，其余按需删除。 |

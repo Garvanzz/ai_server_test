@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"xfx/core/common"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -73,7 +72,7 @@ func (a *ActivityArena) Format(ctx *proto_player.Context) proto.Message {
 		//初始敌人
 		ids := a.OnRankIndex(ctx.Id)
 		for i := 0; i < len(ids); i++ {
-			id := common.StringToInt64(ids[i])
+			id := utils.MustParseInt64(ids[i])
 			pd.PlayerIds = append(pd.PlayerIds, id)
 		}
 	}
@@ -297,7 +296,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 	// 将结果转换为 int64 并存储
 	pd.PlayerIds = make([]int64, 0)
 	for _, idStr := range result {
-		id := common.StringToInt64(idStr)
+		id := utils.MustParseInt64(idStr)
 		if id > 0 {
 			pd.PlayerIds = append(pd.PlayerIds, id)
 		}

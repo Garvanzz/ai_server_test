@@ -3,7 +3,6 @@ package pet
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -22,7 +21,7 @@ func Init(pl *model.Player) {
 	pl.Pet = new(model.Pet)
 	pl.Pet.Pets = make(map[int32]*model.PetItem)
 	pl.Pet.ResetFreeNum = 1
-	pl.Pet.ResetFreeTime = time.Now().Unix()
+	pl.Pet.ResetFreeTime = utils.Now().Unix()
 	pl.Pet.Skills = make(map[int32]*model.PetSkill)
 
 	//默认玉兔
@@ -154,8 +153,8 @@ func ReqInitPet(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2SInitPet)
 	resp.PetSkills = model.ToPetSkillItemProto(pl.Pet.Skills)
 	resp.Ids = model.ToPetEquipHandbookListProto(pl.PetHandbook)
 
-	if !utils.IsSameWeekBySec(time.Now().Unix(), pl.Pet.ResetFreeTime) {
-		pl.Pet.ResetFreeTime = time.Now().Unix()
+	if !utils.IsSameWeekBySec(utils.Now().Unix(), pl.Pet.ResetFreeTime) {
+		pl.Pet.ResetFreeTime = utils.Now().Unix()
 		pl.Pet.ResetFreeNum = 1
 	}
 	resp.ResetFreeNum = pl.Pet.ResetFreeNum
@@ -368,7 +367,7 @@ func ReqPetReset(ctx global.IPlayer, pl *model.Player, req *proto_pet.C2SResetPe
 		}
 	} else {
 		pl.Pet.ResetFreeNum -= 1
-		pl.Pet.ResetFreeTime = time.Now().Unix()
+		pl.Pet.ResetFreeTime = utils.Now().Unix()
 	}
 
 	pet := pl.Pet.Pets[req.Id]

@@ -3,12 +3,12 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_chat"
 	"xfx/proto/proto_public"
 )
@@ -29,14 +29,14 @@ func SyncChatSend(ctx global.IPlayer, pl *model.Player, typ, id int32, content s
 	}
 
 	//先看是否封禁
-	if account.ChatBan != 0 && account.ChatBan > time.Now().Unix() {
+	if account.ChatBan != 0 && account.ChatBan > utils.Now().Unix() {
 		return false, proto_public.CommonErrorCode_ERR_LIMITCHAT
 	}
 
 	push := new(model.ChatInfo)
 	push.DbId = pl.Id
 	push.Content = content
-	push.Time = time.Now().Unix()
+	push.Time = utils.Now().Unix()
 	push.Value = value
 	push.Cid = cid
 	push.Type = msgType

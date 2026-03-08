@@ -3,7 +3,6 @@ package chat
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -11,6 +10,7 @@ import (
 	"xfx/main_server/invoke"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_chat"
 	"xfx/proto/proto_public"
 )
@@ -221,7 +221,7 @@ func ReqSendPrivateChatData(ctx global.IPlayer, pl *model.Player, req *proto_cha
 			Name:       pl.Base.Name,
 			FaceId:     int32(pl.GetProp(define.PlayerPropFaceId)),
 			FaceSlotId: int32(pl.GetProp(define.PlayerPropFaceSlotId)),
-			Time:       time.Now().Unix(),
+			Time:       utils.Now().Unix(),
 			Info:       req.Content,
 		}})
 

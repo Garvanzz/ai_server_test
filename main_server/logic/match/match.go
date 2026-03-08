@@ -1,11 +1,10 @@
 package match
 
 import (
-	"xfx/core/common"
 	"xfx/core/define"
+	"xfx/pkg/utils"
 	"xfx/core/model"
 	"xfx/pkg/log"
-	"xfx/pkg/utils"
 )
 
 var (
@@ -97,9 +96,9 @@ func (m *Match) startMatch(team *model.MatchTeam) bool {
 func (m *Match) cancelMatch(roomId int32) bool {
 	m.deleteTeam(roomId)
 	m.teamNum -= 1
-	arr := common.RemoveFirstByValueInt32(m.waitIds, roomId)
+	arr := utils.RemoveFirstInt32(m.waitIds, roomId)
 	m.waitIds = arr
-	arr = common.RemoveFirstByValueInt32(m.sortIds, roomId)
+	arr = utils.RemoveFirstInt32(m.sortIds, roomId)
 	m.sortIds = arr
 	log.Debug("取消匹配:%v", roomId)
 	return true

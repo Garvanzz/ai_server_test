@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"strconv"
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -198,7 +197,7 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 	isOnline := invoke.LoginClient(ctx).IsOnline(dbId)
 	r.Online = isOnline
 	if r.Online == false {
-		r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+		r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 	}
 
 	//是否申请
@@ -269,7 +268,7 @@ func getFriendList(rdb *db.CDBEngine, ctx global.IPlayer, pl *model.Player) ([]*
 		isOnline := invoke.LoginClient(ctx).IsOnline(dbId)
 		r.Online = isOnline
 		if r.Online == false {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		//判断状态
@@ -346,7 +345,7 @@ func ReqFriendApplyList(ctx global.IPlayer, pl *model.Player) {
 		isOnline := invoke.LoginClient(ctx).IsOnline(playerInfo.Id)
 		r.Online = isOnline
 		if r.Online == false {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		ret = append(ret, r)
@@ -852,7 +851,7 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 		isOnline := invoke.LoginClient(ctx).IsOnline(dbId)
 		r.Online = isOnline
 		if !r.Online {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		json.Unmarshal(replyself.([]byte), &m)
@@ -919,7 +918,7 @@ func ReqBlockFriendList(ctx global.IPlayer, pl *model.Player) {
 		isOnline := invoke.LoginClient(ctx).IsOnline(playerInfo.Id)
 		r.Online = isOnline
 		if !r.Online {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		ret = append(ret, r)
@@ -1127,7 +1126,7 @@ func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 		isOnline := invoke.LoginClient(ctx).IsOnline(playerInfo.Id)
 		r.Online = isOnline
 		if !r.Online {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		//是否申请
@@ -1216,7 +1215,7 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 		isOnline := invoke.LoginClient(ctx).IsOnline(playerInfo.Id)
 		r.Online = isOnline
 		if !r.Online {
-			r.LastOnlineTime = time.Now().Unix() - playerInfo.OfflineTime
+			r.LastOnlineTime = utils.Now().Unix() - playerInfo.OfflineTime
 		}
 
 		//是否申请

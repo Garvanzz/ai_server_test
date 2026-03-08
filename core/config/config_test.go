@@ -4,9 +4,10 @@
 // 不依赖项目真实配置目录即可运行。
 //
 // 运行方式:
-//   go test ./core/config -v
-//   go test ./core/config -run TestLoadRealConfigDir -v   # 用真实 json 目录做集成校验
-//   CONFIG_DIR=/path/to/json go test ./core/config -run TestLoadRealConfigDir -v
+//
+//	go test ./core/config -v
+//	go test ./core/config -run TestLoadRealConfigDir -v   # 用真实 json 目录做集成校验
+//	CONFIG_DIR=/path/to/json go test ./core/config -run TestLoadRealConfigDir -v
 package config
 
 import (
@@ -14,8 +15,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-
-	"xfx/core/config/conf"
 )
 
 // getTestdataDir 返回 testdata 目录的绝对路径（与当前测试文件同目录下的 testdata）。
@@ -86,27 +85,6 @@ func TestManager_Reload(t *testing.T) {
 	all := m.getAll()
 	if _, ok := all["Global"]; !ok {
 		t.Fatalf("after Reload, getAll() should contain Global, got keys: %v", keys(all))
-	}
-}
-
-func TestManager_AllJson_GetGlobal(t *testing.T) {
-	dir := getTestdataDir(t)
-	m := NewManager(dir, false, Parse)
-	m.Reload()
-
-	all := m.AllJson()
-	if all == nil {
-		t.Fatal("AllJson() returned nil")
-	}
-	g, ok := all["Global"]
-	if !ok {
-		t.Fatal("AllJson() should contain Global")
-	}
-	_ = g.(conf.Global)
-
-	global := m.GetGlobal()
-	if global.UseItemMaxCount != 99 {
-		t.Errorf("GetGlobal().UseItemMaxCount = %d, want 99", global.UseItemMaxCount)
 	}
 }
 

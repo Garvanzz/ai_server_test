@@ -7,11 +7,11 @@ import (
 	"math"
 	"math/rand"
 	"slices"
-	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
 	"xfx/core/model"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_guild"
 	"xfx/proto/proto_player"
 )
@@ -139,10 +139,10 @@ func (ent *entity) updateYuanchi() {
 	toRemove := make(map[int32]bool)
 	for i, v := range ent.guild.Yuanchi.Refinings {
 		if v.LastTime == 0 {
-			v.LastTime = time.Now().Unix()
+			v.LastTime = utils.Now().Unix()
 		} else {
-			if time.Now().Unix()-v.LastTime >= 60 {
-				v.LastTime = time.Now().Unix()
+			if utils.Now().Unix()-v.LastTime >= 60 {
+				v.LastTime = utils.Now().Unix()
 
 				v.Time += 60
 				// 计算当前成功率（随时间动态变化）
@@ -187,7 +187,7 @@ func calculateCurrentRate(TotalTime, ElapsedTime, BaseRate float64) float64 {
 func (ent *entity) addGuildRefiningLog(data *model.YuanchiRefining, state bool) {
 	guildLog := new(model.GuildRefiningLog)
 	guildLog.Data = data
-	guildLog.Time = time.Now().Unix()
+	guildLog.Time = utils.Now().Unix()
 	guildLog.State = state
 
 	rdb, _ := db.GetEngine(Mgr.App.GetEnv().ID)

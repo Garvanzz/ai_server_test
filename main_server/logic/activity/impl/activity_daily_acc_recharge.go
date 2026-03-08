@@ -3,7 +3,7 @@ package impl
 import (
 	"errors"
 	"time"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -89,7 +89,7 @@ func (a *ActivityDailyAccRecharge) GetAward(ctx *proto_player.Context, req *prot
 		return nil, errors.New("get activity money is not enghth")
 	}
 
-	if common.IsHaveValueIntArray(pd.GetList, int32(config.Id)) {
+	if utils.ContainsInt32(pd.GetList, int32(config.Id)) {
 		return nil, errors.New("get activity has get")
 	}
 	pd.GetList = append(pd.GetList, int32(config.Id))

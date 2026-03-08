@@ -3,8 +3,8 @@ package base
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/db"
+	"xfx/pkg/utils"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
@@ -13,7 +13,7 @@ import (
 func Init(pl *model.Player, uid string) {
 	pl.Base = new(model.PlayerBase)
 	pl.Base.Name = fmt.Sprintf("ID%s", uid)
-	pl.Base.CreateTime = time.Now().Unix()
+	pl.Base.CreateTime = utils.Now().Unix()
 }
 
 func Save(pl *model.Player, isSync bool) {

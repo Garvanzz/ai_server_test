@@ -10,8 +10,9 @@ import (
 	"xfx/pkg/gate/tcpgate"
 	"xfx/pkg/log"
 	"xfx/pkg/module/modules"
-	Proto_Player "xfx/proto/proto_player"
-	Proto_Public "xfx/proto/proto_public"
+	"xfx/pkg/utils"
+	"xfx/proto/proto_player"
+	"xfx/proto/proto_public"
 )
 
 const PingTime = 30 * time.Second
@@ -110,17 +111,6 @@ func (a *Agent) OnStop() { // actor stop call
 	}
 }
 
-// func (a *Agent) Close() error {
-// 	log.Debug("game_agent close:%v", a.GetSession().ID())
-
-// 	if a.Context == nil {
-// 		log.Error("game_agent close: context is nil, session:%v", a.GetSession().ID())
-// 		return nil
-// 	}
-// 	a.Context.Stop()
-// 	return nil
-// }
-
 // kickAfterLoginFailure 登录失败后延迟断开连接，让客户端先收到 S2CLogin 再关闭
 func (a *Agent) kickAfterLoginFailure() {
 	go func() {
@@ -156,7 +146,7 @@ func (a *Agent) OnMessage(msg any) any {
 	switch m := msg.(type) {
 	case *sessionmsg:
 		a.OnSessionMessage(m.msg)
-	case *Proto_Player.S2CKick:
+	case *proto_player.S2CKick:
 		a.playerId = 0
 		a.playerPid = nil
 		a.Send(m)
@@ -176,15 +166,15 @@ func (a *Agent) OnMessage(msg any) any {
 // OnSessionMessage 转发网关消息
 func (a *Agent) OnSessionMessage(msg any) {
 	switch m := msg.(type) {
-	case *Proto_Player.C2SLogout: // 登出
+	case *proto_player.C2SLogout: // 登出
 		invoke.LoginClient(a).Logout(a.playerId)
-	case *Proto_Player.C2SPing:
+	case *proto_player.C2SPing:
 		a.pingTime = PingTime
 		//log.Info("ping!!!")
-		a.Send(&Proto_Player.S2CPong{
-			ZoneOffset: time.Now().Unix(),
+		a.Send(&proto_player.S2CPong{
+			ZoneOffset: utils.Now().Unix(),
 		})
-	case *Proto_Player.C2SLogin: // 登录
+	case *proto_player.C2SLogin: // 登录
 		loginResult, err := invoke.LoginClient(a).Login(&messages.Login{
 			Session: a.Context.Self(),
 			Request: m,
@@ -192,16 +182,16 @@ func (a *Agent) OnSessionMessage(msg any) {
 
 		log.Debug("agent login result : %v", loginResult)
 		if err != nil {
-			a.Send(&Proto_Player.S2CLogin{State: Proto_Public.CommonState_Faild})
+			a.Send(&proto_player.S2CLogin{State: proto_public.CommonState_Faild})
 			a.kickAfterLoginFailure()
 			return
 		}
 
-		state := Proto_Public.CommonState(loginResult.Result)
-		if state != Proto_Public.CommonState_Success {
-			a.Send(&Proto_Player.S2CLogin{
+		state := proto_public.CommonState(loginResult.Result)
+		if state != proto_public.CommonState_Success {
+			a.Send(&proto_player.S2CLogin{
 				State:      state,
-				ZoneOffset: time.Now().Unix(),
+				ZoneOffset: utils.Now().Unix(),
 			})
 			a.kickAfterLoginFailure()
 			return

@@ -3,7 +3,6 @@ package mission
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	config2 "xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -86,14 +85,14 @@ func ReqInitMission(ctx global.IPlayer, pl *model.Player, req *proto_mission.C2S
 }
 
 func resetMission(pl *model.Player) {
-	if !utils.CheckIsSameDayBySec(pl.Mission.Box.Time, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pl.Mission.Box.Time, utils.Now().Unix(), 0) {
 		pl.Mission.Box.ChallengeNum = 0
-		pl.Mission.Box.Time = time.Now().Unix()
+		pl.Mission.Box.Time = utils.Now().Unix()
 	}
 
-	if !utils.CheckIsSameDayBySec(pl.Mission.Lingyu.Time, time.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pl.Mission.Lingyu.Time, utils.Now().Unix(), 0) {
 		pl.Mission.Lingyu.ChallengeNum = 0
-		pl.Mission.Lingyu.Time = time.Now().Unix()
+		pl.Mission.Lingyu.Time = utils.Now().Unix()
 	}
 }
 

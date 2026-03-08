@@ -9,6 +9,7 @@ import (
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/pkg/module"
 	"xfx/pkg/module/modules"
 )
@@ -79,7 +80,7 @@ func (m *Manager) loadData() {
 func (m *Manager) GetType() string { return define.ModuleHuaguoshan }
 
 func (m *Manager) OnTick(delta time.Duration) {
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if now-m.lastSaveTime >= 60 {
 		m.saveToRedis()
 		m.lastSaveTime = now
@@ -119,7 +120,7 @@ func (m *Manager) OnMessage(msg interface{}) interface{} {
 // CreateInvite 创建邀请
 func (m *Manager) CreateInvite(senderId int64, senderName string, receiverId int64) *model.PartnerInvite {
 	m.inviteId++
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	effectTime := config.Global.Get().PaternerInviteEffectTime
 	expireTime := now + int64(effectTime*24*3600)
 
@@ -175,7 +176,7 @@ func (m *Manager) ProcessInvite(inviteId int64, accept bool) (*model.PartnerInvi
 	}
 
 	// 校验是否过期
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if now > invite.ExpireTime {
 		return nil, fmt.Errorf("邀请已过期")
 	}

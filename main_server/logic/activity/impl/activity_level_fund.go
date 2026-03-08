@@ -2,7 +2,7 @@ package impl
 
 import (
 	"errors"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -98,14 +98,14 @@ func (a *ActivityLevelFund) GetAward(ctx *proto_player.Context, req *proto_activ
 
 	if req.IsPay {
 		for _, v := range req.Ids {
-			if common.IsHaveValueIntArray(pd.AdvanceIds, v) {
+			if utils.ContainsInt32(pd.AdvanceIds, v) {
 				return nil, errors.New("activity is al buy")
 			}
 		}
 
 	} else {
 		for _, v := range req.Ids {
-			if common.IsHaveValueIntArray(pd.NormalIds, v) {
+			if utils.ContainsInt32(pd.NormalIds, v) {
 				return nil, errors.New("activity is al buy")
 			}
 		}
@@ -127,7 +127,7 @@ func (a *ActivityLevelFund) GetAward(ctx *proto_player.Context, req *proto_activ
 			pd.AdvanceIds = append(pd.AdvanceIds, v)
 			awards = append(awards, conf.AdvanceAward...)
 			log.Debug("66666666:%v,%v", v, pd.AdvanceIds)
-			if !common.IsHaveValueIntArray(pd.NormalIds, v) {
+			if !utils.ContainsInt32(pd.NormalIds, v) {
 				pd.NormalIds = append(pd.NormalIds, v)
 				awards = append(awards, conf.NormalAward...)
 			}

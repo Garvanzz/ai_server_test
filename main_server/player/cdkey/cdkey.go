@@ -13,6 +13,7 @@ import (
 	"xfx/main_server/global"
 	"xfx/main_server/player/bag"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_item"
 	"xfx/proto/proto_public"
 
@@ -107,7 +108,7 @@ func ReqExchangeCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SE
 	}
 
 	// 检查时间有效性
-	now := time.Now()
+	now := utils.Now()
 	if targetConf.StartTime != "" {
 		startTime, err := time.ParseInLocation("2006-01-02 15:04:05", targetConf.StartTime, time.Local)
 		if err == nil && now.Before(startTime) {

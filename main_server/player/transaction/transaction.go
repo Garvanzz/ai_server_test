@@ -3,8 +3,8 @@ package transaction
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config/conf"
+	"xfx/pkg/utils"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -194,7 +194,7 @@ func processBuyOrder(ctx global.IPlayer, pl *model.Player, order *model.Transact
 		for k := 0; k < len(Records); k++ {
 			if Records[k].AttachmentInfo.Id == processedOrder.Id {
 				Records[k].Status = 1
-				Records[k].AttachmentInfo.TransactionTime = time.Now().Unix()
+				Records[k].AttachmentInfo.TransactionTime = utils.Now().Unix()
 				change = true
 				model = Records[k]
 				break
@@ -318,7 +318,7 @@ func getPlayerCooldown(pl *model.Player) int64 {
 	if pl.Transaction == nil || pl.Transaction.CooldownTime == 0 {
 		return 0
 	}
-	now := time.Now().Unix()
+	now := utils.Now().Unix()
 	if pl.Transaction.CooldownTime > now {
 		return pl.Transaction.CooldownTime - now
 	}
@@ -327,7 +327,7 @@ func getPlayerCooldown(pl *model.Player) int64 {
 
 // setPlayerCooldown 设置玩家冷却时间
 func setPlayerCooldown(pl *model.Player, seconds int64) {
-	pl.Transaction.CooldownTime = time.Now().Unix() + seconds
+	pl.Transaction.CooldownTime = utils.Now().Unix() + seconds
 }
 
 // processPrivateTransaction 处理私人交易（Type=1）：通过邮件附件发送
@@ -408,7 +408,7 @@ func processPrivateTransaction(ctx global.IPlayer, pl *model.Player, req *proto_
 		Status:          2,
 		Price:           req.AttachmentInfo.Price,
 		PriceType:       req.AttachmentInfo.PriceType,
-		CreateTime:      time.Now().Unix(),
+		CreateTime:      utils.Now().Unix(),
 		OtherPlayerId:   req.AttachmentInfo.TargetInfo.PlayerId,
 		OtherPlayerName: req.AttachmentInfo.TargetInfo.Name,
 	}
@@ -471,7 +471,7 @@ func processExchangeTransaction(ctx global.IPlayer, pl *model.Player, req *proto
 		Status:         2,
 		PriceType:      req.AttachmentInfo.PriceType,
 		Price:          price,
-		CreateTime:     time.Now().Unix(),
+		CreateTime:     utils.Now().Unix(),
 	}
 	record.AttachmentInfo.Id = order.Id
 	record.AttachmentInfo.Src = req.Type

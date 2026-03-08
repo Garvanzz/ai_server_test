@@ -5,6 +5,7 @@ package invoke
 import (
 	"github.com/golang/protobuf/proto"
 	"xfx/core/define"
+	"xfx/core/model"
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
@@ -115,5 +116,188 @@ func (c ActivityModClient) OnRouterMsg(ctx *proto_player.Context, actId int64, r
 		return nil, err2
 	}
 	return v, nil
+}
+
+func (c ActivityModClient) ListAllActivities() ([]*model.ActivityInfo, error) {
+	result, err := c.invoke.Invoke(c.Type, "ListAllActivities")
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "ListAllActivities", err)
+		return nil, err
+	}
+
+	if result == nil {
+		return nil, nil
+	}
+
+	v, err2 := As[[]*model.ActivityInfo](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "ListAllActivities", err2)
+		return nil, err2
+	}
+	return v, nil
+}
+
+func (c ActivityModClient) GetActivityByActId(actId int64) (*model.ActivityInfo, error) {
+	result, err := c.invoke.Invoke(c.Type, "GetActivityByActId", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityByActId", err)
+		return nil, err
+	}
+
+	if result == nil {
+		return nil, nil
+	}
+
+	v, err2 := As[*model.ActivityInfo](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityByActId", err2)
+		return nil, err2
+	}
+	return v, nil
+}
+
+func (c ActivityModClient) GetActivityByCfgId(cfgId int64) (*model.ActivityInfo, error) {
+	result, err := c.invoke.Invoke(c.Type, "GetActivityByCfgId", cfgId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityByCfgId", err)
+		return nil, err
+	}
+
+	if result == nil {
+		return nil, nil
+	}
+
+	v, err2 := As[*model.ActivityInfo](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityByCfgId", err2)
+		return nil, err2
+	}
+	return v, nil
+}
+
+func (c ActivityModClient) StopActivity(actId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "StopActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "StopActivity", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "StopActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) RecoverActivity(actId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "RecoverActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "RecoverActivity", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "RecoverActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) CloseActivity(actId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "CloseActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "CloseActivity", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "CloseActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) RestartActivity(actId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "RestartActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "RestartActivity", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "RestartActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) RemoveActivity(actId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "RemoveActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "RemoveActivity", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "RemoveActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) CloseActivityByCfgId(cfgId int64) (error) {
+	result, err := c.invoke.Invoke(c.Type, "CloseActivityByCfgId", cfgId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "CloseActivityByCfgId", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "CloseActivityByCfgId", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) StopActivityByType(typ string) (error) {
+	result, err := c.invoke.Invoke(c.Type, "StopActivityByType", typ)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "StopActivityByType", err)
+		return err
+	}
+
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "StopActivityByType", err2)
+		return err2
+	}
+	return v
 }
 

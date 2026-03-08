@@ -30,39 +30,23 @@ func LoadEnv() (*Env, error) {
 }
 
 type Env struct {
-	v  *viper.Viper
-	ID int // 机器id
-
-	Name string // 当前节点名
-	Host string // 当前节点地址
-	Port int    // 当前节点端口
-
-	Debug    bool
-	ConfPath string // 配置路径
-	HttpUrl  string
-
-	// TimeOffsetDays 游戏逻辑时间偏移（天）。仅当 Debug=true 时生效；线上 Debug=false 时忽略，始终用服务器真实时间。
-	TimeOffsetDays int `mapstructure:"TimeOffsetDays"`
-
-	Mysql   *Mysql
-	Redis   *Redis
-	Gate    *Gate    // ws
-	TcpGate *TcpGate // tcp
-	Log     *Log
-}
-
-type Gate struct {
-	Host              string
-	WriteWait         time.Duration
-	PongWait          time.Duration
-	PingPeriod        time.Duration
-	MaxMessageSize    int
-	MessageBufferSize int
+	v          *viper.Viper
+	ID         int    // 机器id
+	RemoteName string // Remote 节点名
+	RemoteHost string // Remote 监听地址
+	RemotePort int    // Remote 监听端口
+	Debug      bool   // 是否是DEBUG模式(Debug模式不可设置时间偏移)
+	ConfPath   string // json文件路径
+	HttpUrl    string // http服务地址
+	TcpGate    *TcpGate
+	Mysql      *Mysql
+	Redis      *Redis
+	Log        *Log
 }
 
 type TcpGate struct {
-	Port              int // 只有这个配置在用
 	Ip                string
+	Port              int
 	WriteWait         time.Duration
 	PongWait          time.Duration
 	PingPeriod        time.Duration
@@ -72,21 +56,21 @@ type TcpGate struct {
 
 type Mysql struct {
 	CommonAddr      string
-	MaxIdleConns    int           `mapstructure:"MaxIdleConns"`
-	MaxOpenConns    int           `mapstructure:"MaxOpenConns"`
-	ConnMaxLifetime time.Duration `mapstructure:"ConnMaxLifetime"`
+	MaxIdleConns    int
+	MaxOpenConns    int
+	ConnMaxLifetime time.Duration
 }
 
 type Redis struct {
 	Host           string
 	Password       string
 	DbNum          int
-	MaxIdle        int           `mapstructure:"MaxIdle"`
-	MaxActive      int           `mapstructure:"MaxActive"`
-	IdleTimeout    time.Duration `mapstructure:"IdleTimeout"`
-	ConnectTimeout time.Duration `mapstructure:"ConnectTimeout"`
-	ReadTimeout    time.Duration `mapstructure:"ReadTimeout"`
-	WriteTimeout   time.Duration `mapstructure:"WriteTimeout"`
+	MaxIdle        int
+	MaxActive      int
+	IdleTimeout    time.Duration
+	ConnectTimeout time.Duration
+	ReadTimeout    time.Duration
+	WriteTimeout   time.Duration
 }
 
 type Log struct {
@@ -94,7 +78,7 @@ type Log struct {
 	FilePath  string
 	Level     string
 	Prefix    string
-	Format    string // json fmtlog text--default text
+	Format    string
 
 	// file write
 	MaxSize    int  // 文件最大大小(MB)
@@ -102,15 +86,3 @@ type Log struct {
 	MaxAge     int  // 文件最大保存天数
 	Compress   bool // 是否压缩备份文件
 }
-
-func (e *Env) Get(key string) interface{}            { return e.v.Get(key) }
-func (e *Env) GetBool(key string) bool               { return e.v.GetBool(key) }
-func (e *Env) GetDuration(key string) time.Duration  { return e.v.GetDuration(key) }
-func (e *Env) GetInt(key string) interface{}         { return e.v.GetInt(key) }
-func (e *Env) GetInt32(key string) interface{}       { return e.v.GetInt32(key) }
-func (e *Env) GetInt64(key string) interface{}       { return e.v.GetInt64(key) }
-func (e *Env) GetIntSlice(key string) interface{}    { return e.v.GetIntSlice(key) }
-func (e *Env) GetString(key string) interface{}      { return e.v.GetString(key) }
-func (e *Env) GetStringMap(key string) interface{}   { return e.v.GetStringMap(key) }
-func (e *Env) GetStringSlice(key string) interface{} { return e.v.GetStringSlice(key) }
-func (e *Env) GetTime(key string) interface{}        { return e.v.GetTime(key) }

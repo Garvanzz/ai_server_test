@@ -12,7 +12,7 @@ import (
 	"xfx/pkg/log"
 	"xfx/pkg/module"
 	"xfx/pkg/module/modules"
-	Proto_Public "xfx/proto/proto_public"
+	"xfx/proto/proto_public"
 
 	"github.com/gomodule/redigo/redis"
 )
@@ -55,10 +55,10 @@ func (l *Login) isOnline(id int64) bool {
 	return exist
 }
 
-// TODO:玩家登录
+// 玩家登录
 func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 	resp := new(messages.LoginResult)
-	resp.Result = int(Proto_Public.CommonState_Faild)
+	resp.Result = int(proto_public.CommonState_Faild)
 
 	rdb, _ := db.GetEngine(l.App.GetEnv().ID)
 
@@ -166,7 +166,7 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 
 	resp.PlayerId = dbId
 	resp.PlayerPid = pid
-	resp.Result = int(Proto_Public.CommonState_Success)
+	resp.Result = int(proto_public.CommonState_Success)
 	return resp, err
 }
 

@@ -3,8 +3,6 @@ package activity
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-	"xfx/core/common"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -18,12 +16,13 @@ import (
 	"xfx/main_server/player/rank"
 	"xfx/main_server/player/task"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_game"
 	"xfx/proto/proto_public"
 )
 
-// ReqActivityTheCompetitionChooseGroupId 竞技场刷新更换敌人
+// ReqActivityArenaRefreshBattlePlayer 竞技场刷新更换敌人
 func ReqActivityArenaRefreshBattlePlayer(ctx global.IPlayer, pl *model.Player, req *proto_activity.C2SArenaRefreshBattlePlayer) {
 	res := new(proto_activity.S2CArenaRefreshBattlePlayer)
 	//先判断活动是否结束
@@ -85,7 +84,7 @@ func ReqActivityTheArenaSetLineUp(ctx global.IPlayer, pl *model.Player, req *pro
 	}
 
 	for _, v := range req.HeroIds {
-		if !common.IsHaveValueIntArray(lineup.HeroId, v) {
+		if !utils.ContainsInt32(lineup.HeroId, v) {
 			res.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(res)
 			return
@@ -363,7 +362,7 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 			TargetId: targetId,
 			IsAttack: true,
 			ActId:    Imodel.ActId,
-			Time:     time.Now().Unix(),
+			Time:     utils.Now().Unix(),
 			Rank:     int32(selfRank),
 			IsFuchou: false,
 		}
@@ -378,7 +377,7 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 				TargetId: pl.Id,
 				IsAttack: false,
 				ActId:    Imodel.ActId,
-				Time:     time.Now().Unix(),
+				Time:     utils.Now().Unix(),
 				Rank:     int32(targetRank),
 				IsFuchou: false,
 			}

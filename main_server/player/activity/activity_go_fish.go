@@ -11,7 +11,7 @@ import (
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
-	Proto_Public "xfx/proto/proto_public"
+	"xfx/proto/proto_public"
 )
 
 // ReqActivityGoFish 钓鱼
@@ -22,14 +22,14 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	reply, err := invoke.ActivityClient(ctx).GetActivityData(pl.ToContext(), req.ActId)
 	if err != nil {
 		log.Error("ReqActivityGoFish invoke activity error:%v", err)
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ACTIVITYCLOSE
+		resp.Code = proto_public.CommonErrorCode_ERR_ACTIVITYCLOSE
 		ctx.Send(resp)
 		return
 	}
 
 	if reply == nil {
 		log.Error("ReqActivityGoFish reply is nil")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ACTIVITYCLOSE
+		resp.Code = proto_public.CommonErrorCode_ERR_ACTIVITYCLOSE
 		ctx.Send(resp)
 		return
 	}
@@ -45,7 +45,7 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	}
 
 	if _conf.Id <= 0 {
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NoConfig
+		resp.Code = proto_public.CommonErrorCode_ERR_NoConfig
 		ctx.Send(resp)
 		return
 	}
@@ -53,7 +53,7 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	//判断最低类型
 	if _conf.NeedMinCost > 0 {
 		if req.CostId != _conf.NeedMinCost {
-			resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+			resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 			ctx.Send(resp)
 			return
 		}
@@ -64,7 +64,7 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 
 	//判断材料够不够
 	if !internal.CheckItemsEnough(pl, cost) {
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NumNotEnough
+		resp.Code = proto_public.CommonErrorCode_ERR_NumNotEnough
 		ctx.Send(resp)
 		return
 	}
@@ -72,14 +72,14 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	_reply, err := invoke.ActivityClient(ctx).OnRouterMsg(pl.ToContext(), req.ActId, req)
 	if err != nil {
 		log.Error("ReqActivityGoFish invoke activity error:%v", err)
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
 	if _reply == nil {
 		log.Error("ReqActivityGoFish reply is nil")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
@@ -88,7 +88,7 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	//没有鱼了
 	if _resp.Code == 1 {
 		log.Debug("ReqActivityGoFish is code :%v", _resp.Code)
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
@@ -96,13 +96,13 @@ func ReqActivityGoFish(ctx global.IPlayer, pl *model.Player, req *proto_activity
 	//扣除材料
 	internal.SubItems(ctx, pl, cost)
 	if _resp.Code == 2 {
-		resp.Code = Proto_Public.CommonErrorCode_ERR_OK
+		resp.Code = proto_public.CommonErrorCode_ERR_OK
 		resp.State = false
 		ctx.Send(resp)
 		return
 	}
 
-	resp.Code = Proto_Public.CommonErrorCode_ERR_OK
+	resp.Code = proto_public.CommonErrorCode_ERR_OK
 	resp.State = true
 
 	if len(_resp.Ids) > 0 {
@@ -125,7 +125,7 @@ func ReqActivityFishSign(ctx global.IPlayer, pl *model.Player, req *proto_activi
 	resp := &proto_activity.S2CFishSign{}
 	if req.ActId == 0 {
 		log.Error("ReqActivitySign id error")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NOACTIVITY
+		resp.Code = proto_public.CommonErrorCode_ERR_NOACTIVITY
 		ctx.Send(resp)
 		return
 	}
@@ -133,21 +133,21 @@ func ReqActivityFishSign(ctx global.IPlayer, pl *model.Player, req *proto_activi
 	reply, err := invoke.ActivityClient(ctx).OnRouterMsg(pl.ToContext(), req.ActId, req)
 	if err != nil {
 		log.Error("ReqActivitySign invoke activity error:%v", err)
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
 	if reply == nil {
 		log.Error("ReqActivitySign reply is nil")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NOACTIVITY
+		resp.Code = proto_public.CommonErrorCode_ERR_NOACTIVITY
 		ctx.Send(resp)
 		return
 	}
 
 	back := reply.(*model.CommonActivityAwardBack)
 	if back.Code == 1 {
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
@@ -155,7 +155,7 @@ func ReqActivityFishSign(ctx global.IPlayer, pl *model.Player, req *proto_activi
 	//奖励
 	bag.AddAward(ctx, pl, back.Award, true)
 
-	resp.Code = Proto_Public.CommonErrorCode_ERR_OK
+	resp.Code = proto_public.CommonErrorCode_ERR_OK
 	ctx.Send(resp)
 }
 
@@ -164,7 +164,7 @@ func ReqActivityFishLevelAward(ctx global.IPlayer, pl *model.Player, req *proto_
 	resp := &proto_activity.S2CFishLevelAward{}
 	if req.ActId == 0 {
 		log.Error("ReqActivityFishLevelAward id error")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NOACTIVITY
+		resp.Code = proto_public.CommonErrorCode_ERR_NOACTIVITY
 		ctx.Send(resp)
 		return
 	}
@@ -172,21 +172,21 @@ func ReqActivityFishLevelAward(ctx global.IPlayer, pl *model.Player, req *proto_
 	reply, err := invoke.ActivityClient(ctx).OnRouterMsg(pl.ToContext(), req.ActId, req)
 	if err != nil {
 		log.Error("ReqActivityFishLevelAward invoke activity error:%v", err)
-		resp.Code = Proto_Public.CommonErrorCode_ERR_ParamTypeError
+		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
 	if reply == nil {
 		log.Error("ReqActivityFishLevelAward reply is nil")
-		resp.Code = Proto_Public.CommonErrorCode_ERR_NOACTIVITY
+		resp.Code = proto_public.CommonErrorCode_ERR_NOACTIVITY
 		ctx.Send(resp)
 		return
 	}
 
 	back := reply.(*model.CommonActivityAwardBack)
 	if back.Code == 1 || back.Code == 2 {
-		resp.Code = Proto_Public.CommonErrorCode_ERR_OK
+		resp.Code = proto_public.CommonErrorCode_ERR_OK
 		ctx.Send(resp)
 		return
 	}
@@ -196,6 +196,6 @@ func ReqActivityFishLevelAward(ctx global.IPlayer, pl *model.Player, req *proto_
 		bag.AddAward(ctx, pl, back.Award, true)
 	}
 
-	resp.Code = Proto_Public.CommonErrorCode_ERR_OK
+	resp.Code = proto_public.CommonErrorCode_ERR_OK
 	ctx.Send(resp)
 }

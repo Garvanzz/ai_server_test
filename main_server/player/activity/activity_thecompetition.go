@@ -1,8 +1,8 @@
 package activity
 
 import (
-	"time"
 	"xfx/core/define"
+	"xfx/pkg/utils"
 	"xfx/core/event"
 	"xfx/core/model"
 	"xfx/main_server/global"
@@ -32,7 +32,7 @@ func ReqActivityTheCompetitionChooseGroupId(ctx global.IPlayer, pl *model.Player
 	}
 
 	resp := reply
-	if time.Now().Unix() >= resp.CloseTime {
+	if utils.Now().Unix() >= resp.CloseTime {
 		res.Code = proto_public.CommonErrorCode_ERR_ACTIVITYCLOSE
 		ctx.Send(res)
 		return
@@ -65,7 +65,7 @@ func ReqActivityTheCompetitionStake(ctx global.IPlayer, pl *model.Player, req *p
 	}
 
 	resp := reply
-	if time.Now().Unix() >= resp.CloseTime {
+	if utils.Now().Unix() >= resp.CloseTime {
 		res.Code = proto_public.CommonErrorCode_ERR_ACTIVITYCLOSE
 		ctx.Send(res)
 		return

@@ -3,7 +3,6 @@ package openbox
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -100,7 +99,7 @@ func RefreshBoxLevelUpTime(pl *model.Player) bool {
 			return false
 		}
 
-		if time.Now().Unix()-pl.OpenBox.LastUpTime >= int64(boxdropConf.UpTime*3600) {
+		if utils.Now().Unix()-pl.OpenBox.LastUpTime >= int64(boxdropConf.UpTime*3600) {
 			pl.OpenBox.Level += 1
 			pl.OpenBox.IsUpLevelBox = false
 			pl.OpenBox.LastUpTime = 0
@@ -140,7 +139,7 @@ func ReqUpLevelBox(ctx global.IPlayer, pl *model.Player, req *proto_openbox.C2SU
 		return
 	}
 
-	pl.OpenBox.LastUpTime = time.Now().Unix()
+	pl.OpenBox.LastUpTime = utils.Now().Unix()
 	pl.OpenBox.IsUpLevelBox = true
 	resp.Box = &proto_openbox.BoxOption{
 		Level:           pl.OpenBox.Level,

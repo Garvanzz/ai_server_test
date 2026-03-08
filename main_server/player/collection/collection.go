@@ -3,7 +3,7 @@ package collection
 import (
 	"encoding/json"
 	"fmt"
-	"xfx/core/common"
+	"xfx/pkg/utils"
 	"xfx/core/config"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/db"
@@ -262,7 +262,7 @@ func ReqSetSlotHeroCollection(ctx global.IPlayer, pl *model.Player, req *proto_e
 			continue
 		}
 
-		if !common.IsHaveValueIntArray(lineup.HeroId, heroId) {
+		if !utils.ContainsInt32(lineup.HeroId, heroId) {
 			res.Code = proto_equip.ERRORCODEEQUIP_ERROR_PARAMERROR
 			ctx.Send(res)
 			return

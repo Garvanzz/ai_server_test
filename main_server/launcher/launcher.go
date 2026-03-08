@@ -8,6 +8,7 @@ import (
 	"time"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/pkg/module"
 	"xfx/pkg/module/modules"
 	proto_id "xfx/proto"
@@ -31,24 +32,24 @@ type launcher struct {
 func (m *launcher) Version() string { return "1.0.0" }
 func (m *launcher) GetType() string { return "launcher" } //模块类型
 func (m *launcher) OnTick(delta time.Duration) {
-	if m.UDP != nil && (time.Now().Unix()-m.lastPingTime) > 10 {
+	if m.UDP != nil && (utils.Now().Unix()-m.lastPingTime) > 10 {
 		//发送心跳
 		id, _ := proto_id.MessageID(&proto_game.C2SPing{})
 		var info = NewPacket(id, &proto_game.C2SPing{}).Serialize()
 		if _, e := m.UDP.Write(info); nil != e {
 			panic(fmt.Sprintf("write error:%s", e.Error()))
 		}
-		m.lastPingTime = time.Now().Unix()
+		m.lastPingTime = utils.Now().Unix()
 	}
 
-	if m.wsconn != nil && (time.Now().Unix()-m.lastPingTime) > 10 {
+	if m.wsconn != nil && (utils.Now().Unix()-m.lastPingTime) > 10 {
 		//发送心跳
 		id, _ := proto_id.MessageID(&proto_game.C2SPing{})
 		var info = NewPacket(uint32(id), &proto_game.C2SPing{}).Serialize()
 		if e := m.wsconn.WriteMessage(websocket.BinaryMessage, info); nil != e {
 			panic(fmt.Sprintf("write error:%s", e.Error()))
 		}
-		m.lastPingTime = time.Now().Unix()
+		m.lastPingTime = utils.Now().Unix()
 	}
 }
 
@@ -57,7 +58,7 @@ func (m *launcher) OnInit(app module.App) {
 
 	m.UDP = nil
 	m.wsconn = nil
-	m.lastPingTime = time.Now().Unix()
+	m.lastPingTime = utils.Now().Unix()
 }
 
 func (m *launcher) OnMessage(msg interface{}) interface{} {
