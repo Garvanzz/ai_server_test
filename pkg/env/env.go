@@ -1,8 +1,9 @@
 package env
 
 import (
-	"github.com/spf13/viper"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 var (
@@ -31,21 +32,33 @@ func LoadEnv() (*Env, error) {
 
 type Env struct {
 	v          *viper.Viper
-	ID         int    // 机器id
-	RemoteName string // Remote 节点名
-	RemoteHost string // Remote 监听地址
-	RemotePort int    // Remote 监听端口
-	Debug      bool   // 是否是DEBUG模式(Debug模式不可设置时间偏移)
-	ConfPath   string // json文件路径
-	HttpUrl    string // http服务地址
-	TcpGate    *TcpGate
-	Mysql      *Mysql
-	Redis      *Redis
-	Log        *Log
+	ID         int      // 机器 id
+	RemoteName string   // Remote 节点名
+	RemoteHost string   // Remote 监听地址
+	RemotePort int      // Remote 监听端口
+	Debug      bool     // 是否是DEBUG模式(Debug模式不可设置时间偏移)
+	ConfPath   string   // json 文件路径
+	HttpUrl    string   // http 服务地址
+	TcpGate    *TcpGate // TCP 网关配置
+	Gate       *Gate    // WebSocket 网关配置
+	Mysql      *Mysql   // 通用 Mysql
+	Redis      *Redis   // 本服 Redis
+	LoginRedis *Redis   // 登录服 Redis
+	Log        *Log     // 日志
 }
 
 type TcpGate struct {
 	Ip                string
+	Port              int
+	WriteWait         time.Duration
+	PongWait          time.Duration
+	PingPeriod        time.Duration
+	MaxMessageSize    int
+	MessageBufferSize int
+}
+
+type Gate struct {
+	Host              string
 	Port              int
 	WriteWait         time.Duration
 	PongWait          time.Duration

@@ -2,13 +2,35 @@ package logic
 
 import (
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"time"
+	"xfx/login_server/model/entity"
+	"xfx/pkg/log"
+
+	_ "github.com/go-sql-driver/mysql"
 	"xorm.io/xorm"
 	xlog "xorm.io/xorm/log"
 )
 
-var AccountEngine *xorm.Engine //账户mysql
+var AccountEngine *xorm.Engine // 账户库（account、server_group、game_server、hot_update、notice）
+
+// EnsureServerTables 确保区组/区服表存在
+func EnsureServerTables() {
+	if AccountEngine == nil {
+		return
+	}
+	if err := AccountEngine.Sync2(new(entity.ServerGroupMeta)); err != nil {
+		log.Error("Sync2 server_group err: %v", err)
+	}
+	if err := AccountEngine.Sync2(new(entity.ServerItem)); err != nil {
+		log.Error("Sync2 game_server err: %v", err)
+	}
+	if err := AccountEngine.Sync2(new(entity.HotUpdateItem)); err != nil {
+		log.Error("Sync2 hot_update err: %v", err)
+	}
+	if err := AccountEngine.Sync2(new(entity.NoticeItem)); err != nil {
+		log.Error("Sync2 notice err: %v", err)
+	}
+}
 
 func NewMysqlEngine(addr string) *xorm.Engine {
 	_engine, err := xorm.NewEngine("mysql", addr)

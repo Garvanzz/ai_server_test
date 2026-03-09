@@ -20,7 +20,7 @@ import (
 //	serverdb.SetGlobal(m)
 //
 //	eng, _ := serverdb.GetEngine(cfg.ServerId)
-//	eng, _ = serverdb.GetEngineByPlayerId(playerId)
+//	eng, _ = serverdb.DefaultEngine()
 func Example_usage() {
 	_ = serverdb.PlayerIdBase
 	_ = serverdb.ServerStateNormal

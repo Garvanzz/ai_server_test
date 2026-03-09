@@ -190,12 +190,11 @@ func (ent *entity) addGuildRefiningLog(data *model.YuanchiRefining, state bool) 
 	guildLog.Time = utils.Now().Unix()
 	guildLog.State = state
 
-	rdb, _ := db.GetEngine(Mgr.App.GetEnv().ID)
 	key := fmt.Sprintf("guild_refing_history:%d", ent.guild.Id)
 
 	js, _ := json.Marshal(guildLog)
 	//尾部添
-	rdb.RedisExec("RPUSH", key, js)
+	db.RedisExec("RPUSH", key, js)
 }
 
 // 炼制判断

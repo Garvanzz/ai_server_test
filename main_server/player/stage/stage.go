@@ -39,12 +39,7 @@ func Save(pl *model.Player, isSync bool) {
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("save stage error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerStage, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerStage, pl.Id), j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -52,12 +47,7 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save stage error, no this server:%v", err)
-		return
-	}
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerStage, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerStage, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load stage error:%v", pl.Id, err)
 		return
@@ -639,15 +629,6 @@ func SettleStageGame(ctx global.IPlayer, pl *model.Player, msg *messages.StageSe
 
 // 获取自由玩家数据
 func GetStageFreePlayer(ctx global.IPlayer, pl *model.Player, msg *proto_stage.C2SGetFreePlayer) {
-	res := &proto_stage.S2CGetFreePlayer{}
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save stage error, no this server:%v", err)
-		res.Code = proto_public.CommonErrorCode_ERR_MYSQLERROR
-		ctx.Send(res)
-		return
-	}
-
 	count := msg.Count
 	if count <= 0 {
 		count = 1
@@ -656,7 +637,7 @@ func GetStageFreePlayer(ctx global.IPlayer, pl *model.Player, msg *proto_stage.C
 	}
 	log.Debug("请求自由玩家:%v", count)
 	//获取战力排行榜
-	rdb.RedisAsyncExec(ctx.Self(), define.RedisRetStage, []int64{1, int64(count)}, "zrevrange", fmt.Sprintf("%s", define.RankTypePowerKey), 0, define.RankTop-1, "WITHSCORES")
+	db.RedisAsyncExec(ctx.Self(), define.RedisRetStage, []int64{1, int64(count)}, "zrevrange", fmt.Sprintf("%s", define.RankTypePowerKey), 0, define.RankTop-1, "WITHSCORES")
 }
 
 // 解锁隐藏剧情

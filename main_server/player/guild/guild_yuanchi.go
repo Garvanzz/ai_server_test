@@ -39,15 +39,8 @@ func ReqGuildYuanchiInit(ctx global.IPlayer, pl *model.Player, req *proto_guild.
 func ReqGuildRefiningLog(ctx global.IPlayer, pl *model.Player, req *proto_guild.C2SReqRecord) {
 	resp := new(proto_guild.S2CReqRecord)
 
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save Destiny error, no this server:%v", err)
-		ctx.Send(resp)
-		return
-	}
-
 	key := fmt.Sprintf("guild_refing_history:%d", req.GuildId)
-	result, err := rdb.RedisExec("LRANGE", key, 0, -1)
+	result, err := db.RedisExec("LRANGE", key, 0, -1)
 	if err != nil {
 		ctx.Send(resp)
 		return

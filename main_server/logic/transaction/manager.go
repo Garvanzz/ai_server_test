@@ -48,13 +48,8 @@ func (m *Manager) OnInit(app module.App) {
 }
 
 func (m *Manager) loadData() {
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
-	if err != nil {
-		log.Error("transaction loadData error: %v", err)
-		return
-	}
 
-	reply, err := rdb.RedisExec("GET", define.TransactionOrder)
+	reply, err := db.RedisExec("GET", define.TransactionOrder)
 	if err != nil {
 		log.Error("load transaction order error: %v", err)
 		return
@@ -87,7 +82,7 @@ func (m *Manager) loadData() {
 
 	log.Debug("transaction loadData success, orderId: %d, orders: %d", m.orderId, len(m.orders))
 
-	reply_records, err := rdb.RedisExec("GET", define.TransactionRecords)
+	reply_records, err := db.RedisExec("GET", define.TransactionRecords)
 	if err != nil {
 		log.Error("load transaction  reply_records order error: %v", err)
 		return
@@ -122,11 +117,6 @@ func (m *Manager) OnDestroy() {
 }
 
 func (m *Manager) saveToRedis() {
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
-	if err != nil {
-		log.Error("save transaction error: %v", err)
-		return
-	}
 
 	data := map[string]interface{}{
 		"orderId":        m.orderId,
@@ -141,7 +131,7 @@ func (m *Manager) saveToRedis() {
 		return
 	}
 
-	rdb.RedisExec("SET", define.TransactionOrder, string(b))
+	db.RedisExec("SET", define.TransactionOrder, string(b))
 
 	c, err := json.Marshal(m.TransactionRecords)
 	if err != nil {
@@ -149,7 +139,7 @@ func (m *Manager) saveToRedis() {
 		return
 	}
 
-	rdb.RedisExec("SET", define.TransactionRecords, string(c))
+	db.RedisExec("SET", define.TransactionRecords, string(c))
 
 }
 

@@ -6,13 +6,14 @@ import (
 	"xfx/core/db"
 	"xfx/pkg/utils"
 
-	"github.com/golang/protobuf/proto"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
 	"xfx/proto/proto_guild"
 	"xfx/proto/proto_player"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func newGuild(name, noticeBoard string, memLimit, banner, bannerColor int32) *model.Guild {
@@ -131,8 +132,7 @@ func (ent *entity) checkPermission(dbId int64, action int) bool {
 
 // 加载帮会数据
 func (mgr *Manager) loadGuildData() {
-	cdb, _ := db.GetEngine(mgr.GetApp().GetEnv().ID)
-	reply, err := cdb.RedisExec("GET", define.GuildRedisKey)
+	reply, err := db.RedisExec("GET", define.GuildRedisKey)
 	if err != nil {
 		log.Error("guild mgr load data err", err)
 		return
@@ -147,7 +147,7 @@ func (mgr *Manager) loadGuildData() {
 	}
 
 	guildDBs := make([]*model.GuildDB, 0)
-	rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 	err = rdb.Mysql.Table(define.TableGuild).Find(&guildDBs)
 	if err != nil {
 		log.Error("load all guild info error:%v", err)
@@ -229,7 +229,7 @@ func guildToGuildDb(guild *model.Guild) *model.GuildDB {
 // 更新帮会信息
 func (ent *entity) onSave() bool {
 
-	rdb, _ := db.GetEngine(Mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 
 	guildDB := guildToGuildDb(ent.guild)
 	if guildDB.Id == 0 { // 插入联盟信息
@@ -304,7 +304,7 @@ func (ent *entity) addGuildLog(action int32, dbId []int64, params ...string) {
 	guildLog.Params = params
 	guildLog.DbId = dbId
 
-	rdb, _ := db.GetEngine(Mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 	n, err := rdb.Mysql.Table(define.TableGuildLog).Insert(guildLog)
 	if err != nil {
 		log.Error("insert guild log error:%v,%v", err, guildLog)
@@ -375,7 +375,7 @@ func (ent *entity) ProtoTomemInfo(info *proto_guild.MemberInfo) *model.Member {
 
 // 删除帮会数据
 func deleteGuildData(guildId int64) {
-	rdb, _ := db.GetEngine(Mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 	_, err := rdb.Mysql.Table(define.TableGuildLog).Where("guild_id = ?", guildId).Delete()
 	if err != nil {
 		log.Error("delete guild log error:%,n:%v", err)
@@ -428,11 +428,9 @@ func (mgr *Manager) AddGuildChatHistory(message string, guildId int64) {
 
 	key := fmt.Sprintf("guild_chat_history:%d", guildId)
 
-	rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
-
 	//尾部添
-	rdb.RedisExec("RPUSH", key, message)
+	db.RedisExec("RPUSH", key, message)
 
 	//然后整理长度 不超过指定存储数量(ChatMsgLen)
-	rdb.RedisExec("LTRIM", key, 0-define.ChatMsgLen, -1)
+	db.RedisExec("LTRIM", key, 0-define.ChatMsgLen, -1)
 }

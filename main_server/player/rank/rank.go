@@ -21,7 +21,6 @@ func ReqRankingData(ctx global.IPlayer, pl *model.Player, req *proto_rank.C2SRan
 	result := new(proto_rank.S2CRankData)
 	result.Type = int32(req.Type)
 	log.Debug("请求排行榜:%v", req.Type)
-	rdb, _ := db.GetEngine(pl.Cache.App.GetEnv().ID)
 
 	switch req.Type {
 	case define.RankTypePerfect:
@@ -30,25 +29,25 @@ func ReqRankingData(ctx global.IPlayer, pl *model.Player, req *proto_rank.C2SRan
 			ctx.Send(result)
 			return
 		}
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypePerfect, guildId}, "zrevrange", fmt.Sprintf("%s:%d", define.RankPerfectKey, guildId), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypePerfect, guildId}, "zrevrange", fmt.Sprintf("%s:%d", define.RankPerfectKey, guildId), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeGrow:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGrow}, "zrevrange", define.RankGrowKey, 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGrow}, "zrevrange", define.RankGrowKey, 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeGuildBattle:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGuildBattle}, "zrevrange", define.RankGuildBattleKey, 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGuildBattle}, "zrevrange", define.RankGuildBattleKey, 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeDrawHero:
 		if len(req.Id) <= 0 {
 			ctx.Send(result)
 			return
 		}
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeDrawHero, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankDrawHeroKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeDrawHero, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankDrawHeroKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeRecharge:
 		if len(req.Id) <= 0 {
 			ctx.Send(result)
 			return
 		}
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeRecharge, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankRechargeKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeRecharge, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankRechargeKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeClimbTower:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeClimbTower}, "zrevrange", define.RankClimbTowerKey, 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeClimbTower}, "zrevrange", define.RankClimbTowerKey, 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeTheCompetition:
 		if len(req.Id) <= 2 {
 			ctx.Send(result)
@@ -56,15 +55,15 @@ func ReqRankingData(ctx global.IPlayer, pl *model.Player, req *proto_rank.C2SRan
 		}
 		id := req.Id[0]
 		group := req.Id[1]
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeTheCompetition, int64(id), int64(group)}, "zrevrange", fmt.Sprintf("%s:%d_%d", define.RankTypeTheCompetitionKey, id, group), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeTheCompetition, int64(id), int64(group)}, "zrevrange", fmt.Sprintf("%s:%d_%d", define.RankTypeTheCompetitionKey, id, group), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeArena:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeArena, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeArena, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeTianti:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeTianti, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeTianti, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypeGoFish:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGoFish, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeGoFishKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypeGoFish, int64(req.Id[0])}, "zrevrange", fmt.Sprintf("%s:%d", define.RankTypeGoFishKey, req.Id[0]), 0, define.RankTop-1, "WITHSCORES")
 	case define.RankTypePower:
-		rdb.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypePower}, "zrevrange", fmt.Sprintf("%s", define.RankTypePowerKey), 0, define.RankTop-1, "WITHSCORES")
+		db.RedisAsyncExec(ctx.Self(), define.RedisRetRank, []int64{define.RankTypePower}, "zrevrange", fmt.Sprintf("%s", define.RankTypePowerKey), 0, define.RankTop-1, "WITHSCORES")
 	default:
 		log.Error("ReqRankingData type error:%v", req.Type)
 	}
@@ -73,12 +72,10 @@ func ReqRankingData(ctx global.IPlayer, pl *model.Player, req *proto_rank.C2SRan
 func GetSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 	ret := new(proto_rank.RankItem)
 
-	rdb, _ := db.GetEngine(serverId)
-
 	log.Debug("获取自己排名:%v,%v", rankKey, id)
 
 	// 先检查用户是否在排行榜中
-	score, err := redis.Float64(rdb.RedisExec("ZSCORE", rankKey, id))
+	score, err := redis.Float64(db.RedisExec("ZSCORE", rankKey, id))
 	if err != nil {
 		if errors.Is(err, redis.ErrNil) {
 			// 用户不在排行榜中
@@ -89,7 +86,7 @@ func GetSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 	}
 
 	// 获取排名
-	rank, err := redis.Int64(rdb.RedisExec("ZREVRANK", rankKey, id))
+	rank, err := redis.Int64(db.RedisExec("ZREVRANK", rankKey, id))
 	if err != nil {
 		// 理论上如果ZSCORE成功，ZREVRANK也应该成功
 		// 但为了安全起见，这里还是处理错误
@@ -104,20 +101,19 @@ func GetSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 
 // updateGuildRank 更新排名
 func updateGuildRank(ctx global.IPlayer, Id int32, pl *model.Player, score float64, rankType int) {
-	rdb, _ := db.GetEngine(pl.Cache.App.GetEnv().ID)
 	log.Debug("刷新排名:类型: %v, 值:%v", rankType, score)
 	var err error
 	switch rankType {
 	case define.RankTypePerfect:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankPerfectKey, Id), score, pl.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankPerfectKey, Id), score, pl.Id)
 	case define.RankTypeGrow:
-		_, err = rdb.RedisExec("ZINCRBY", define.RankGrowKey, score, Id)
+		_, err = db.RedisExec("ZINCRBY", define.RankGrowKey, score, Id)
 	case define.RankTypeGuildBattle:
-		_, err = rdb.RedisExec("ZINCRBY", define.RankGuildBattleKey, score, Id)
+		_, err = db.RedisExec("ZINCRBY", define.RankGuildBattleKey, score, Id)
 	case define.RankTypeClimbTower:
-		_, err = rdb.RedisExec("ZINCRBY", define.RankClimbTowerKey, score, pl.Id)
+		_, err = db.RedisExec("ZINCRBY", define.RankClimbTowerKey, score, pl.Id)
 	case define.RankTypePower:
-		_, err = rdb.RedisExec("ZINCRBY", define.RankTypePowerKey, score, pl.Id)
+		_, err = db.RedisExec("ZINCRBY", define.RankTypePowerKey, score, pl.Id)
 	default:
 	}
 
@@ -141,12 +137,11 @@ func updateGuildRank(ctx global.IPlayer, Id int32, pl *model.Player, score float
 
 // updateZAddRank 更新排名
 func updateZAddRank(ctx global.IPlayer, Id int64, pl *model.Player, score float64, rankType int) {
-	rdb, _ := db.GetEngine(pl.Cache.App.GetEnv().ID)
 	log.Debug("刷新排名:类型: %v, 值:%v", rankType, score)
 	var err error
 	switch rankType {
 	case define.RankTypeArena:
-		_, err = rdb.RedisExec("ZADD", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, Id), score, pl.Id)
+		_, err = db.RedisExec("ZADD", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, Id), score, pl.Id)
 	default:
 	}
 

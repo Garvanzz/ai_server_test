@@ -32,8 +32,7 @@ func AddEquips(ctx global.IPlayer, pl *model.Player, Id, Num, Level int32) {
 	}
 
 	if !has {
-		rdb, _ := db.GetEngineByPlayerId(pl.Id)
-		equipId, _ := rdb.GetEquipId()
+		equipId, _ := db.GetEquipId()
 		eop = &model.EquipOption{
 			Id:    int32(equipId),
 			Level: Level,

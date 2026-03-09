@@ -2,29 +2,30 @@ package logic
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"time"
+
 	"xfx/login_server/define"
-	"xfx/login_server/model"
+	"xfx/login_server/internal/middleware"
+	"xfx/login_server/model/dto"
+	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
-// Key 加密使用
-const Key = "12348578902223367877723456789012"
-
-const TokenExpire = 60 * 60 * 2  // token失效(秒) 2小时
+const TokenExpire = 60 * 60 * 2  // token 失效(秒) 2 小时
 const VerifyCodeExpire = 60 * 10 // 验证码失效(秒)
 
-// 注册账号
-func Accountregister(c *gin.Context) {
-	var registerUser model.RegisterUser
+func Register(c *gin.Context) {
+	var registerUser dto.RegisterUser
 	if err := c.ShouldBindJSON(&registerUser); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
 
 	if registerUser.Platform < 1 || registerUser.Platform > 3 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
 
@@ -37,13 +38,13 @@ func Accountregister(c *gin.Context) {
 
 	//玩家注册的话 账号不能为空
 	if len(registerUser.Account) == 0 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "register account error")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "register account error")
 		return
 	}
 
-	p := new(model.Account)
+	p := new(entity.Account)
 
-	if has, _ := AccountEngine.IsTableExist(define.AccountTable); !has {
+	if has, _ := AccountEngine.IsTableExist(define.TableAccount); !has {
 		// 同步结构体与数据库表
 		err := AccountEngine.Sync2(p)
 		if err != nil {
@@ -55,30 +56,30 @@ func Accountregister(c *gin.Context) {
 	p.Platform = registerUser.Platform
 	uid := ""
 
-	has, err := AccountEngine.Table(define.AccountTable).Where("account = ?", p.Account).Exist()
+	has, err := AccountEngine.Table(define.TableAccount).Where("account = ?", p.Account).Exist()
 	if err != nil {
 		log.Error("register find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		middleware.RetGame(c, define.ERR_DB, err.Error())
 		return
 	}
 	if has {
-		httpRetGame(c, ERR_ACCOUNT_EXISTS, "account exists")
+		middleware.RetGame(c, define.ERR_ACCOUNT_EXISTS, "account exists")
 		return
 	}
 
 	//检测uid重复否 重复则重新拿
-	uid = RandomNumeric(10)
+	uid = utils.RandomNumeric(10)
 	for {
-		has, err := AccountEngine.Table(define.AccountTable).Where("uid = ?", uid).Exist()
+		has, err := AccountEngine.Table(define.TableAccount).Where("uid = ?", uid).Exist()
 		if err != nil {
 			log.Error("register find uid err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			middleware.RetGame(c, define.ERR_DB, err.Error())
 			return
 		}
 		if !has {
 			break
 		}
-		uid = RandomNumeric(10)
+		uid = utils.RandomNumeric(10)
 	}
 
 	now := time.Now()
@@ -88,21 +89,21 @@ func Accountregister(c *gin.Context) {
 	p.CreateTime = now
 	p.ServerId = registerUser.ServerId
 
-	_, err = AccountEngine.Table(define.AccountTable).Insert(p)
+	_, err = AccountEngine.Table(define.TableAccount).Insert(p)
 	if err != nil {
 		log.Error("register player account db err : %v", err)
-		httpRetGame(c, ERR_DB, err.Error())
+		middleware.RetGame(c, define.ERR_DB, err.Error())
 		return
 	}
 
-	httpRetGame(c, SUCCESS, "success", map[string]interface{}{"account": p.Account})
+	middleware.RetGame(c, define.SUCCESS, "success", map[string]interface{}{"account": p.Account})
 }
 
-// 登录
+// Login 登录
 func Login(c *gin.Context) {
-	var loginUser model.LoginUser
+	var loginUser dto.LoginUser
 	if err := c.ShouldBindJSON(&loginUser); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
@@ -114,33 +115,33 @@ func Login(c *gin.Context) {
 	//	return
 	//}
 
-	//判断平台id是否正确
+	// 判断平台 id 是否正确
 	if loginUser.Platform < 1 || loginUser.Platform > 100 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
 
 	//账号不能为空
 	if len(loginUser.Account) <= 0 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "account not found")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "account not found")
 		return
 	}
 
-	player := new(model.Account)
+	player := new(entity.Account)
 	player.Account = loginUser.Account
-	has, err := AccountEngine.Table(define.AccountTable).Get(player)
+	has, err := AccountEngine.Table(define.TableAccount).Get(player)
 	if err != nil {
 		log.Error("account failed, err : %v", err)
-		httpRetGame(c, ERR_DB, "db err")
+		middleware.RetGame(c, define.ERR_DB, "db err")
 		return
 	}
 	if !has {
-		httpRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		middleware.RetGame(c, define.ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
 	if player.LoginBan != 0 && player.LoginBan > time.Now().Unix() {
-		httpRetGame(c, ERR_ACCOUNT_BANNED, "account banned")
+		middleware.RetGame(c, define.ERR_ACCOUNT_BANNED, "account banned")
 		return
 	}
 
@@ -172,21 +173,21 @@ func Login(c *gin.Context) {
 
 	//验证密码
 	if player.Password != loginUser.Password {
-		httpRetGame(c, ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
+		middleware.RetGame(c, define.ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
 		return
 	}
 
-	var serverItem model.ServerItem
-	has, err = AccountEngine.Table(define.ServerGroup).Where("id = ?", loginUser.ServerId).Get(&serverItem)
+	var serverItem entity.ServerItem
+	has, err = AccountEngine.Table(define.TableGameServer).Where("id = ?", loginUser.ServerId).Get(&serverItem)
 	if err != nil {
 		log.Error("get server list find db err :%v", err.Error())
-		httpRetGame(c, ERR_DB, "get server list find db err")
+		middleware.RetGame(c, define.ERR_DB, "get server list find db err")
 		return
 	}
 
 	if !has {
 		log.Error("get server list id error")
-		httpRetGame(c, ERR_DB, "get server list id error")
+		middleware.RetGame(c, define.ERR_DB, "get server list id error")
 		return
 	}
 
@@ -195,49 +196,54 @@ func Login(c *gin.Context) {
 		_, err = RedisExec("del", fmt.Sprintf("%s:%v", define.LoginToken, player.LastToken))
 		if err != nil {
 			log.Error("del last token failed, err : %v", err)
-			httpRetGame(c, ERR_DB, err.Error())
+			middleware.RetGame(c, define.ERR_DB, err.Error())
 			return
 		}
 	}
 
-	//生成登录token
-	loginToken := fmt.Sprintf("%x", RandomNumeric(15))
+	// 上次登录服（更新前）供客户端选服展示
+	lastLoginServerId := int64(player.ServerId)
+
+	// 生成登录 token，并更新账号 last_token、online_time、server_id（本次所选服）
+	loginToken := fmt.Sprintf("%x", []byte(utils.RandomNumeric(15)))
 	player.LastToken = loginToken
 	player.OnlineTime = time.Now()
+	player.ServerId = int(serverItem.Id)
 
-	//把token存入db 还有最近一次登录时间
-	n, err := AccountEngine.Table(define.AccountTable).Where("uid = ?", player.Uid).Cols("last_token", "online_time").Update(player)
+	n, err := AccountEngine.Table(define.TableAccount).Where("uid = ?", player.Uid).
+		Cols("last_token", "online_time", "server_id").Update(player)
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		middleware.RetGame(c, define.ERR_DB, err.Error())
 		log.Error("login save last token failed, err :%v", err)
 		return
 	}
 	if n == 0 {
 		log.Error("login save last token failed")
-		httpRetGame(c, ERR_DB, "login failed")
+		middleware.RetGame(c, define.ERR_DB, "login failed")
 		return
 	}
 
-	//token存入redis
+	// token 存入 redis
 	_, err = RedisExec("set", fmt.Sprintf("%s:%v", define.LoginToken, loginToken), player.Uid, "ex", fmt.Sprintf("%v", TokenExpire))
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		middleware.RetGame(c, define.ERR_DB, err.Error())
 		return
 	}
 
-	//登录服务器存入redis
-	_, err = RedisExec("set", fmt.Sprintf("%s:%v", define.PlayerLastLoginServer, player.RedisId), serverItem.Id)
+	// 按 uid 记录上次登录服（渠道与服解耦：不依赖 RedisId，login_server 即可维护）
+	_, err = RedisExec("set", fmt.Sprintf("%s:uid:%s", define.PlayerLastLoginServer, player.Uid), serverItem.Id, "ex", fmt.Sprintf("%v", TokenExpire*2))
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
-		return
+		log.Error("login save last server by uid failed, err :%v", err)
+		// 不阻断登录
 	}
 
 	log.Debug("login success")
 
-	httpRetGame(c, SUCCESS, "success",
+	middleware.RetGame(c, define.SUCCESS, "success",
 		map[string]any{
-			"serverId": serverItem.Id,
-			"token":    loginToken,
-			"uid":      player.Uid,
+			"serverId":          serverItem.Id,
+			"token":             loginToken,
+			"uid":               player.Uid,
+			"lastLoginServerId": lastLoginServerId,
 		})
 }

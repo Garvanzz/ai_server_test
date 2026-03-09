@@ -193,8 +193,7 @@ func (mgr *Manager) OnSave() {
 		return
 	}
 
-	cdb, _ := db.GetEngine(mgr.GetApp().GetEnv().ID)
-	_, err = cdb.RedisExec("SET", define.GuildRedisKey, string(mgrData))
+	_, err = db.RedisExec("SET", define.GuildRedisKey, string(mgrData))
 	if err != nil {
 		log.Error("guild mgr OnSave db err", err)
 		return
@@ -265,7 +264,7 @@ func (mgr *Manager) OnCreateGuild(ctx *proto_player.Context, req *proto_guild.C2
 	//}
 
 	// 检查是否有重名的帮会
-	rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 	exist, err := rdb.Mysql.Table(define.TableGuild).Where("guild_name = ?", req.Name).Exist()
 	if err != nil {
 		log.Error("guild name err:%v", err)
@@ -632,7 +631,7 @@ func (mgr *Manager) OnLeaveGuild(ctx *proto_player.Context, req *proto_guild.C2S
 			return
 		}
 
-		rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
+		rdb, _ := db.GetEngine()
 
 		n, err := rdb.Mysql.Table(define.TableGuild).Where("id = ?", ent.guild.Id).Delete()
 		if err != nil {
@@ -659,13 +658,13 @@ func (mgr *Manager) OnLeaveGuild(ctx *proto_player.Context, req *proto_guild.C2S
 		deleteGuildData(ent.guild.Id)
 
 		// 删除帮会战力排行
-		_, err = rdb.RedisExec("zrem", "rank_guild_cup_point", ent.guild.Id)
+		_, err = db.RedisExec("zrem", "rank_guild_cup_point", ent.guild.Id)
 		if err != nil {
 			log.Error("delete guild rank error:%v", err)
 		}
 
 		// 删除帮会聊天记录
-		_, err = rdb.RedisExec("del", fmt.Sprintf("guild_chat_history:%d", ent.guild.Id))
+		_, err = db.RedisExec("del", fmt.Sprintf("guild_chat_history:%d", ent.guild.Id))
 		if err != nil {
 			log.Error("delete guild chan history error:%v", err)
 		}
@@ -758,7 +757,7 @@ func (mgr *Manager) OnGetEvents(ctx *proto_player.Context, req *proto_guild.C2SG
 	}
 
 	logs := make([]*model.GuildLog, 0)
-	rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
+	rdb, _ := db.GetEngine()
 
 	err := rdb.Mysql.Table(define.TableGuildLog).Where("guild_id = ?", info.GuildId).Desc("timestamp").Limit(define.LogCountMax).Find(&logs)
 	if err != nil {
@@ -1144,8 +1143,7 @@ func (mgr *Manager) OnGetGuildListByPage(ctx *proto_player.Context, req *proto_g
 
 	start := (req.Page-1)*define.PageMax + 1
 
-	//rdb, _ := db.GetEngine(mgr.App.GetEnv().ID)
-	//reply, err := rdb.RedisExec("zrevrange", "rank_guild_cup_point", 0, -1)
+	//reply, err := db.RedisExec("zrevrange", "rank_guild_cup_point", 0, -1)
 	//if err != nil {
 	//	log.Error("get guild cup point rank error:", err)
 	//	return resp

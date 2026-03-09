@@ -292,13 +292,7 @@ func GetInviteList(ctx global.IPlayer, pl *model.Player, msg *proto_room.C2SGetI
 	res := &proto_room.S2CGetInviteList{}
 	//获取好友
 	if msg.Type == 1 {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("GetInviteList error, no this server:%v", err)
-			ctx.Send(res)
-			return
-		}
-		reply, err := rdb.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+		reply, err := db.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 		if err != nil {
 			log.Error("ReqFriendList err: %v", err)
 			ctx.Send(res)

@@ -534,11 +534,10 @@ func (a *ActivityLadderRace) OnClose() {
 
 // initRankPlayerFromRedis 从Redis排行榜初始化RankPlayer数据
 func (a *ActivityLadderRace) initRankPlayerFromRedis() {
-	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
 	rankKey := fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, a.GetId())
 
 	// 从Redis获取排行榜数据（所有玩家的ID和积分）
-	result, err := redis.Strings(rdb.RedisExec("ZREVRANGE", rankKey, 0, -1, "WITHSCORES"))
+	result, err := redis.Strings(db.RedisExec("ZREVRANGE", rankKey, 0, -1, "WITHSCORES"))
 	if err != nil && !errors.Is(err, redis.ErrNil) {
 		log.Error("initRankPlayerFromRedis error:%v", err)
 		return

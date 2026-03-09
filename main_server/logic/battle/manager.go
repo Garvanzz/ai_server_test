@@ -97,8 +97,7 @@ func (m *Manager) OnInit(app module.App) {
 	m.Register("BattleArena", m.BattleArena)
 	m.Register("BattleTianti", m.BattleTianti)
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
-	reply, err := rdb.RedisExec("get", "battleId")
+	reply, err := db.RedisExec("get", "battleId")
 	if err != nil {
 		log.Error("load battleId err:%v", err)
 		return
@@ -114,7 +113,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	replyMap, err := rdb.RedisExec("get", "battleIdMap")
+	replyMap, err := db.RedisExec("get", "battleIdMap")
 	if err != nil {
 		log.Error("load replyMap err:%v", err)
 		return
@@ -130,7 +129,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	reply_danao, err := rdb.RedisExec("get", "battleDanaotiangong")
+	reply_danao, err := db.RedisExec("get", "battleDanaotiangong")
 	if err != nil {
 		log.Error("load reply_danao err:%v", err)
 		return
@@ -205,8 +204,7 @@ func (m *Manager) OnSave() {
 		return
 	}
 
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
-	_, err = rdb.RedisExec("set", "battleId", data)
+	_, err = db.RedisExec("set", "battleId", data)
 	if err != nil {
 		log.Error("set battleId error: %v", err)
 		return

@@ -33,7 +33,7 @@ func (m *HttpModule) GMSendMail(c *gin.Context) {
 	//延时
 	if Info.EffectTime.Unix() > utils.Now().Unix() {
 		//取ID
-		id, _ := db.CommonEngine.GetDelayMailId()
+		id, _ := db.GetDelayMailId()
 
 		isSuc := invoke.MailClient(m).SendDelayMails(int64(id), Info.EffectTime.Unix(), Info.Type, Info.CnTitle, Info.CnContent, "", "", awards, int64(0), int32(0), []string{}, Info.PlayerIds)
 		if !isSuc {

@@ -137,7 +137,7 @@ func (mgr *Manager) OnCreateRoom(gen *proto_player.Context, msg *proto_room.C2SC
 	if lineup == nil {
 		return nil, errors.New("room is not lineup")
 	}
-	roomId, _ := db.CommonEngine.GetRoomId()
+	roomId, _ := db.GetRoomId()
 
 	room := new(model.Room)
 	room.Id = int32(roomId)

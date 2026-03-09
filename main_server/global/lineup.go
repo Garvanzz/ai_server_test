@@ -14,13 +14,8 @@ import (
 // GetPlayerInfo 获取玩家布阵
 func GetPlayerLineUpInfo(dbId int64) map[int32]*proto_public.CommonPlayerLineUpInfo {
 	lineup := make(map[int32]*proto_public.CommonPlayerLineUpInfo)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("GetPlayerInfo error, no this server:%v", err)
-		return lineup
-	}
 
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerLineUp, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerLineUp, dbId))
 	if err != nil {
 		log.Error("player[%v],load Collection error:%v", dbId, err)
 		return lineup

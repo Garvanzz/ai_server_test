@@ -13,13 +13,7 @@ import (
 // GetPlayerInfo 获取玩家装配的装备, 正在使用的装备/坐骑/神兵/背饰
 func GetPlayerEquipBindInfo(dbId int64) (map[int32]*proto_public.CommonPlayerEquipInfo, int32, int32, int32) {
 	equips := make(map[int32]*proto_public.CommonPlayerEquipInfo)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("GetPlayerInfo error, no this server:%v", err)
-		return equips, 0, 0, 0
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerEquip, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerEquip, dbId))
 	if err != nil {
 		log.Error("player[%v],load bag error:%v", dbId, err)
 		return equips, 0, 0, 0
@@ -70,13 +64,7 @@ func GetPlayerEquipBindInfo(dbId int64) (map[int32]*proto_public.CommonPlayerEqu
 // GetPlayerCollectInfo 获取玩家藏品
 func GetPlayerCollectInfo(dbId int64) map[int32]*proto_public.CommonPlayerCollectionInfo {
 	collects := make(map[int32]*proto_public.CommonPlayerCollectionInfo)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("GetPlayerInfo error, no this server:%v", err)
-		return collects
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerCollection, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerCollection, dbId))
 	if err != nil {
 		log.Error("player[%v],load Collection error:%v", dbId, err)
 		return collects
@@ -107,13 +95,7 @@ func GetPlayerCollectInfo(dbId int64) map[int32]*proto_public.CommonPlayerCollec
 // GetPlayerEquip 获取玩家装备
 func GetPlayerEquip(dbId int64) *model.Equip {
 	equip := new(model.Equip)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("equip error, no this server:%v", err)
-		return equip
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerEquip, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerEquip, dbId))
 	if err != nil {
 		log.Error("player[%v],load equip error:%v", dbId, err)
 		return equip
@@ -134,13 +116,7 @@ func GetPlayerEquip(dbId int64) *model.Equip {
 // GetPlayerDestiny 获取玩家天命
 func GetPlayerDestiny(dbId int64) *model.Destiny {
 	destiny := new(model.Destiny)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("destiny error, no this server:%v", err)
-		return destiny
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerDestiny, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerDestiny, dbId))
 	if err != nil {
 		log.Error("player[%v],load destiny error:%v", dbId, err)
 		return destiny

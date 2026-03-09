@@ -67,14 +67,9 @@ func Save(pl *model.Player, isSync bool) {
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("Save pet error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPet, pl.Id), j)
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPetEquip, pl.Id), je)
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPetHandbook, pl.Id), jh)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPet, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPetEquip, pl.Id), je)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerPetHandbook, pl.Id), jh)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -84,14 +79,9 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("Load pet error, no this server:%v", err)
-		return
-	}
 
 	//宠物
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPet, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPet, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load pet error:%v", pl.Id, err)
 		return
@@ -111,7 +101,7 @@ func Load(pl *model.Player) {
 	pl.Pet = m
 
 	//装备
-	ereply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPetEquip, pl.Id))
+	ereply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPetEquip, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load pet error:%v", pl.Id, err)
 		return
@@ -126,7 +116,7 @@ func Load(pl *model.Player) {
 	pl.PetEquip = em
 
 	//图鉴
-	hreply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPetHandbook, pl.Id))
+	hreply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerPetHandbook, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load pet error:%v", pl.Id, err)
 		return

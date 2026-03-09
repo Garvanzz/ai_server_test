@@ -30,12 +30,7 @@ func Save(pl *model.Player, isSync bool) {
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("save Welfare error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerWelfare, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerWelfare, pl.Id), j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -43,12 +38,7 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save Welfare error, no this server:%v", err)
-		return
-	}
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerWelfare, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerWelfare, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load task error:%v", pl.Id, err)
 		return
@@ -201,13 +191,8 @@ func updateMonthCardState(pl *model.Player) {
 		//判断下过期没
 		if key == define.MonthCard_GemAppraisal {
 			//判断有没有购买鉴宝月卡
-			rdb, err := db.GetEngineByPlayerId(pl.Id)
-			if err != nil {
-				log.Error("getExchangeAddNum error, no this server:%v", err)
-				continue
-			}
 
-			reply, err := rdb.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
+			reply, err := db.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
 			if err != nil {
 				log.Error("[%v],load getExchangeAddNum error:%v", pl.Id, err)
 				continue
@@ -231,15 +216,7 @@ func ReqMonthCardGetAward(ctx global.IPlayer, pl *model.Player, req *proto_welfa
 
 	//鉴宝
 	if req.Type == define.MonthCard_GemAppraisal {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("ReqMonthCardGetAward, no this server:%v", err)
-			res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
-			ctx.Send(res)
-			return
-		}
-
-		reply, err := rdb.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
+		reply, err := db.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
 		if err != nil {
 			log.Error("[%v],load ReqMonthCardGetAward error:%v", pl.Id, err)
 			res.Code = proto_welfare.ERRORGAMECODE_ERR_NOTSUP
@@ -297,7 +274,7 @@ func ReqMonthCardGetAward(ctx global.IPlayer, pl *model.Player, req *proto_welfa
 		m.GetDay += 1
 		m.GetTime = utils.Now().Unix()
 		js, _ := json.Marshal(m)
-		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
+		db.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
 
 		res.Option = &proto_welfare.MonthCardOption{
 			IsGet: monthCard.IsGet,

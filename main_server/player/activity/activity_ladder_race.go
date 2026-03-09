@@ -256,7 +256,6 @@ func BattleBack_Tianti(ctx global.IPlayer, pl *model.Player, data interface{}) {
 		selfRank = selfRankItem.Rank
 		targetRank = targetRankItem.Rank
 
-		rdb, _ := db.GetEngine(pl.Cache.App.GetEnv().ID)
 		// 记录战报
 		selfRecordKey := fmt.Sprintf("%s:%d_%d", define.RankTypeTiantiRecordKey, Imodel.ActId, pl.Id)
 		selfRecord := &model.BattleReportRecord_LadderRace{
@@ -267,8 +266,8 @@ func BattleBack_Tianti(ctx global.IPlayer, pl *model.Player, data interface{}) {
 			Rank:     int32(selfRank),
 		}
 		selfRecordJson, _ := json.Marshal(selfRecord)
-		rdb.RedisExec("LPUSH", selfRecordKey, string(selfRecordJson))
-		rdb.RedisExec("LTRIM", selfRecordKey, 0, 99)
+		db.RedisExec("LPUSH", selfRecordKey, string(selfRecordJson))
+		db.RedisExec("LTRIM", selfRecordKey, 0, 99)
 
 		//人机不进库
 		if Imodel.PlayerId > define.PlayerIdBase {
@@ -281,8 +280,8 @@ func BattleBack_Tianti(ctx global.IPlayer, pl *model.Player, data interface{}) {
 				Rank:     int32(targetRank),
 			}
 			targetRecordJson, _ := json.Marshal(targetRecord)
-			rdb.RedisExec("LPUSH", targetRecordKey, string(targetRecordJson))
-			rdb.RedisExec("LTRIM", targetRecordKey, 0, 99)
+			db.RedisExec("LPUSH", targetRecordKey, string(targetRecordJson))
+			db.RedisExec("LTRIM", targetRecordKey, 0, 99)
 		}
 	}
 
@@ -306,19 +305,11 @@ func ReqActivityTiantiBattleRecord(ctx global.IPlayer, pl *model.Player, req *pr
 	res := new(proto_activity.S2CLadderRaceReqRecord)
 	res.Options = make([]*proto_activity.LadderRaceRecordOption, 0)
 
-	// 获取 Redis 连接
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("ReqActivityArenaBattleRecord get redis error:%v", err)
-		ctx.Send(res)
-		return
-	}
-
 	// 构建 Redis Key
 	rankRecordKey := fmt.Sprintf("%s:%d_%d", define.RankTypeTiantiRecordKey, req.ActId, pl.Id)
 
 	// 从 Redis 读取战报记录 (LRANGE 0 -1 获取所有记录)
-	reply, err := rdb.RedisExec("LRANGE", rankRecordKey, 0, -1)
+	reply, err := db.RedisExec("LRANGE", rankRecordKey, 0, -1)
 	if err != nil {
 		log.Error("ReqActivityArenaBattleRecord load record error:%v", err)
 		ctx.Send(res)

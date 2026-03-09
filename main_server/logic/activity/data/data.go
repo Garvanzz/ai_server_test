@@ -21,9 +21,7 @@ var (
 // =================================活动数据===========================================
 
 func LoadAllActivityData() ([]*model.ActivityData, error) {
-	rdb, _ := db.GetEngine(ServerId)
-
-	keys, err := redis.Strings(rdb.RedisExec("KEYS", fmt.Sprintf("%s:*", define.ActivityRedisKey)))
+	keys, err := redis.Strings(db.RedisExec("KEYS", fmt.Sprintf("%s:*", define.ActivityRedisKey)))
 	if err != nil {
 		return nil, fmt.Errorf("KEYS error: %v", err)
 	}
@@ -32,7 +30,7 @@ func LoadAllActivityData() ([]*model.ActivityData, error) {
 		return nil, nil
 	}
 
-	values, err := redis.Values(rdb.RedisExec("MGET", redis.Args{}.AddFlat(keys)...))
+	values, err := redis.Values(db.RedisExec("MGET", redis.Args{}.AddFlat(keys)...))
 	if err != nil {
 		return nil, fmt.Errorf("MGET error: %v", err)
 	}
@@ -60,8 +58,7 @@ func LoadAllActivityData() ([]*model.ActivityData, error) {
 }
 
 func LoadActivityData(id int32) (*model.ActivityData, error) {
-	rdb, _ := db.GetEngine(ServerId)
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.ActivityRedisKey, id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.ActivityRedisKey, id))
 	if err != nil {
 		log.Error("load activity data from redis error:%v", err)
 		return nil, err
@@ -81,13 +78,11 @@ func LoadActivityData(id int32) (*model.ActivityData, error) {
 }
 
 func SaveActivityData(data *model.ActivityData) error {
-	rdb, _ := db.GetEngine(ServerId)
-
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	_, err = rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.ActivityRedisKey, data.Id), string(b))
+	_, err = db.RedisExec("SET", fmt.Sprintf("%s:%d", define.ActivityRedisKey, data.Id), string(b))
 	if err != nil {
 		return err
 	}
@@ -97,8 +92,7 @@ func SaveActivityData(data *model.ActivityData) error {
 }
 
 func DelActivityData(id int64) {
-	rdb, _ := db.GetEngine(ServerId)
-	_, err := rdb.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityRedisKey, id))
+	_, err := db.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityRedisKey, id))
 	if err != nil {
 		log.Error("DelActivityData error:%v", err)
 	}
@@ -108,8 +102,6 @@ func DelActivityData(id int64) {
 
 // SavePlayerData 玩家数据落库
 func SavePlayerData(key int64, data any) bool {
-	rdb, _ := db.GetEngine(ServerId)
-
 	b, err := json.Marshal(data)
 	if err != nil {
 		log.Error("save player activity data marshal error:%v", err)
@@ -119,7 +111,7 @@ func SavePlayerData(key int64, data any) bool {
 	playerId := key % define.ActivityPlayerDataBase
 	baseKet := key - playerId
 	actId := baseKet / define.ActivityPlayerDataBase
-	_, err = rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId), b)
+	_, err = db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId), b)
 	if err != nil {
 		log.Error("save player activity data db error:%v", err)
 		return false
@@ -147,9 +139,7 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 
 	var ret T
 
-	rdb, _ := db.GetEngine(ServerId)
-
-	bytes, err := redis.Bytes(rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId)))
+	bytes, err := redis.Bytes(db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId)))
 	if err != nil && !errors.Is(err, redis.ErrNil) {
 		log.Error("load activity player data error:%v", err)
 		return ret
@@ -183,8 +173,7 @@ func PurgeActivityPlayerData(actId int64) {
 		}
 	}
 
-	rdb, _ := db.GetEngine(ServerId)
-	_, err := rdb.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId))
+	_, err := db.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId))
 	if err != nil {
 		log.Error("PurgeActivityPlayerData redis DEL error:%v", err)
 	}

@@ -539,9 +539,11 @@ func TestRedisAsyncExecFullLoop(t *testing.T) {
 		return nil, fmt.Errorf("unknown cmd: %s", cmd)
 	})
 
-	engine := &CDBEngine{Redis: pool}
+	origEngine := Engine
+	Engine = &CDBEngine{Redis: pool}
+	defer func() { Engine = origEngine }()
 
-	engine.RedisAsyncExec(env.pid, 7, []int64{111, 222}, "SET", "mykey", "myval")
+	RedisAsyncExec(env.pid, 7, []int64{111, 222}, "SET", "mykey", "myval")
 
 	msg := env.ag.wait(t, 5*time.Second)
 	ret := msg.(*RedisRet)
@@ -567,9 +569,11 @@ func TestRedisAsyncExecWithError(t *testing.T) {
 	asyncGo = env.goSvc
 	defer func() { asyncGo = origAsyncGo }()
 
-	engine := &CDBEngine{Redis: errPool(errors.New("NOPERM"))}
+	origEngine := Engine
+	Engine = &CDBEngine{Redis: errPool(errors.New("NOPERM"))}
+	defer func() { Engine = origEngine }()
 
-	engine.RedisAsyncExec(env.pid, 3, nil, "DEL", "forbidden")
+	RedisAsyncExec(env.pid, 3, nil, "DEL", "forbidden")
 
 	msg := env.ag.wait(t, 5*time.Second)
 	ret := msg.(*RedisRet)
@@ -600,8 +604,11 @@ func TestRedisAsyncExecQueueFullSilent(t *testing.T) {
 	slowPool := delayPool(time.Hour, "OK")
 	asyncGo.submitJob(slowPool, "BLOCK", nil, func(any, error) {})
 
-	engine := &CDBEngine{Redis: okPool()}
-	engine.RedisAsyncExec(pid, 1, nil, "SET", "k", "v")
+	origEngine := Engine
+	Engine = &CDBEngine{Redis: okPool()}
+	defer func() { Engine = origEngine }()
+
+	RedisAsyncExec(pid, 1, nil, "SET", "k", "v")
 
 	ag.expectNoMsg(t, 500*time.Millisecond)
 }

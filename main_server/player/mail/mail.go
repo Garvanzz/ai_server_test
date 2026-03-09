@@ -105,7 +105,7 @@ func ReqDelMail(ctx global.IPlayer, pl *model.Player, req *proto_mail.C2SDelMail
 
 // ReqDelAllMails TODO:删除所有已读邮件
 func ReqDelAllMails(ctx global.IPlayer, pl *model.Player, req *proto_mail.C2SDelAllMail) {
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqDelAllMails error, no this server:%v", err)
 		return
@@ -257,7 +257,7 @@ func ReqCollectAllMailItems(ctx global.IPlayer, pl *model.Player, req *proto_mai
 // 检查新系统邮件 返回拉取到的新系统邮件
 func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 	account := new(model.Account)
-	_, err := db.CommonEngine.Mysql.Table("account").Where("uid = ?", pl.Uid).ForUpdate().Get(account)
+	_, err := db.Engine.Mysql.Table("account").Where("uid = ?", pl.Uid).ForUpdate().Get(account)
 	if err != nil {
 		log.Error("check new mail error:%v", err)
 		return
@@ -273,7 +273,7 @@ func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	account.SystemMailId = maxSystemMailId
-	_, err = db.CommonEngine.Mysql.Table("account").Where("id = ?", account.Id).MustCols("sys_mail_id").Update(account)
+	_, err = db.Engine.Mysql.Table("account").Where("id = ?", account.Id).MustCols("sys_mail_id").Update(account)
 	if err != nil {
 		log.Error("check new system mail error:%v", err)
 		return
@@ -321,7 +321,7 @@ func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 // =====================DB========================
 // 更新邮件信息
 func updateDBMail(serverId int, mail *model.PlayerMailInfo) (ok bool) {
-	rdb, err := db.GetEngine(serverId)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("checkNewSysMail error, no this server:%v", err)
 		return false
@@ -349,7 +349,7 @@ func updateDBMail(serverId int, mail *model.PlayerMailInfo) (ok bool) {
 
 // 从db中获取邮件
 func getMailsFromDB(serverId int, dbId int64) []*model.PlayerMailInfo {
-	rdb, err := db.GetEngine(serverId)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("checkNewSysMail error, no this server:%v", err)
 		return nil
@@ -381,7 +381,7 @@ func getMailsFromDB(serverId int, dbId int64) []*model.PlayerMailInfo {
 
 // 根据邮件id获取邮件
 func getMailById(serverId int, id int64) *model.PlayerMailInfo {
-	rdb, err := db.GetEngine(serverId)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("getMailById error, no this server:%v", err)
 		return nil
@@ -406,7 +406,7 @@ func getMailById(serverId int, id int64) *model.PlayerMailInfo {
 
 // 插入新邮件
 func insertDBMail(serverId int, mail *model.PlayerMailInfo) bool {
-	rdb, err := db.GetEngine(serverId)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("insertDBMail error, no this server:%v", err)
 		return false
@@ -430,7 +430,7 @@ func insertDBMail(serverId int, mail *model.PlayerMailInfo) bool {
 
 // 插入新邮件
 func deleteDBMail(serverId int, id int64) bool {
-	rdb, err := db.GetEngine(serverId)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("deleteDBMail error, no this server:%v", err)
 		return false

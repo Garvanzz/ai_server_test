@@ -34,12 +34,7 @@ func Save(pl *model.Player, isSync bool) {
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("save shop error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerShop, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerShop, pl.Id), j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -47,12 +42,7 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save shop error, no this server:%v", err)
-		return
-	}
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerShop, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerShop, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load shop error:%v", pl.Id, err)
 		return
@@ -238,13 +228,6 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 		return
 	}
 
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save shop error, no this server:%v", err)
-		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
-		ctx.Send(res)
-		return
-	}
 
 	//判断个数
 	if data, ok := pl.Shop.Shops[shopConf.Type]; ok {
@@ -302,7 +285,7 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 	shopBuyToMode(ctx, pl, shopConf)
 
 	//订单信息进入订单缓存数据库
-	_, err = db.CommonEngine.Mysql.Table(define.PayCacheOrder).Insert(order)
+	_, err := db.Engine.Mysql.Table(define.PayCacheOrder).Insert(order)
 	if err != nil {
 		log.Error("插入失败: %v", err)
 		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
@@ -312,7 +295,7 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 
 	//奖励进入redis
 	js, _ := json.Marshal(awards)
-	rdb.RedisExec("hset", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), oid, js)
+	db.RedisExec("hset", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), oid, js)
 	pl.Shop.Shops[shopConf.Type].ShopItems[int(req.Id)].Num += 1
 	pushChangeShopData(ctx, pl, shopConf.Type, req.Id)
 	res.Code = proto_shop.ERRORCODE_ERR_Ok
@@ -326,13 +309,7 @@ func getExchangeAddNum(pl *model.Player, shopConf conf.Shop) int {
 	//这里要区别下鉴宝的快捷兑换，ID先写死
 	if shopConf.Type == define.SHOPTYPE_QUICKBUY && shopConf.Id == define.ShopIdGemAppraisal {
 		//判断有没有购买鉴宝月卡
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("getExchangeAddNum error, no this server:%v", err)
-			return 0
-		}
-
-		reply, err := rdb.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
+		reply, err := db.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
 		if err != nil {
 			log.Error("[%v],load getExchangeAddNum error:%v", pl.Id, err)
 			return 0
@@ -385,17 +362,10 @@ func shopBuyToMode(ctx global.IPlayer, pl *model.Player, shopConf conf.Shop) {
 func ReqBackShopBuyAward(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SReqRechargeBackAward) {
 	res := new(proto_shop.S2CReqRechargeBackAward)
 
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save shop error, no this server:%v", err)
-		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
-		ctx.Send(res)
-		return
-	}
 
 	//判断订单存不存在
 	order := model.RechargeOrder{}
-	has, err := db.CommonEngine.Mysql.Table(define.PayCacheOrder).Where("order_id = ?", req.OrderId).Get(&order)
+	has, err := db.Engine.Mysql.Table(define.PayCacheOrder).Where("order_id = ?", req.OrderId).Get(&order)
 	if err != nil {
 		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
 		ctx.Send(res)
@@ -410,7 +380,7 @@ func ReqBackShopBuyAward(ctx global.IPlayer, pl *model.Player, req *proto_shop.C
 
 	log.Debug("进入支付库:%v", order)
 	//订单信息进入完成订单数据库
-	_, err = db.CommonEngine.Mysql.Table(define.PayOrder).Insert(order)
+	_, err = db.Engine.Mysql.Table(define.PayOrder).Insert(order)
 	if err != nil {
 		log.Error("进入支付库错误:%v", err)
 		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
@@ -419,9 +389,9 @@ func ReqBackShopBuyAward(ctx global.IPlayer, pl *model.Player, req *proto_shop.C
 	}
 
 	//删除缓存订单信息
-	db.CommonEngine.Mysql.Table(define.PayCacheOrder).Delete(order)
+	db.Engine.Mysql.Table(define.PayCacheOrder).Delete(order)
 
-	reply, err := rdb.RedisExec("hget", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), req.OrderId)
+	reply, err := db.RedisExec("hget", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), req.OrderId)
 	if err != nil {
 		res.Code = proto_shop.ERRORCODE_ERR_RechargeErr
 		ctx.Send(res)
@@ -445,7 +415,7 @@ func ReqBackShopBuyAward(ctx global.IPlayer, pl *model.Player, req *proto_shop.C
 	bag.AddAward(ctx, pl, awards, true)
 
 	//删除缓存
-	rdb.RedisExec("hdel", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), req.OrderId)
+	db.RedisExec("hdel", fmt.Sprintf("%s:%d", define.PayChache, pl.Id), req.OrderId)
 
 	res.Code = proto_shop.ERRORCODE_ERR_Ok
 	ctx.Send(res)

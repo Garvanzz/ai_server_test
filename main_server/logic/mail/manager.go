@@ -79,7 +79,7 @@ func (m *Manager) OnInit(app module.App) {
 	m.Register("GetSystemMailById", m.GetSystemMailById)
 	m.Register("GetMaxSystemMailId", m.GetMaxSystemMailId)
 
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("mail manager OnInit GetEngine err:%v", err)
 		return
@@ -99,7 +99,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	reply, err := rdb.RedisExec("get", "dailyMail")
+	reply, err := db.RedisExec("get", "dailyMail")
 	if err != nil {
 		log.Error("mail manager load daily mail err:%v", err)
 		return
@@ -114,7 +114,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	reply, err = rdb.RedisExec("get", "systemMailId")
+	reply, err = db.RedisExec("get", "systemMailId")
 	if err != nil {
 		log.Error("mail manager load system mail Id err:%v", err)
 		return
@@ -174,7 +174,7 @@ func (m *Manager) OnTick(delta time.Duration) {
 	now := utils.Now()
 	m.LastUpdateTime = now
 
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("mail manager OnTick GetEngine err:%v", err)
 		return
@@ -233,12 +233,7 @@ func (m *Manager) OnSave() {
 		return
 	}
 
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
-	if err != nil {
-		log.Error("mail manager OnSave GetEngine err:%v", err)
-		return
-	}
-	_, err = rdb.RedisExec("set", "systemMailId", data)
+	_, err = db.RedisExec("set", "systemMailId", data)
 	if err != nil {
 		log.Error("mailManager stop set systemMailid error: %v", err)
 		return
@@ -326,7 +321,7 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 			//AccountId:  receiverId,
 		}
 		log.Info("newMail:%v", newMail)
-		rdb, err := db.GetEngine(m.App.GetEnv().ID)
+		rdb, err := db.GetEngine()
 		if err != nil {
 			log.Error("mail manager sendPlayerMail GetEngine err:%v", err)
 			return false
@@ -361,7 +356,7 @@ func (m *Manager) sendSysMail(items []conf.ItemE, CnTitle, CnContent, EnTitle, E
 		SenderName: sendName,
 	}
 
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("mail manager sendSysMail GetEngine err:%v", err)
 		return false
@@ -414,7 +409,7 @@ func (m *Manager) DeleteDelayMails(id int64) bool {
 
 // 删除db邮件
 func (m *Manager) deleteDBMail(id int64) bool {
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("mail manager deleteDBMail GetEngine err:%v", err)
 		return false

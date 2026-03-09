@@ -38,12 +38,3 @@ func GetEngine(serverId int) (*Engine, error) {
 	}
 	return m.GetEngine(serverId)
 }
-
-// GetEngineByPlayerId 便捷：按玩家 ID 取引擎（仅本服玩家返回）
-func GetEngineByPlayerId(playerId int64) (*Engine, error) {
-	m := GetGlobal()
-	if m == nil {
-		return nil, ErrNotStarted
-	}
-	return m.GetEngineByPlayerId(playerId)
-}

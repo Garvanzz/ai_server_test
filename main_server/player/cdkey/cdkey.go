@@ -27,13 +27,7 @@ func Init(pl *model.Player) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("Load cdkey error, no this server:%v", err)
-		return
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load cdkey error:%v", pl.Id, err)
 		return
@@ -60,16 +54,10 @@ func Save(pl *model.Player, isSync bool) {
 		return
 	}
 
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save cdkey error, no this server:%v", err)
-		return
-	}
-
 	if isSync {
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id), j)
 	} else {
-		rdb.RedisAsyncExec(pl.Cache.Self, define.RedisRetNone, nil, "SET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id), j)
+		db.RedisAsyncExec(pl.Cache.Self, define.RedisRetNone, nil, "SET", fmt.Sprintf("%s:%d", define.PlayerCdkey, pl.Id), j)
 	}
 }
 
@@ -127,13 +115,6 @@ func ReqExchangeCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SE
 	}
 
 	// 获取Redis连接
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("ReqExchangeCDKey get db engine error:%v", err)
-		res.Code = proto_public.CommonErrorCode_ERR_REDISERROR
-		ctx.Send(res)
-		return
-	}
 
 	// 非通用兑换码检查玩家个人数据
 	if !targetConf.Iscommon {
@@ -147,7 +128,7 @@ func ReqExchangeCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SE
 		if targetConf.Count > 0 {
 			// 获取当前全局使用次数
 			globalCountKey := fmt.Sprintf("%s:%s", define.CommonCdkey, code)
-			globalCount, err := redis.Int(rdb.RedisExec("GET", globalCountKey))
+			globalCount, err := redis.Int(db.RedisExec("GET", globalCountKey))
 			if err != nil && err != redis.ErrNil {
 				log.Error("ReqExchangeCDKey get global count error:%v", err)
 				res.Code = proto_public.CommonErrorCode_ERR_REDISERROR
@@ -186,7 +167,7 @@ func ReqExchangeCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SE
 	} else if targetConf.Count > 0 {
 		// 通用且有次数限制：增加全局计数
 		globalCountKey := fmt.Sprintf("%s:%s", define.CommonCdkey, code)
-		_, err := rdb.RedisExec("INCR", globalCountKey)
+		_, err := db.RedisExec("INCR", globalCountKey)
 		if err != nil {
 			log.Error("ReqExchangeCDKey incr global count error:%v", err)
 		}
@@ -212,11 +193,6 @@ func ReqInitCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SInitC
 	cdkeyConfs := config.Cdkey.All()
 
 	// 获取Redis连接
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("ReqInitCDKey get db engine error:%v", err)
-	}
-
 	// 非通用兑换码：从玩家数据中获取
 	for code, count := range pl.Cdkey.UsedKeys {
 		if count <= 0 {
@@ -253,7 +229,7 @@ func ReqInitCDKey(ctx global.IPlayer, pl *model.Player, req *proto_item.C2SInitC
 			for _, key := range conf.Keys {
 				code := strings.TrimSpace(key)
 				globalCountKey := fmt.Sprintf("%s:%s", define.CommonCdkey, code)
-				globalCount, _ := redis.Int(rdb.RedisExec("GET", globalCountKey))
+				globalCount, _ := redis.Int(db.RedisExec("GET", globalCountKey))
 
 				// 获取过期时间
 				var expireTime int64

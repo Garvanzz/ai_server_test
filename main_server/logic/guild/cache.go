@@ -16,13 +16,7 @@ func savePlayerData(playerId int64, v *model.PlayerGuild) bool {
 		return false
 	}
 
-	rdb, err := db.GetEngineByPlayerId(playerId)
-	if err != nil {
-		log.Error("getChatList error, no this server:%v", err)
-		return false
-	}
-
-	_, err = rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerGuildKey, playerId), string(b))
+	_, err = db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerGuildKey, playerId), string(b))
 	if err != nil {
 		log.Error("callback redis error:%v", err)
 		return false
@@ -31,8 +25,7 @@ func savePlayerData(playerId int64, v *model.PlayerGuild) bool {
 }
 
 func loadPlayerData(playerId int64) (*model.PlayerGuild, error) {
-	rdb, _ := db.GetEngineByPlayerId(playerId)
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerGuildKey, playerId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerGuildKey, playerId))
 	if err != nil {
 		return nil, err
 	}

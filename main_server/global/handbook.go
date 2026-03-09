@@ -12,13 +12,8 @@ import (
 // GetPlayerHandbook 获取玩家图鉴
 func GetPlayerHandbook(dbId int64) *model.Handbook {
 	handbook := new(model.Handbook)
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("handbook error, no this server:%v", err)
-		return handbook
-	}
 
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerHandbook, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerHandbook, dbId))
 	if err != nil {
 		log.Error("player[%v],load Handbook error:%v", dbId, err)
 		return handbook

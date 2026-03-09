@@ -23,22 +23,20 @@ func updateActivityRank(a BaseInfo, ctx *proto_player.Context, Id int32, score i
 	uTime, _ := strconv.ParseFloat(fmt.Sprintf("0.%d", 1999999999-utils.Now().Unix()), 64)
 	_finalAmount := float64(score) + uTime
 
-	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
-
 	var err error
 	switch rankType {
 	case define.RankTypeDrawHero:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankDrawHeroKey, a.GetId()), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankDrawHeroKey, a.GetId()), _finalAmount, ctx.Id)
 	case define.RankTypeRecharge:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankRechargeKey, a.GetId()), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankRechargeKey, a.GetId()), _finalAmount, ctx.Id)
 	case define.RankTypeTheCompetition:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d_%d", define.RankTypeTheCompetitionKey, a.GetId(), Id), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d_%d", define.RankTypeTheCompetitionKey, a.GetId(), Id), _finalAmount, ctx.Id)
 	case define.RankTypeGoFish:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeGoFishKey, a.GetId()), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeGoFishKey, a.GetId()), _finalAmount, ctx.Id)
 	case define.RankTypeArena:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId()), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId()), _finalAmount, ctx.Id)
 	case define.RankTypeTianti:
-		_, err = rdb.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, a.GetId()), _finalAmount, ctx.Id)
+		_, err = db.RedisExec("ZINCRBY", fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, a.GetId()), _finalAmount, ctx.Id)
 	default:
 	}
 
@@ -79,10 +77,8 @@ func updateActivityRank(a BaseInfo, ctx *proto_player.Context, Id int32, score i
 func getSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 	ret := new(proto_rank.RankItem)
 
-	rdb, _ := db.GetEngine(serverId)
-
 	// 先检查用户是否在排行榜中
-	score, err := redis.Float64(rdb.RedisExec("ZSCORE", rankKey, id))
+	score, err := redis.Float64(db.RedisExec("ZSCORE", rankKey, id))
 	if err != nil {
 		if errors.Is(err, redis.ErrNil) {
 			// 用户不在排行榜中
@@ -93,7 +89,7 @@ func getSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 	}
 
 	// 获取排名
-	rank, err := redis.Int64(rdb.RedisExec("ZREVRANK", rankKey, id))
+	rank, err := redis.Int64(db.RedisExec("ZREVRANK", rankKey, id))
 	if err != nil {
 		// 理论上如果ZSCORE成功，ZREVRANK也应该成功
 		// 但为了安全起见，这里还是处理错误
@@ -108,15 +104,13 @@ func getSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 
 // 清空排行榜
 func deleteActivityRank(a BaseInfo, rankType int) {
-	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
-
 	key, ok := define.RankTypeToKey[rankType]
 	if !ok {
 		log.Error("deleteActivityRank error : rankType not exist", key)
 		return
 	}
 
-	_, err := rdb.RedisExec("DEL", fmt.Sprintf("%s:%d", key, a.GetId()))
+	_, err := db.RedisExec("DEL", fmt.Sprintf("%s:%d", key, a.GetId()))
 	if err != nil {
 		log.Error("deleteActivityRank error : %v", err)
 	}
@@ -133,8 +127,7 @@ func sendRankReward(a BaseInfo, rankType int, ignoreList []int64) {
 
 	rankKey := fmt.Sprintf("%s:%d", key, a.GetId())
 
-	rdb, _ := db.GetEngine(a.Module().GetApp().GetEnv().ID)
-	reply, err := rdb.RedisExec("zrevrange", rankKey, 0, define.RankTop-1)
+	reply, err := db.RedisExec("zrevrange", rankKey, 0, define.RankTop-1)
 	if err != nil {
 		log.Error("sendRankReward db error : %v", err)
 		return

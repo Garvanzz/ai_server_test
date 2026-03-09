@@ -15,14 +15,8 @@ import (
 
 // SyncChatSend 同步聊天
 func SyncChatSend(ctx global.IPlayer, pl *model.Player, typ, id int32, content string, value []int32, cid int32, msgType int32, attachment *proto_public.AttachmentOption) (bool, proto_public.CommonErrorCode) {
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
-	if err != nil {
-		log.Error("ReqChatInfo error, no this server:%v", err)
-		return false, proto_public.CommonErrorCode_ERR_MYSQLERROR
-	}
-
 	account := new(model.Account)
-	_, err = db.CommonEngine.Mysql.Where("uid = ?", pl.Uid).Get(account)
+	_, err := db.Engine.Mysql.Where("uid = ?", pl.Uid).Get(account)
 	if err != nil {
 		log.Error("check new mail error:%v", err)
 		return false, proto_public.CommonErrorCode_ERR_MYSQLERROR
@@ -58,17 +52,16 @@ func SyncChatSend(ctx global.IPlayer, pl *model.Player, typ, id int32, content s
 	}
 
 	if typ == define.ChatTypeWorld {
-		rdb.RedisExec("RPUSH", define.ChatWorld, string(temp))
+		db.RedisExec("RPUSH", define.ChatWorld, string(temp))
 	} else if typ == define.ChatTypeZudui {
-		rdb.RedisExec("RPUSH", fmt.Sprintf("%s:%d", define.ChatZudui, id), string(temp))
+		db.RedisExec("RPUSH", fmt.Sprintf("%s:%d", define.ChatZudui, id), string(temp))
 	} else if typ == define.ChatTypeGuild {
 		//判断帮派ID
-		rdb.RedisExec("RPUSH", fmt.Sprintf("%s:%d", define.ChatGuild, id), string(temp))
+		db.RedisExec("RPUSH", fmt.Sprintf("%s:%d", define.ChatGuild, id), string(temp))
 	} else if typ == define.ChatTypeChuanwen {
-		rdb.RedisExec("RPUSH", define.ChatChuanwen, string(temp))
+		db.RedisExec("RPUSH", define.ChatChuanwen, string(temp))
 	} else if typ == define.ChatTypeKuafu {
-		gdb := db.CommonEngine
-		gdb.RedisExec("RPUSH", define.ChatKuafu, string(temp))
+		db.RedisExec("RPUSH", define.ChatKuafu, string(temp))
 	}
 
 	//推送消息

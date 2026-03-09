@@ -41,13 +41,8 @@ func (m *Manager) OnInit(app module.App) {
 }
 
 func (m *Manager) loadData() {
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
-	if err != nil {
-		log.Error("huaguoshan loadData error: %v", err)
-		return
-	}
 
-	reply, err := rdb.RedisExec("GET", define.HuaguoshanPartnerInvite)
+	reply, err := db.RedisExec("GET", define.HuaguoshanPartnerInvite)
 	if err != nil {
 		log.Error("load huaguoshan partner invite error: %v", err)
 		return
@@ -92,11 +87,6 @@ func (m *Manager) OnDestroy() {
 }
 
 func (m *Manager) saveToRedis() {
-	rdb, err := db.GetEngine(m.App.GetEnv().ID)
-	if err != nil {
-		log.Error("save huaguoshan error: %v", err)
-		return
-	}
 
 	data := map[string]interface{}{
 		"inviteId":        m.inviteId,
@@ -110,7 +100,7 @@ func (m *Manager) saveToRedis() {
 		return
 	}
 
-	rdb.RedisExec("SET", define.HuaguoshanPartnerInvite, string(b))
+	db.RedisExec("SET", define.HuaguoshanPartnerInvite, string(b))
 }
 
 func (m *Manager) OnMessage(msg interface{}) interface{} {

@@ -42,13 +42,8 @@ func (mgr *Manager) OnInit(app module.App) {
 
 func (mgr *Manager) loadData() {
 	//获取时间
-	rdb, err := db.GetEngine(mgr.App.GetEnv().ID)
-	if err != nil {
-		log.Error("save TimeEventDayRefresh Init error, no this server:%v", err)
-		return
-	}
 
-	reply, err := rdb.RedisExec("GET", define.CommonRedisKey)
+	reply, err := db.RedisExec("GET", define.CommonRedisKey)
 	if err != nil {
 		log.Error("load TimeEventDayRefresh time error:%v", err)
 		return
@@ -93,11 +88,6 @@ func (mgr *Manager) OnTick(delta time.Duration) {
 }
 
 func (mgr *Manager) OnDestroy() {
-	rdb, err := db.GetEngine(mgr.App.GetEnv().ID)
-	if err != nil {
-		log.Error("save TimeEventDayRefresh Init error, no this server:%v", err)
-		return
-	}
 
 	b, err := json.Marshal(mgr)
 	if err != nil {
@@ -105,7 +95,7 @@ func (mgr *Manager) OnDestroy() {
 		return
 	}
 
-	rdb.RedisExec("SET", define.CommonRedisKey, string(b))
+	db.RedisExec("SET", define.CommonRedisKey, string(b))
 }
 
 func (mgr *Manager) OnMessage(msg interface{}) interface{} {
@@ -116,13 +106,8 @@ func (mgr *Manager) OnMessage(msg interface{}) interface{} {
 // 鉴宝月卡
 func (mgr *Manager) MonthCardGamAppraisal() {
 	//补发邮件
-	rdb, err := db.GetEngine(mgr.App.GetEnv().ID)
-	if err != nil {
-		log.Error("save MonthCardGamAppraisal error, no this server:%v", err)
-		return
-	}
 
-	reply, err := rdb.RedisExec("EXISTS", define.GemAppraisal_MonthCard)
+	reply, err := db.RedisExec("EXISTS", define.GemAppraisal_MonthCard)
 	if err != nil {
 		log.Error("load MonthCardGamAppraisal error:%v", err)
 		return
@@ -133,7 +118,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 		return
 	}
 
-	replys, err := redis.StringMap(rdb.RedisExec("HGETALL", define.GemAppraisal_MonthCard))
+	replys, err := redis.StringMap(db.RedisExec("HGETALL", define.GemAppraisal_MonthCard))
 	if err != nil {
 		log.Error("load1 MonthCardGamAppraisal error:%v", err)
 		return
@@ -152,7 +137,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 
 		//判断时间
 		if tab.GetDay >= tab.EffectDay {
-			rdb.RedisExec("HDEL", define.GemAppraisal_MonthCard, uid)
+			db.RedisExec("HDEL", define.GemAppraisal_MonthCard, uid)
 			continue
 		}
 
@@ -190,7 +175,7 @@ func (mgr *Manager) MonthCardGamAppraisal() {
 		tab.GetTime = utils.Now().Unix()
 
 		js, _ := json.Marshal(tab)
-		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, uid, js)
+		db.RedisExec("HSET", define.GemAppraisal_MonthCard, uid, js)
 	}
 }
 
@@ -267,8 +252,7 @@ func (mgr *Manager) releaseRobot(robotId int32) {
 }
 
 func (mgr *Manager) createRobot() {
-	rdb, _ := db.GetEngine(mgr.GetApp().GetEnv().ID)
-	reply, err := rdb.RedisExec("keys", "robot:1")
+	reply, err := db.RedisExec("keys", "robot:1")
 	if err != nil {
 		log.Error("createRobots %v", err)
 		return
@@ -286,7 +270,7 @@ func (mgr *Manager) createRobot() {
 
 			b, _ := json.Marshal(robot)
 
-			rdb.RedisExec("set", fmt.Sprintf("robot:%d", robot.Id), string(b))
+			db.RedisExec("set", fmt.Sprintf("robot:%d", robot.Id), string(b))
 		}
 	}
 }

@@ -35,12 +35,7 @@ func Save(pl *model.Player, isSync bool) {
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("save Danaotiangong error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.Danaotiangong, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.Danaotiangong, pl.Id), j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -48,12 +43,7 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("Load Danaotiangong error, no this server:%v", err)
-		return
-	}
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.Danaotiangong, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.Danaotiangong, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load Danaotiangong error:%v", pl.Id, err)
 		return
@@ -82,12 +72,7 @@ func saveBattleRecord(pl *model.Player, stageId int32, record *model.BattleRecor
 	}
 
 	if isSync {
-		rdb, err := db.GetEngineByPlayerId(pl.Id)
-		if err != nil {
-			log.Error("save Danaotiangong record error, no this server:%v", err)
-			return
-		}
-		rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.BRDanaotiangong, pl.Id), stageId, j)
+		db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.BRDanaotiangong, pl.Id), stageId, j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -96,12 +81,7 @@ func saveBattleRecord(pl *model.Player, stageId int32, record *model.BattleRecor
 
 // 取战斗记录
 func loadBattleRecord(pl *model.Player, stage int32) *model.BattleRecord_Dabaotiangong {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("Load Danaotiangong Record error, no this server:%v", err)
-		return nil
-	}
-	reply, err := rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.BRDanaotiangong, pl.Id), stage)
+	reply, err := db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.BRDanaotiangong, pl.Id), stage)
 	if err != nil {
 		log.Error("player[%v],load Danaotiangong Record error:%v", pl.Id, err)
 		return nil

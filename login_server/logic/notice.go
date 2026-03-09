@@ -2,35 +2,38 @@ package logic
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
+
 	"slices"
 	"xfx/login_server/define"
-	"xfx/login_server/model"
+	"xfx/login_server/internal/middleware"
+	"xfx/login_server/model/dto"
+	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
+
+	"github.com/gin-gonic/gin"
 )
 
-// 获取公告
+// GetNotices 获取公告
 func GetNotices(c *gin.Context) {
-	var reqnotice model.ReqNoticeList
-	if err := c.ShouldBindJSON(&reqnotice); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+	var req dto.ReqNoticeList
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
-	log.Debug(" 获取公告： %v", reqnotice)
+	log.Debug(" 获取公告： %v", req)
 
-	//取库
-	var items []model.NoticeItem
-	err := AccountEngine.Table(define.Notice).
+	var items []entity.NoticeItem
+	err := AccountEngine.Table(define.TableNotice).
 		Where("(channel = ? OR channel = 0) AND (server_id = ? OR server_id = 0)",
-			reqnotice.Channel, reqnotice.ServerId).
+			req.Channel, req.ServerId).
 		Find(&items)
 	if err != nil {
 		log.Error("获取公告错误: %s", err)
-		httpRetGame(c, ERR_DB, "params err1")
+		middleware.RetGame(c, define.ERR_DB, "params err1")
 		return
 	}
 
-	slices.SortFunc(items, func(a, b model.NoticeItem) int {
+	slices.SortFunc(items, func(a, b entity.NoticeItem) int {
 		return int(a.EffectTime - b.EffectTime)
 	})
 
@@ -43,7 +46,7 @@ func GetNotices(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(items)
-	httpRetGame(c, SUCCESS, "success",
+	middleware.RetGame(c, define.SUCCESS, "success",
 		map[string]any{
 			"data": js,
 		})

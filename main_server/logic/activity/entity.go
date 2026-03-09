@@ -129,7 +129,7 @@ func (e *entity) determineStateFromConfig(Sid int) (event string) {
 		}
 	case define.ActTimeServerConfigured: //按照服务器开启时间
 		serverItem := new(model.ServerItem)
-		ok, err := db.CommonEngine.Mysql.Table(define.ServerGroup).Where("id = ?", Sid).Get(serverItem)
+		ok, err := db.Engine.Mysql.Table(define.ServerGroup).Where("id = ?", Sid).Get(serverItem)
 		if !ok || err != nil {
 			log.Error("activity determineStateFromConfig mysql error, cfgId:%v, err:%v", e.CfgId, err)
 			return

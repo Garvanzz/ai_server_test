@@ -1,9 +1,7 @@
 package serverdb
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -133,18 +131,6 @@ func (m *Manager) GetEngine(serverId int) (*Engine, error) {
 	}
 	if serverId != m.cfg.ServerId {
 		return nil, ErrWrongServer
-	}
-	return m.engine, nil
-}
-
-// GetEngineByPlayerId 根据玩家 ID 取引擎。playerId 高段为 serverId，仅本服玩家返回引擎。
-func (m *Manager) GetEngineByPlayerId(playerId int64) (*Engine, error) {
-	if m.engine == nil {
-		return nil, ErrNotStarted
-	}
-	serverId := int(playerId / PlayerIdBase)
-	if serverId != m.cfg.ServerId {
-		return nil, errors.New("serverdb: player not on this server, serverId=" + strconv.Itoa(serverId))
 	}
 	return m.engine, nil
 }

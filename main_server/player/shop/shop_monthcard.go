@@ -12,14 +12,9 @@ import (
 
 // 商城to鉴宝月卡
 func ShopToGemAppraisalMonthCard(ctx global.IPlayer, pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("ShopToGemAppraisalMonthCard error, no this server:%v", err)
-		return
-	}
 
 	//查找之前是否有购买月卡记录
-	reply, err := rdb.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
+	reply, err := db.RedisExec("HGET", define.GemAppraisal_MonthCard, pl.Id)
 	if err != nil {
 		log.Error("[%v],load ShopToGemAppraisalMonthCard error:%v", pl.Id, err)
 		return
@@ -32,7 +27,7 @@ func ShopToGemAppraisalMonthCard(ctx global.IPlayer, pl *model.Player) {
 		m.PID = pl.Uid
 		m.DbId = pl.Id
 		js, _ := json.Marshal(m)
-		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
+		db.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
 
 		//玩家自己数据
 		pl.Welfare.MonthCard[define.MonthCard_GemAppraisal] = &model.MonthCard{
@@ -50,6 +45,6 @@ func ShopToGemAppraisalMonthCard(ctx global.IPlayer, pl *model.Player) {
 
 		m.EffectDay += 30
 		js, _ := json.Marshal(m)
-		rdb.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
+		db.RedisExec("HSET", define.GemAppraisal_MonthCard, pl.Id, js)
 	}
 }

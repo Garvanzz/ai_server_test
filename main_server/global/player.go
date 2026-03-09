@@ -26,12 +26,7 @@ type IPlayer interface {
 
 // GetPlayerInfo 获取玩家基础信息
 func GetPlayerInfo(dbId int64) *model.PlayerInfo {
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("GetPlayerInfo error, no this server:%v", err)
-		return nil
-	}
-	values, err := redis.Values(rdb.RedisExec("hgetall", fmt.Sprintf("%s:%d", define.Player, dbId)))
+	values, err := redis.Values(db.RedisExec("hgetall", fmt.Sprintf("%s:%d", define.Player, dbId)))
 	if err != nil {
 		log.Error("GetPlayerInfo get redis player %d error:%v", dbId, err)
 		return nil

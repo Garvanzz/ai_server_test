@@ -1,0 +1,55 @@
+2026-03-04 00:32:56 DEBU <login_server/main.go:52> http service listen at :9003
+2026-03-04 00:32:56 FATA <login_server/main.go:54> ListenAndServe err : %!(EXTRA *net.OpError=listen tcp :9003: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.)
+2026-03-04 00:33:30 DEBU <login_server/main.go:52> http service listen at :9033
+2026-03-04 02:53:59 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 02:53:59 ERRO <logic/account.go:197> del last token failed, err : dial tcp: address 127.0.0.1: missing port in address
+2026-03-04 02:54:00 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 02:54:00 ERRO <logic/account.go:197> del last token failed, err : dial tcp: address 127.0.0.1: missing port in address
+2026-03-04 04:27:57 DEBU <login_server/main.go:52> http service listen at :9033
+2026-03-04 04:28:39 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 04:28:39 ERRO <logic/account.go:197> del last token failed, err : dial tcp: address 172.16.1.50: missing port in address
+2026-03-04 04:28:40 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 04:28:40 ERRO <logic/account.go:197> del last token failed, err : dial tcp: address 172.16.1.50: missing port in address
+2026-03-04 04:30:19 DEBU <login_server/main.go:52> http service listen at :9033
+2026-03-04 04:30:23 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 04:30:23 DEBU <logic/account.go:235> login success
+2026-03-04 04:30:23 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 04:30:23 DEBU <logic/account.go:235> login success
+2026-03-04 05:28:47 DEBU <login_server/main.go:52> http service listen at :9033
+2026-03-04 05:29:00 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 05:29:00 DEBU <logic/account.go:235> login success
+2026-03-04 05:29:00 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 05:29:01 DEBU <logic/account.go:235> login success
+2026-03-04 05:50:04 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 05:50:04 DEBU <logic/account.go:235> login success
+2026-03-04 05:50:04 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 05:50:04 DEBU <logic/account.go:235> login success
+2026-03-04 05:55:45 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 05:55:46 DEBU <logic/account.go:235> login success
+2026-03-04 05:55:46 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 05:55:46 DEBU <logic/account.go:235> login success
+2026-03-04 06:21:39 DEBU <login_server/main.go:52> http service listen at :9033
+2026-03-04 06:21:59 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 06:21:59 DEBU <logic/account.go:235> login success
+2026-03-04 06:21:59 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 06:21:59 DEBU <logic/account.go:235> login success
+2026-03-04 06:51:02 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 06:51:03 DEBU <logic/account.go:235> login success
+2026-03-04 06:51:03 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 06:51:03 DEBU <logic/account.go:235> login success
+2026-03-04 09:17:32 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 09:17:32 DEBU <logic/account.go:235> login success
+2026-03-04 09:17:32 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 09:17:32 DEBU <logic/account.go:235> login success
+2026-03-04 09:20:02 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 09:20:03 DEBU <logic/account.go:235> login success
+2026-03-04 09:20:03 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 09:20:03 DEBU <logic/account.go:235> login success
+2026-03-04 09:28:03 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 09:28:03 DEBU <logic/account.go:235> login success
+2026-03-04 09:28:03 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 09:28:03 DEBU <logic/account.go:235> login success
+2026-03-04 09:28:14 DEBU <logic/account.go:109>  account account:2, version 0.1
+2026-03-04 09:28:14 DEBU <logic/account.go:235> login success
+2026-03-04 09:28:14 DEBU <logic/account.go:109>  account account:3, version 0.1
+2026-03-04 09:28:14 DEBU <logic/account.go:235> login success

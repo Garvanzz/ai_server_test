@@ -3,7 +3,6 @@ package player
 import (
 	"fmt"
 	"xfx/core/config"
-	"xfx/pkg/utils"
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
@@ -12,6 +11,7 @@ import (
 	"xfx/main_server/player/base"
 	"xfx/main_server/player/internal"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/pkg/utils/sensitive"
 	"xfx/proto/proto_player"
 
@@ -25,26 +25,16 @@ func (pl *PlayerAgent) OnSave(isSync bool) {
 	//离线时间
 	dbData.OfflineTime = utils.Now().Unix()
 
-	rdb, err := db.GetEngineByPlayerId(pl.model.Id)
-	if err != nil {
-		log.Error("OnSave PlayerAgent error, no this server:%v", err)
-		return
-	}
 
-	rdb.RedisExec("hmset", redis.Args{}.Add(fmt.Sprintf("%s:%d", define.Player, pl.model.Id)).AddFlat(dbData)...)
+	db.RedisExec("hmset", redis.Args{}.Add(fmt.Sprintf("%s:%d", define.Player, pl.model.Id)).AddFlat(dbData)...)
 
 	base.Save(pl.model, isSync)
 	bag.Save(pl.model, isSync)
 }
 
 func LoadPlayerData(id int64) (*model.Player, error) {
-	rdb, err := db.GetEngineByPlayerId(id)
-	if err != nil {
-		log.Error("LoadPlayerData PlayerAgent error, no this server:%v", err)
-		return nil, err
-	}
 
-	values, err := redis.Values(rdb.RedisExec("hgetall", fmt.Sprintf("%s:%d", define.Player, id)))
+	values, err := redis.Values(db.RedisExec("hgetall", fmt.Sprintf("%s:%d", define.Player, id)))
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +57,7 @@ func Born(uid string, serverId int) (*model.Player, error) {
 	pl := new(model.Player)
 
 	// 获取唯一id
-	rdb, err := db.GetEngine(serverId)
-	if err != nil {
-		log.Error("LoadPlayerData PlayerAgent error, no this server:%v", err)
-		return nil, err
-	}
-
-	id, err := rdb.GetPlayerId(serverId)
+	id, err := db.GetPlayerId()
 	if err != nil {
 		return nil, fmt.Errorf("get unique id error:%v", err)
 	}

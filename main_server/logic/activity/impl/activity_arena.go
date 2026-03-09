@@ -193,14 +193,13 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 	rankKey := fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId())
 	rankItem := getSelfRank(int(serverId), rankKey, ctx.Id)
 
-	rdb, _ := db.GetEngine(int(serverId))
 	var result []string
 
 	// 如果自己排名 <= 6，直接返回前6名（排除自己）
 	if rankItem.Rank > 0 && rankItem.Rank <= 6 {
 		// 获取前6名（排名1-6，索引0-5）
 		var err error
-		candidates, err := redis.Strings(rdb.RedisExec("ZREVRANGE", rankKey, 0, 5))
+		candidates, err := redis.Strings(db.RedisExec("ZREVRANGE", rankKey, 0, 5))
 		if err != nil && !errors.Is(err, redis.ErrNil) {
 			log.Error("获取前6名失败 error:%v", err)
 			candidates = []string{}
@@ -228,7 +227,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 		endIndex := endRank - 1
 
 		// 从Redis获取候选范围内的所有玩家ID
-		candidates, err := redis.Strings(rdb.RedisExec("ZREVRANGE", rankKey, startIndex, endIndex))
+		candidates, err := redis.Strings(db.RedisExec("ZREVRANGE", rankKey, startIndex, endIndex))
 		if err != nil && !errors.Is(err, redis.ErrNil) {
 			log.Error("获取候选玩家失败 error:%v", err)
 			candidates = []string{}
@@ -255,7 +254,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 		// 自己不在排行榜中，从最后一名开始向前取20名，随机选取6名
 		var err error
 		// 先获取排行榜总长度
-		count, err := redis.Int64(rdb.RedisExec("ZCARD", rankKey))
+		count, err := redis.Int64(db.RedisExec("ZCARD", rankKey))
 		if err != nil && !errors.Is(err, redis.ErrNil) {
 			log.Error("获取排行榜长度失败 error:%v", err)
 			result = []string{}
@@ -267,7 +266,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 				end = count - 1
 			}
 			// 获取分数最低的最多20名玩家（ZRANGE按分数升序返回）
-			candidates, err := redis.Strings(rdb.RedisExec("ZRANGE", rankKey, 0, end))
+			candidates, err := redis.Strings(db.RedisExec("ZRANGE", rankKey, 0, end))
 			if err != nil && !errors.Is(err, redis.ErrNil) {
 				log.Error("获取后20名失败 error:%v", err)
 				result = []string{}
@@ -524,11 +523,8 @@ func (a *ActivityArena) OnClose() {
 
 // 获取
 func (a *ActivityArena) OnRankIndex(Id int64) []string {
-	serverId := Id / define.PlayerIdBase
-	rdb, _ := db.GetEngine(int(serverId))
-
 	// 获取最后6名的成员ID（分数最低的6个）
-	result, err := redis.Strings(rdb.RedisExec("ZRANGE", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId()), 0, 5))
+	result, err := redis.Strings(db.RedisExec("ZRANGE", fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId()), 0, 5))
 	if err != nil && !errors.Is(err, redis.ErrNil) {
 		log.Error("获取最后4名失败 error:%v", err)
 		return nil

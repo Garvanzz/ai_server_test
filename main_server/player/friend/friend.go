@@ -23,7 +23,7 @@ import (
 func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRequestAddFriend) {
 	res := &proto_friend.S2CAddFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("Load Equip error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -32,7 +32,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 	}
 
 	// 判断自己好友数量超上限没有
-	count, err := rdb.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+	count, err := db.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 	if err != nil {
 		log.Error("reqAddFriend redis error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -57,7 +57,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 	}
 
 	// 检查是否已经是好友
-	isFriend, err := rdb.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), targetRedisId)
+	isFriend, err := db.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), targetRedisId)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -73,7 +73,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 	}
 
 	// 判断对方好友数量超上限没有
-	count, err = rdb.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, targetRedisId))
+	count, err = db.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, targetRedisId))
 	if err != nil {
 		log.Error("reqAddFriend redis error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -118,7 +118,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 		return
 	}
 
-	ApplyId, _ := redis.Int(rdb.RedisExec("INCRBY", "friendApplyId", 1))
+	ApplyId, _ := redis.Int(db.RedisExec("INCRBY", "friendApplyId", 1))
 	// 发送申请
 	apply := &model.FriendApply{
 		Id:       int32(ApplyId),
@@ -151,7 +151,7 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 		return
 	}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("Load Equip error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -160,7 +160,7 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 	}
 
 	//目前只判断uid,后面改uid+昵称
-	reply, err := rdb.RedisExec("get", fmt.Sprintf("%s:%s", define.Account, req.IdOrName))
+	reply, err := db.RedisExec("get", fmt.Sprintf("%s:%s", define.Account, req.IdOrName))
 	if reply == nil || err != nil {
 		log.Error("reply null")
 		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
@@ -224,7 +224,7 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 func ReqFriendList(ctx global.IPlayer, pl *model.Player) {
 	res := &proto_friend.S2CFriendList{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqFriendList error, no this server:%v", err)
 		ctx.Send(res)
@@ -244,7 +244,7 @@ func ReqFriendList(ctx global.IPlayer, pl *model.Player) {
 
 // 获取好友列表
 func getFriendList(rdb *db.CDBEngine, ctx global.IPlayer, pl *model.Player) ([]*proto_friend.FriendOption, error) {
-	reply, err := rdb.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+	reply, err := db.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func getFriendList(rdb *db.CDBEngine, ctx global.IPlayer, pl *model.Player) ([]*
 		}
 
 		//判断状态
-		reply, err = rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId)
+		reply, err = db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId)
 		if err != nil {
 			return nil, err
 		}
@@ -311,7 +311,7 @@ func getFriendList(rdb *db.CDBEngine, ctx global.IPlayer, pl *model.Player) ([]*
 func ReqFriendApplyList(ctx global.IPlayer, pl *model.Player) {
 	res := &proto_friend.S2CFriendApplyList{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqFriendList error, no this server:%v", err)
 		ctx.Send(res)
@@ -357,14 +357,7 @@ func ReqFriendApplyList(ctx global.IPlayer, pl *model.Player) {
 // 删除好友
 func ReqRemoveFriend(ctx global.IPlayer, pl *model.Player, msg *proto_friend.C2SDeleteFriend) {
 	res := &proto_friend.S2CDeleteFriend{}
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
-	if err != nil {
-		log.Error("ReqFriendList error, no this server:%v", err)
-		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
-		ctx.Send(res)
-		return
-	}
-	exist, err := rdb.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), msg.PlayerId)
+	exist, err := db.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), msg.PlayerId)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
@@ -380,7 +373,7 @@ func ReqRemoveFriend(ctx global.IPlayer, pl *model.Player, msg *proto_friend.C2S
 	}
 
 	// 删除自己的好友
-	_, err = rdb.RedisExec("srem", fmt.Sprintf("%s:%d", define.Friend, pl.Id), msg.PlayerId)
+	_, err = db.RedisExec("srem", fmt.Sprintf("%s:%d", define.Friend, pl.Id), msg.PlayerId)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
@@ -389,7 +382,7 @@ func ReqRemoveFriend(ctx global.IPlayer, pl *model.Player, msg *proto_friend.C2S
 	}
 
 	// 删除对方的好友
-	_, err = rdb.RedisExec("srem", fmt.Sprintf("%s:%d", define.Friend, msg.PlayerId), pl.Id)
+	_, err = db.RedisExec("srem", fmt.Sprintf("%s:%d", define.Friend, msg.PlayerId), pl.Id)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
@@ -405,7 +398,7 @@ func ReqRemoveFriend(ctx global.IPlayer, pl *model.Player, msg *proto_friend.C2S
 func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.C2SreqDealFriendApply) {
 	res := &proto_friend.S2CDealFriendApply{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqDealFriendApply error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -450,7 +443,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 		}
 
 		// 判断自己好友数量超上限没有
-		count, err := rdb.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+		count, err := db.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 		if err != nil {
 			log.Error("reqDealFriendApply redis error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -466,7 +459,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 		}
 
 		// 判断对方好友数量超上限没有
-		count, err = rdb.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, apply.PlayerId))
+		count, err = db.RedisExec("scard", fmt.Sprintf("%s:%d", define.Friend, apply.PlayerId))
 		if err != nil {
 			log.Error("reqDealFriendApply redis error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -481,7 +474,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 		}
 
 		// 然后添加到对方和自己的set
-		_, err = rdb.RedisExec("sadd", fmt.Sprintf("%s:%d", define.Friend, apply.PlayerId), pl.Id)
+		_, err = db.RedisExec("sadd", fmt.Sprintf("%s:%d", define.Friend, apply.PlayerId), pl.Id)
 		if err != nil {
 			log.Error("reqDealFriendApply redis error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -489,7 +482,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 			return
 		}
 
-		_, err = rdb.RedisExec("sadd", fmt.Sprintf("%s:%d", define.Friend, pl.Id), apply.PlayerId)
+		_, err = db.RedisExec("sadd", fmt.Sprintf("%s:%d", define.Friend, pl.Id), apply.PlayerId)
 		if err != nil {
 			log.Error("reqDealFriendApply redis error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -531,7 +524,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqFriendGift) {
 	res := &proto_friend.S2CFriendGift{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("Load Equip error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -540,7 +533,7 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 	}
 
 	// 检查是否已经是好友
-	isFriend, err := rdb.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), req.Pid)
+	isFriend, err := db.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), req.Pid)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -556,7 +549,7 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 	}
 
 	//自己这边
-	reply, err := rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid)
+	reply, err := db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid)
 	if err != nil {
 		log.Error("db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -585,10 +578,10 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 	}
 
 	js, _ := json.Marshal(m)
-	rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid, js)
+	db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid, js)
 
 	// 设置过期时间
-	_, err = rdb.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
+	_, err = db.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
 	if err != nil {
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 		ctx.Send(res)
@@ -596,7 +589,7 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 	}
 
 	//对方
-	reply, err = rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), pl.Id)
+	reply, err = db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), pl.Id)
 	if err != nil {
 		log.Error("db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -618,10 +611,10 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 	m.IsCanGet = true
 
 	js, _ = json.Marshal(m)
-	rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), pl.Id, js)
+	db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), pl.Id, js)
 
 	// 设置过期时间
-	_, err = rdb.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), utils.TimestampTodayMillisecond())
+	_, err = db.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, req.Pid), utils.TimestampTodayMillisecond())
 	if err != nil {
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 		ctx.Send(res)
@@ -645,7 +638,7 @@ func ReqFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SRe
 func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqGetFriendGift) {
 	res := &proto_friend.S2CGetFriendGift{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("Load ReqGetFriendGift error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -654,7 +647,7 @@ func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 	}
 
 	// 检查是否已经是好友
-	isFriend, err := rdb.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), req.Pid)
+	isFriend, err := db.RedisExec("sismember", fmt.Sprintf("%s:%d", define.Friend, pl.Id), req.Pid)
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -669,7 +662,7 @@ func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 		return
 	}
 
-	reply, err := rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid)
+	reply, err := db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid)
 	if err != nil {
 		log.Error("db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -711,10 +704,10 @@ func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 	m.IsAlGet = true
 	m.IsCanGet = false
 	js, _ := json.Marshal(m)
-	rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid, js)
+	db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), req.Pid, js)
 
 	// 设置过期时间
-	_, err = rdb.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
+	_, err = db.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
 	if err != nil {
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 		ctx.Send(res)
@@ -738,15 +731,8 @@ func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SOneKeyFriendGift) {
 	res := &proto_friend.S2COneKeyFriendGift{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
-	if err != nil {
-		log.Error("Load Equip error, no this server:%v", err)
-		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
-		ctx.Send(res)
-		return
-	}
 
-	reply, err := rdb.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+	reply, err := db.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 	if err != nil {
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 		ctx.Send(res)
@@ -761,7 +747,7 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 		dbId, _ := strconv.ParseInt(str, 10, 64)
 		//赠送 --------------------------------
 		//自己这边
-		replyself, err := rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId)
+		replyself, err := db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId)
 		if err != nil {
 			log.Error("db error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -795,10 +781,10 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 		}
 
 		js, _ := json.Marshal(m)
-		rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId, js)
+		db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), dbId, js)
 
 		// 设置过期时间
-		_, err = rdb.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
+		_, err = db.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, pl.Id), utils.TimestampTodayMillisecond())
 		if err != nil {
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 			ctx.Send(res)
@@ -806,7 +792,7 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 		}
 
 		//对方
-		reply, err = rdb.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), pl.Id)
+		reply, err = db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), pl.Id)
 		if err != nil {
 			log.Error("db error:%v", err)
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -828,10 +814,10 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 		m.IsCanGet = true
 
 		js, _ = json.Marshal(m)
-		rdb.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), pl.Id, js)
+		db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), pl.Id, js)
 
 		// 设置过期时间
-		_, err = rdb.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), utils.TimestampTodayMillisecond())
+		_, err = db.RedisExec("EXPIREAT", fmt.Sprintf("%s:%d", define.Friend_Gift, dbId), utils.TimestampTodayMillisecond())
 		if err != nil {
 			res.Code = proto_friend.CommonErrorCode_ERR_DBERR
 			ctx.Send(res)
@@ -886,7 +872,7 @@ func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend
 func ReqBlockFriendList(ctx global.IPlayer, pl *model.Player) {
 	res := &proto_friend.S2CReqInitBlockFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqFriendList error, no this server:%v", err)
 		ctx.Send(res)
@@ -931,7 +917,7 @@ func ReqBlockFriendList(ctx global.IPlayer, pl *model.Player) {
 func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqBlockFriend) {
 	res := &proto_friend.S2CRespBlockFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqFriendList error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -957,7 +943,7 @@ func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SR
 	}
 
 	//从别人的好友中删除
-	_, err = rdb.RedisExec("SREM", fmt.Sprintf("%s:%d", define.Friend, req.PlayerId), pl.Id)
+	_, err = db.RedisExec("SREM", fmt.Sprintf("%s:%d", define.Friend, req.PlayerId), pl.Id)
 	if err != nil {
 		log.Error("别人的好友中删除 redis error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -1003,7 +989,7 @@ func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SR
 func ReqUnLockBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqUnlockBlockFriend) {
 	res := &proto_friend.S2CRespUnlockBlockFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqUnLockBlockFriend error, no this server:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -1068,7 +1054,7 @@ func ReqUnLockBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_frien
 func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqTuijianFriend) {
 	res := &proto_friend.S2CReSPTuijianFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqUnLockBlockFriend error, no this server:%v", err)
 		ctx.Send(res)
@@ -1076,7 +1062,7 @@ func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 	}
 
 	// 获取列表
-	reply, err := rdb.RedisExec("SMEMBERS", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
+	reply, err := db.RedisExec("SMEMBERS", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		ctx.Send(res)
@@ -1108,7 +1094,7 @@ func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 			args = append(args, item)
 		}
 
-		rdb.RedisExec("sadd", args...)
+		db.RedisExec("sadd", args...)
 	}
 
 	for i := 0; i < len(list); i++ {
@@ -1155,7 +1141,7 @@ func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReqRefreshFriend) {
 	res := &proto_friend.S2CReqRefreshFriend{}
 
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
+	rdb, err := db.GetEngine()
 	if err != nil {
 		log.Error("ReqUnLockBlockFriend error, no this server:%v", err)
 		ctx.Send(res)
@@ -1163,7 +1149,7 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 	}
 
 	// 获取列表
-	reply, err := rdb.RedisExec("SMEMBERS", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
+	reply, err := db.RedisExec("SMEMBERS", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
 	if err != nil {
 		log.Error("remove friend db error:%v", err)
 		ctx.Send(res)
@@ -1176,7 +1162,7 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 	vals := reply.([]interface{})
 	if len(vals) > 0 {
 		//先移除之前的list
-		_, err = rdb.RedisExec("UNLINK", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
+		_, err = db.RedisExec("UNLINK", fmt.Sprintf("%s:%d", define.Friend_Recommend, pl.Id))
 		if err != nil {
 			log.Error("remove friend db error:%v", err)
 			ctx.Send(res)
@@ -1198,7 +1184,7 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 		args = append(args, item)
 	}
 
-	rdb.RedisExec("sadd", args...)
+	db.RedisExec("sadd", args...)
 
 	for i := 0; i < len(list); i++ {
 		r := new(proto_friend.FriendOption)
@@ -1243,13 +1229,8 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 // 刷新好友推荐
 func RefreshFriendTuijian(pl *model.Player) ([]int64, error) {
 	//获取玩家列表
-	rdb, err := db.GetEngine(pl.Cache.App.GetEnv().ID)
-	if err != nil {
-		log.Error("RefreshFriendTuijian error, no this server:%v", err)
-		return nil, err
-	}
 
-	reply, err := rdb.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
+	reply, err := db.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -1273,7 +1254,7 @@ func RefreshFriendTuijian(pl *model.Player) ([]int64, error) {
 
 	//排除好友
 	account := make([]*model.Account, 0)
-	query := db.CommonEngine.Mysql.Table("account")
+	query := db.Engine.Mysql.Table("account")
 	//Where("server_id = ?", pl.ServerId) // TODO:
 
 	if len(idInterfaces) > 0 {

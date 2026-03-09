@@ -326,8 +326,7 @@ func (m *Manager) Action(action string, fromState string, toState string, args [
 		data.DelActivityData(ent.Id) // 清空活动数据
 
 		// 分配新的id
-		rdb, _ := db.GetEngine(m.App.GetEnv().ID)
-		actId, err := rdb.GetActivityId()
+		actId, err := db.GetActivityId()
 		if err != nil {
 			log.Error("get activity id from redis error:%v", err)
 			return err
@@ -375,8 +374,7 @@ func (m *Manager) notify(obj *proto_player.Context, content map[string]any) {
 
 // register 注册新的活动
 func (m *Manager) register(cfgId int64) *entity {
-	rdb, _ := db.GetEngine(m.App.GetEnv().ID)
-	id, err := rdb.GetActivityId()
+	id, err := db.GetActivityId()
 	if err != nil {
 		log.Error("register new activity get id error:%v", err)
 		return nil
@@ -420,6 +418,7 @@ func (m *Manager) register(cfgId int64) *entity {
 			return nil
 		}
 	} else if activityConf.ActTime == define.ActTimeServerConfigured {
+		rdb, _ := db.GetEngine()
 		serverItem := new(model.ServerItem)
 		ok, err := rdb.Mysql.Table(define.ServerGroup).Where("id = ?", m.App.GetEnv().ID).Get(serverItem)
 		if !ok || err != nil {

@@ -322,10 +322,9 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 		selfRank = selfRankItem.Rank
 		targetRank = targetRankItem.Rank
 
-		rdb, _ := db.GetEngine(pl.Cache.App.GetEnv().ID)
 		if !selfInRank && Imodel.Fuchou {
 			// 自己不在榜上，查复仇记录
-			isFuchou := MarkFuchouRecord(rdb, Imodel.ActId, pl.Id, targetId, targetRank > selfRank)
+			isFuchou := MarkFuchouRecord(Imodel.ActId, pl.Id, targetId, targetRank > selfRank)
 			if isFuchou {
 				log.Debug("复仇成功: 玩家[%d]对[%d]", pl.Id, targetId)
 			}
@@ -343,7 +342,7 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 		// 交换分数
 		rank.UpdateArenaRank(ctx, Imodel.ActId, pl, int32(targetScore))
 
-		_, err := rdb.RedisExec("ZADD", rankKey, selfScore, targetId)
+		_, err := db.RedisExec("ZADD", rankKey, selfScore, targetId)
 		if err != nil {
 			log.Error("更新对手分数失败: %v", err)
 			global.BattleBackPlayer(ctx, pl, resq, nil)
@@ -367,8 +366,8 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 			IsFuchou: false,
 		}
 		selfRecordJson, _ := json.Marshal(selfRecord)
-		rdb.RedisExec("LPUSH", selfRecordKey, string(selfRecordJson))
-		rdb.RedisExec("LTRIM", selfRecordKey, 0, 99)
+		db.RedisExec("LPUSH", selfRecordKey, string(selfRecordJson))
+		db.RedisExec("LTRIM", selfRecordKey, 0, 99)
 
 		//人机不进库
 		if targetId > define.PlayerIdBase {
@@ -382,8 +381,8 @@ func BattleBack_Arena(ctx global.IPlayer, pl *model.Player, data interface{}) {
 				IsFuchou: false,
 			}
 			targetRecordJson, _ := json.Marshal(targetRecord)
-			rdb.RedisExec("LPUSH", targetRecordKey, string(targetRecordJson))
-			rdb.RedisExec("LTRIM", targetRecordKey, 0, 99)
+			db.RedisExec("LPUSH", targetRecordKey, string(targetRecordJson))
+			db.RedisExec("LTRIM", targetRecordKey, 0, 99)
 		}
 	}
 
@@ -399,19 +398,11 @@ func ReqActivityArenaBattleRecord(ctx global.IPlayer, pl *model.Player, req *pro
 	res := new(proto_activity.S2CArenaReqRecord)
 	res.Options = make([]*proto_activity.ArenaRecordOption, 0)
 
-	// 获取 Redis 连接
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("ReqActivityArenaBattleRecord get redis error:%v", err)
-		ctx.Send(res)
-		return
-	}
-
 	// 构建 Redis Key
 	rankRecordKey := fmt.Sprintf("%s:%d_%d", define.RankTypeArenaRecordKey, req.ActId, pl.Id)
 
 	// 从 Redis 读取战报记录 (LRANGE 0 -1 获取所有记录)
-	reply, err := rdb.RedisExec("LRANGE", rankRecordKey, 0, -1)
+	reply, err := db.RedisExec("LRANGE", rankRecordKey, 0, -1)
 	if err != nil {
 		log.Error("ReqActivityArenaBattleRecord load record error:%v", err)
 		ctx.Send(res)
@@ -468,9 +459,7 @@ func ReqActivityArenaBattleRecord(ctx global.IPlayer, pl *model.Player, req *pro
 
 // MarkFuchouRecord 查询战报记录中是否存在对定目标的记录，并标记为复仇
 // 返回值: true 为找到并标记成功， false 为未找到
-func MarkFuchouRecord(rdb interface {
-	RedisExec(cmd string, args ...interface{}) (interface{}, error)
-}, actId int64, playerId int64, targetId int64, isExchange bool) bool {
+func MarkFuchouRecord(actId int64, playerId int64, targetId int64, isExchange bool) bool {
 	if !isExchange {
 		return false
 	}
@@ -479,7 +468,7 @@ func MarkFuchouRecord(rdb interface {
 	rankRecordKey := fmt.Sprintf("%s:%d_%d", define.RankTypeArenaRecordKey, actId, playerId)
 
 	// 从 Redis 读取战报记录 (LRANGE 0 -1 获取所有记录)
-	reply, err := rdb.RedisExec("LRANGE", rankRecordKey, 0, -1)
+	reply, err := db.RedisExec("LRANGE", rankRecordKey, 0, -1)
 	if err != nil {
 		log.Error("MarkFuchouRecord load record error:%v", err)
 		return false
@@ -540,7 +529,7 @@ func MarkFuchouRecord(rdb interface {
 
 	// 4. 更新 Redis中的记录
 	// 使用 LSET 根据索引过程中不改变 List 的位置
-	_, err = rdb.RedisExec("LSET", rankRecordKey, foundIndex, string(updatedJson))
+	_, err = db.RedisExec("LSET", rankRecordKey, foundIndex, string(updatedJson))
 	if err != nil {
 		log.Error("update battle record in redis error:%v", err)
 		return false

@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,5 +147,8 @@ func Error(format string, v ...interface{}) {
 }
 
 func Fatal(format string, v ...interface{}) {
+	if logger == nil {
+		stdlog.Fatalf(format, v...)
+	}
 	logger.Fatalf(format, v...)
 }

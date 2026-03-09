@@ -31,27 +31,15 @@ func Save(pl *model.Player, isSync bool) {
 		return
 	}
 
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("save bag error, no this server:%v", err)
-		return
-	}
-
 	if isSync {
-		rdb.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id), j)
 	} else {
-		rdb.RedisAsyncExec(pl.Cache.Self, define.RedisRetNone, nil, "SET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id), j)
+		db.RedisAsyncExec(pl.Cache.Self, define.RedisRetNone, nil, "SET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id), j)
 	}
 }
 
 func Load(pl *model.Player) {
-	rdb, err := db.GetEngineByPlayerId(pl.Id)
-	if err != nil {
-		log.Error("Load bag error, no this server:%v", err)
-		return
-	}
-
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerBag, pl.Id))
 	if err != nil {
 		log.Error("player[%v],load bag error:%v", pl.Id, err)
 		return

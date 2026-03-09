@@ -11,12 +11,7 @@ import (
 
 // GetPlayerHero 获取玩家角色信息
 func GetPlayerHero(dbId int64) *model.Hero {
-	rdb, err := db.GetEngineByPlayerId(dbId)
-	if err != nil {
-		log.Error("GetPlayerHero error, no this server:%v", err)
-		return new(model.Hero)
-	}
-	reply, err := rdb.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerHero, dbId))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerHero, dbId))
 	if err != nil {
 		log.Error("player[%v],load hero error:%v", dbId, err)
 		return new(model.Hero)

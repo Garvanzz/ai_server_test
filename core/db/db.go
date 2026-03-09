@@ -3,7 +3,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 	"xfx/core/define"
 	"xfx/pkg/env"
@@ -20,29 +19,27 @@ type IDBSink interface {
 	//OnRet(ret *CDBRet)
 }
 
-// CDBEngine 单服引擎：一进程一 Redis 一 MySQL，连接配置仅来自 env（方案二）
 type CDBEngine struct {
 	Redis *redis.Pool
 	Mysql *xorm.Engine
 }
 
 var (
-	// Engine 全局唯一数据引擎（单服：env 配置的 Redis + MySQL）
-	Engine *CDBEngine
-	// CommonEngine 保留别名，与现有代码兼容，指向 Engine
-	CommonEngine *CDBEngine
-	// currentServerId 本进程服 ID，Start 时从 env 写入；GetEngine 仅在此 ID 时返回引擎
+	Engine          *CDBEngine
+	LoginRedisPool  *redis.Pool // 登录服 Redis（与 login_server 共用，仅 token 等）
 	currentServerId int
 	asyncGo         *Go
 )
 
-// Start 单服模式：仅用 env 建立本服 Redis 与共享 MySQL，不再读 servergroup 建多连接
 func Start(app module.App) {
 	currentServerId = app.GetEnv().ID
 	Engine = new(CDBEngine)
 	Engine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
 	Engine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr, app.GetEnv().Mysql)
-	CommonEngine = Engine
+
+	if cfg := app.GetEnv().LoginRedis; cfg != nil && cfg.Host != "" {
+		LoginRedisPool = NewRedisPool(cfg.Host, cfg.Password, cfg.DbNum, cfg)
+	}
 
 	asyncGo = NewGo(app.System())
 	asyncGo.start()
@@ -50,6 +47,10 @@ func Start(app module.App) {
 
 func Close() {
 	asyncGo.stop()
+	if LoginRedisPool != nil {
+		LoginRedisPool.Close()
+		LoginRedisPool = nil
+	}
 	if Engine != nil {
 		if Engine.Redis != nil {
 			Engine.Redis.Close()
@@ -58,7 +59,6 @@ func Close() {
 			_ = Engine.Mysql.Close()
 		}
 		Engine = nil
-		CommonEngine = nil
 	}
 }
 
@@ -162,54 +162,61 @@ func NewRedisPool(host, password string, dataBase int, cfg *env.Redis) *redis.Po
 	return pool
 }
 
-// GetEngine 根据服务器 id 取引擎。单服模式：仅当 serverId == 本进程 env.ID 时返回 Engine
-func GetEngine(serverId int) (*CDBEngine, error) {
+func GetEngine() (*CDBEngine, error) {
 	if Engine == nil {
 		return nil, errors.New("db: not started")
-	}
-	if serverId != currentServerId {
-		return nil, errors.New("db: no this server:" + strconv.Itoa(serverId))
 	}
 	return Engine, nil
 }
 
-// GetEngineByPlayerId 通过玩家 id 取引擎。单服模式：仅有一个 Engine，直接返回
-func GetEngineByPlayerId(playerId int64) (*CDBEngine, error) {
-	if Engine == nil {
+// RedisExec 同步执行 Redis 命令
+func RedisExec(cmd string, args ...interface{}) (reply interface{}, err error) {
+	if Engine == nil || Engine.Redis == nil {
 		return nil, errors.New("db: not started")
 	}
-	return Engine, nil
+	conn := Engine.Redis.Get()
+	defer conn.Close()
+	return conn.Do(cmd, args...)
+}
+
+// RedisLoginExec 使用登录服 Redis 执行命令
+func RedisLoginExec(cmd string, args ...interface{}) (reply interface{}, err error) {
+	if LoginRedisPool == nil {
+		return nil, errors.New("db: login redis not configured")
+	}
+	conn := LoginRedisPool.Get()
+	defer conn.Close()
+	return conn.Do(cmd, args...)
 }
 
 // GetEquipId 获取唯一装备id
-func (c *CDBEngine) GetEquipId() (id int, err error) {
-	return redis.Int(c.RedisExec("INCRBY", "equipId", 1))
+func GetEquipId() (id int, err error) {
+	return redis.Int(RedisExec("INCRBY", "equipId", 1))
 }
 
 // GetActivityId 获取唯一活动id
-func (c *CDBEngine) GetActivityId() (id int, err error) {
-	return redis.Int(c.RedisExec("INCRBY", "activityId", 1))
+func GetActivityId() (id int, err error) {
+	return redis.Int(RedisExec("INCRBY", "activityId", 1))
 }
 
-// GetDelayMailId TODO:Get延时邮件Id 获取延时邮件id
-func (c *CDBEngine) GetDelayMailId() (id int, err error) {
-	return redis.Int(c.RedisExec("INCRBY", "delayMailId", 1))
+// GetDelayMailId 获取延时邮件id
+func GetDelayMailId() (id int, err error) {
+	return redis.Int(RedisExec("INCRBY", "delayMailId", 1))
 }
 
 // GetPlayerId 获取唯一玩家id
-func (c *CDBEngine) GetPlayerId(serverId int) (id int64, err error) {
-	_id, err := redis.Int(c.RedisExec("INCRBY", "playerId", 1))
+func GetPlayerId() (id int64, err error) {
+	_id, err := redis.Int(RedisExec("INCRBY", "playerId", 1))
 	if err != nil {
 		return 0, err
 	}
-
-	//区号 + ID
-	return int64(serverId*define.PlayerIdBase + _id), nil
+	// 区号 + ID
+	return int64(currentServerId*define.PlayerIdBase + _id), nil
 }
 
 // GetRoomId 获取房间id
-func (c *CDBEngine) GetRoomId() (id int64, err error) {
-	return redis.Int64(c.RedisExec("INCRBY", "roomId", 1))
+func GetRoomId() (id int64, err error) {
+	return redis.Int64(RedisExec("INCRBY", "roomId", 1))
 }
 
 // Close 关闭该引擎的 Redis 与 MySQL（单服时一般由 db.Close() 统一关闭全局 Engine）
@@ -225,16 +232,13 @@ func (c *CDBEngine) Close() {
 	}
 }
 
-// RedisExec 同步直接redis命令
-func (c *CDBEngine) RedisExec(cmd string, args ...interface{}) (reply interface{}, err error) {
-	conn := c.Redis.Get()
-	defer conn.Close()
-	return conn.Do(cmd, args...)
-}
-
-// RedisAsyncExec 异步执行redis 命令
-func (c *CDBEngine) RedisAsyncExec(pid module.PID, opType int, params []int64, cmd string, args ...interface{}) {
-	err := asyncGo.submitJob(c.Redis, cmd, args, func(res any, err error) {
+// RedisAsyncExec 异步执行 Redis 命令
+func RedisAsyncExec(pid module.PID, opType int, params []int64, cmd string, args ...interface{}) {
+	if Engine == nil || Engine.Redis == nil {
+		log.Error("db: RedisAsyncExec not started")
+		return
+	}
+	err := asyncGo.submitJob(Engine.Redis, cmd, args, func(res any, err error) {
 		asyncGo.system.Cast(pid, &RedisRet{
 			OpType: opType,
 			Params: params,
