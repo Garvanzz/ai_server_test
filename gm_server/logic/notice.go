@@ -16,73 +16,62 @@ import (
 func GmSendNotice(c *gin.Context) {
 	var Info model.NoticeItem
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
 	log.Debug(" Info %v", Info)
 
 	if len(Info.Content) <= 0 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
-	//入库
 	item := model.NoticeOpt{
-		Channel:  Info.Channel,
-		ServerId: Info.ServerId,
-		Content:  Info.Content,
-		//Title:      Info.Title,
+		Channel:    Info.Channel,
+		ServerId:   Info.ServerId,
+		Content:    Info.Content,
 		ExpireTime: Info.ExpireTime,
 		EffectTime: time.Now().Unix(),
 	}
-
-	_, err := db.AccountDb.Table(define.NoticeTable).Insert(item)
+	_, err := db.AccountDb.Table(define.NoticeTable).Insert(&item)
 	if err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
 		return
 	}
 
-	// TODO:
-	//if Info.IsImmediately {
-	//	// 通知游戏服（main_server）
-	//	js, _ := json.Marshal(item)
-	//	err, _ := HttpRequest(js, "/gm/notice")
-	//	if err != nil {
-	//		httpRetGame(c, ERR_SERVER_INTERNAL, "fail")
-	//		return
-	//	} else {
-	//		httpRetGame(c, SUCCESS, "success")
-	//		return
-	//	}
-	//}
-
-	httpRetGame(c, SUCCESS, "success")
+	// 若指定了区服，则转发到该区服 main_server 实时推送给在线玩家
+	if Info.ServerId > 0 {
+		js, _ := json.Marshal(item)
+		if err, _ := HttpRequestToServer(int(Info.ServerId), js, "/gm/notice"); err != nil {
+			log.Debug("GmSendNotice forward main_server err: %v", err)
+			// 已入库，仅记录；仍返回成功
+		}
+	}
+	HTTPRetGame(c, SUCCESS, "success")
 }
 
 // 发送跑马灯
 func GmSendHorse(c *gin.Context) {
 	var Info model.HorseItem
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
 	log.Debug(" horse Info %v", Info)
 
-	if len(Info.Content) <= 0 {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if len(Info.Content) == 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "content required")
 		return
 	}
 
 	js, _ := json.Marshal(Info)
-	// 通知游戏服（main_server）
-	err, _ := HttpRequest(js, "/gm/horse")
+	// 按区服转发到对应 main_server；ServerId<=0 时用配置默认 URL
+	err, _ := HttpRequestToServer(int(Info.ServerId), js, "/gm/horse")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, "fail")
-		return
-	} else {
-		httpRetGame(c, SUCCESS, "success")
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
+	HTTPRetGame(c, SUCCESS, "success")
 }

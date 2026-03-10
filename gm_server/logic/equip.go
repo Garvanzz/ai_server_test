@@ -3,6 +3,7 @@ package logic
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,41 +17,42 @@ func GmEquip(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
 	var req dto.GmReqPlayerEquip
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 || strings.TrimSpace(req.Uid) == "" {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId and uid required")
 		return
 	}
 
 	log.Debug("请求玩家装备数据 : %d, %s", req.ServerId, req.Uid)
-
 	playerId, err := getPlayerIdByServerAndUid(req.ServerId, req.Uid)
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	if playerId == 0 {
-		httpRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
 	body, _ := json.Marshal(model.GMPlayerIdReq{PlayerId: playerId})
-	err, respBody := HttpRequest(body, "/gm/equip")
+	err, respBody := HttpRequestToServer(req.ServerId, body, "/gm/equip")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	var wrap struct {
 		Data string `json:"data"`
 	}
 	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		forwardMainServerResponse(c, respBody)
+		HTTPRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
 		return
 	}
 	dst := new(model.Equip)
 	if err := json.Unmarshal([]byte(wrap.Data), dst); err != nil {
-		forwardMainServerResponse(c, respBody)
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse equip data err")
 		return
 	}
 	dsts := make([]*dto.GmRespPlayerEquip, 0)
@@ -92,7 +94,7 @@ func GmEquip(c *gin.Context) {
 		return false
 	})
 	js, _ := json.Marshal(dsts)
-	httpRetGame(c, SUCCESS, "success", map[string]any{
+	HTTPRetGame(c, SUCCESS, "success", map[string]any{
 		"data":       string(js),
 		"totalCount": len(dsts),
 	})
@@ -103,22 +105,27 @@ func GmDeleteEquip(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
 	var req dto.GmReqPlayerEquip
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 || strings.TrimSpace(req.Uid) == "" {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId and uid required")
+		return
+	}
+	if len(req.Ids) == 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "ids required")
 		return
 	}
 
 	log.Debug("删除装备 : %d, %s", req.ServerId, req.Uid)
-
 	playerId, err := getPlayerIdByServerAndUid(req.ServerId, req.Uid)
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	if playerId == 0 {
-		httpRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
@@ -127,9 +134,9 @@ func GmDeleteEquip(c *gin.Context) {
 		ids = append(ids, int32(v))
 	}
 	body, _ := json.Marshal(model.GMEquipDeleteReq{PlayerId: playerId, Ids: ids})
-	err, respBody := HttpRequest(body, "/gm/equip/delete")
+	err, respBody := HttpRequestToServer(req.ServerId, body, "/gm/equip/delete")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	forwardMainServerResponse(c, respBody)

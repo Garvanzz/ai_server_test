@@ -25,29 +25,29 @@ func main() {
 		})
 	})
 
-	// ========== 鉴权（仅管理系统） ==========
+	// ========== 鉴权==========
 	auth := r.Group("/gm/auth")
 	{
 		auth.POST("/login", logic.GmLogin)             // GM 登录，校验账号密码并写 session/token
-		auth.POST("/logout", logic.GmLoginout)         // GM 登出，清除登录态
+		auth.POST("/logout", logic.GmLogout)           // GM 登出，清除登录态
 		auth.POST("/user-info", logic.GmAdminUserInfo) // 获取当前登录 GM 用户信息与权限
 	}
 
-	// ========== 区服与进程（仅管理系统） ==========
+	// ========== 区服与进程 ==========
 	servers := r.Group("/gm/servers")
 	{
-		servers.POST("/list", logic.GmGetServerList)                  // 获取大厅服（main_server）列表及状态
-		servers.POST("/start", logic.GmStartServer)                   // 启动指定大厅服进程
-		servers.POST("/stop", logic.GmStopServer)                     // 停止指定大厅服进程
-		servers.POST("/restart", logic.GmReStartServer)               // 重启指定大厅服进程
-		servers.POST("/game-list", logic.GmGetGameServerList)         // 获取游戏服列表（含运行状态、开服时间等）
-		servers.POST("/game-start", logic.GmStartGameServer)          // 启动指定游戏服进程
-		servers.POST("/game-stop", logic.GmStopGameServer)            // 停止指定游戏服进程
-		servers.POST("/game-restart", logic.GmReStartGameServer)      // 重启指定游戏服进程
-		servers.POST("/game-list-all", logic.GmGetGameGameServerList) // 获取所有游戏服简要列表
+		servers.POST("/list", logic.GmGetServerList)                     // 获取区服列表及状态
+		servers.POST("/start", logic.GmStartServer)                      // 启动指定大厅服进程
+		servers.POST("/stop", logic.GmStopServer)                        // 停止指定大厅服进程
+		servers.POST("/restart", logic.GmReStartServer)                  // 重启指定大厅服进程
+		servers.POST("/game-list", logic.GmGetGameServerList)            // 获取游戏服列表
+		servers.POST("/game-start", logic.GmStartGameServer)             // 启动指定游戏服进程
+		servers.POST("/game-stop", logic.GmStopGameServer)               // 停止指定游戏服进程
+		servers.POST("/game-restart", logic.GmReStartGameServer)         // 重启指定游戏服进程
+		servers.POST("/game-list-all", logic.GmGetGameServerProcessList) // 获取所有游戏服进程列表
 	}
 
-	// ========== 玩家数据查询（读 Redis/DB，仅管理系统） ==========
+	// ========== 玩家数据查询==========
 	players := r.Group("/gm/players")
 	{
 		players.POST("/info", logic.GmGetPlayerInfo)           // 按区服/uid 查询玩家基础信息（可批量）
@@ -64,17 +64,17 @@ func main() {
 	}
 
 	// ========== 需转发 main_server 的接口 ==========
-	r.POST("/gm/mail/send", logic.GmCreateAdminMail)            // 创建并发送邮件（转发 main_server /gm/mail，支持延时与附件）
-	r.POST("/gm/notice/horse", logic.GmSendHorse)               // 发送跑马灯（转发 main_server /gm/horse，全服推送）
-	r.POST("/gm/notice/send", logic.GmSendNotice)               // 发送公告（当前仅入库；即时下发需再调 main_server /gm/notice）
-	r.POST("/gm/players/grant-item", logic.GmAddItem)           // 给指定玩家发放道具（转发 main_server /gm/item，玩家进程内执行）
-	r.POST("/gm/players/grant-item-all", logic.GmOneKeyAddItem) // 一键给指定玩家发放全部配置道具（转发 main_server /gm/item）
-	r.POST("/gm/players/item-delete", logic.GmDeleteItem)       // 删除指定玩家背包道具（当前直写 Redis，未走 main_server）
+	r.POST("/gm/mail/send", logic.GmCreateAdminMail)            // 创建并发送邮件
+	r.POST("/gm/notice/horse", logic.GmSendHorse)               // 发送跑马灯
+	r.POST("/gm/notice/send", logic.GmSendNotice)               // 发送公告
+	r.POST("/gm/players/grant-item", logic.GmAddItem)           // 给指定玩家发放道具
+	r.POST("/gm/players/grant-item-all", logic.GmOneKeyAddItem) // 一键给指定玩家发放全部配置道具
+	r.POST("/gm/players/item-delete", logic.GmDeleteItem)       // 删除指定玩家背包道具
 
 	// ========== 订单、帮会==========
 	r.POST("/gm/orders/list", logic.GmGetOrderList)            // 查询充值订单列表（支持按订单号、uid 筛选）
 	r.POST("/gm/orders/cache-list", logic.GmGetCacheOrderList) // 查询缓存充值订单列表
-	r.POST("/gm/guild/list", logic.GmGetGuidList)              // 查询帮会列表（名称、人数、会长等）
+	r.POST("/gm/guild/list", logic.GmGetGuildList)             // 查询帮会列表（名称、人数、会长等）
 
 	// ========== 热更==========
 	hotfix := r.Group("/gm/hotfix")
@@ -87,11 +87,11 @@ func main() {
 	}
 
 	// ========== 上传、服务器时间、配置、编译 ==========
-	r.POST("/gm/upload", logic.Gmupload)                       // 上传文件（如热更包、配置等）
+	r.POST("/gm/upload", logic.GmUpload)                       // 上传文件（如热更包、配置等）
 	r.POST("/gm/server/time", logic.GmSetServerTime)           // 设置 GM 所在机器系统时间（执行 date 命令，慎用）
 	r.POST("/gm/config/update", logic.GmUpdateConfig)          // 拉取配置仓库并更新大厅服配置
 	r.POST("/gm/config/game-update", logic.GmGameUpdateConfig) // 拉取配置仓库并更新游戏服配置
-	r.POST("/gm/build", logic.GmBuildServer)                   // 拉取代码并编译大厅服（main_server）
+	r.POST("/gm/build", logic.GmBuildServer)                   // 拉取代码并编译大厅服
 	r.POST("/gm/build/game", logic.GmGameBuildServer)          // 拉取代码并编译游戏服
 
 	log.Debug("http service listen at %v", conf.Server.HttpPort)

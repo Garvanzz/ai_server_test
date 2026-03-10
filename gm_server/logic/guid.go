@@ -13,13 +13,13 @@ import (
 	"xfx/pkg/log"
 )
 
-// 获取帮会列表
-func GmGetGuidList(c *gin.Context) {
+// GmGetGuildList 获取帮会列表（Guild 与路由 /gm/guild 一致）
+func GmGetGuildList(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
 		log.Error("GmStartServer find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
@@ -28,14 +28,14 @@ func GmGetGuidList(c *gin.Context) {
 	//serverId, ok := result["serverId"].(string)
 	//if !ok {
 	//	log.Error("GmGetGuidList find serverId err")
-	//	httpRetGame(c, ERR_DB, "GmGetGuidList find serverId err")
+	//	HTTPRetGame(c, ERR_DB, "GmGetGuidList find serverId err")
 	//	return
 	//}
 	//
 	//id, ok := result["id"].(string)
 	//if !ok {
 	//	log.Error("GmGetGuidList find id err")
-	//	httpRetGame(c, ERR_DB, "GmGetGuidList find id err")
+	//	HTTPRetGame(c, ERR_DB, "GmGetGuidList find id err")
 	//	return
 	//}
 
@@ -43,7 +43,7 @@ func GmGetGuidList(c *gin.Context) {
 	err := db.AccountDb.Table(define.GuildTable).Find(&guids)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
@@ -66,7 +66,7 @@ func GmGetGuidList(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(opts)
-	httpRetGame(c, SUCCESS, "success", map[string]any{
+	HTTPRetGame(c, SUCCESS, "success", map[string]any{
 		"data":       string(js),
 		"totalCount": len(opts),
 	})

@@ -32,7 +32,7 @@ TRUNCATE TABLE admin;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================================================
--- 表名与代码定义对照（core/define、login_server/define、gm_server/define）
+-- 表名与代码定义对照（core/define）
 -- =============================================================================
 -- account          -> AccountTable        玩家账号
 -- admin            -> Admin               GM 后台账号（gm_server）

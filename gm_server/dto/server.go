@@ -34,3 +34,21 @@ type GmSetServerTime struct {
 	SetTime string `json:"settime"`
 	Server  int32  `json:"server"`
 }
+
+// GmHotUpdateVersionReq 编辑/创建热更版本请求
+type GmHotUpdateVersionReq struct {
+	Channel     string `json:"channel"`
+	ChannelName string `json:"channelName"`
+	Version     string `json:"version"`
+}
+
+// GmHotUpdateDeleteReq 删除热更版本请求（按 channel 列表删除）
+type GmHotUpdateDeleteReq struct {
+	Channels []string `json:"channel"` // 或 "channels"，前端传数组
+}
+
+// GmHotUpdatePathReq 创建热更路径请求（仅创建目录，不写表）
+type GmHotUpdatePathReq struct {
+	Channel string `json:"channel"`
+	Version string `json:"version"`
+}

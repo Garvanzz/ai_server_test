@@ -21,7 +21,7 @@ func GmGetOrderList(c *gin.Context) {
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
 		log.Error("GmStartServer find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
@@ -40,28 +40,28 @@ func GmGetOrderList(c *gin.Context) {
 		err := db.AccountDb.Table(define.PayOrderTable).Where("order_id = ? AND game_user_id =?", OrderId, Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else if len(OrderId) > 0 {
 		err := db.AccountDb.Table(define.PayOrderTable).Where("order_id = ? ", OrderId).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else if len(Uid) > 0 {
 		err := db.AccountDb.Table(define.PayOrderTable).Where("game_user_id = ? ", Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
 		err := db.AccountDb.Table(define.PayOrderTable).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	}
@@ -84,7 +84,7 @@ func GmGetOrderList(c *gin.Context) {
 
 	js, _ := json.Marshal(items)
 
-	httpRetGame(c, SUCCESS, "success", map[string]any{
+	HTTPRetGame(c, SUCCESS, "success", map[string]any{
 		"data":       string(js),
 		"totalCount": len(items),
 	})
@@ -98,7 +98,7 @@ func GmGetCacheOrderList(c *gin.Context) {
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
 		log.Error("GmStartServer find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
@@ -117,28 +117,28 @@ func GmGetCacheOrderList(c *gin.Context) {
 		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("order_id = ? AND game_user_id =?", OrderId, Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else if len(OrderId) > 0 {
 		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("order_id = ? ", OrderId).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else if len(Uid) > 0 {
 		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("game_user_id = ? ", Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
 		err := db.AccountDb.Table(define.PayCacheOrderTable).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	}
@@ -146,7 +146,7 @@ func GmGetCacheOrderList(c *gin.Context) {
 	err := db.AccountDb.Table(define.PayCacheOrderTable).Find(&orderItem)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	items := make([]*dto.GMRespRechargeOrder, 0)
@@ -167,7 +167,7 @@ func GmGetCacheOrderList(c *gin.Context) {
 
 	js, _ := json.Marshal(items)
 
-	httpRetGame(c, SUCCESS, "success", map[string]any{
+	HTTPRetGame(c, SUCCESS, "success", map[string]any{
 		"data":       string(js),
 		"totalCount": len(items),
 	})

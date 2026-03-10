@@ -16,7 +16,7 @@ import (
 func GmCreateAdminMail(c *gin.Context) {
 	var Info dto.GmMailInfo
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
@@ -31,14 +31,14 @@ func GmCreateAdminMail(c *gin.Context) {
 	mail.PlayerIds = make([]int64, 0)
 	mail.Items = make([]model.MailItem, 0)
 
-	//类型
+	// 类型：system=系统邮件，person=个人邮件
 	if Info.Type == "system" {
 		mail.Type = 1
-	} else if Info.Type == "persion" {
+	} else if Info.Type == "person" {
 		mail.Type = 2
 	}
 
-	//uid
+	// Uid 格式为 player_id 列表，用 | 分隔（如 "123|456"），与 main_server 发件接口一致
 	if len(Info.Uid) > 0 {
 		uids := strings.Split(Info.Uid, "|")
 		for i := 0; i < len(uids); i++ {
@@ -59,7 +59,7 @@ func GmCreateAdminMail(c *gin.Context) {
 	} else {
 		t, err := time.ParseInLocation("2006-01-02 15:04:05", Info.Delaytime, time.Local)
 		if err != nil {
-			httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+			HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 			return
 		}
 		mail.EffectTime = t
@@ -76,21 +76,21 @@ func GmCreateAdminMail(c *gin.Context) {
 			awards := strings.Split(arr[i], ",")
 			Type1, err := strconv.ParseInt(awards[0], 10, 32)
 			if err != nil {
-				httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+				HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 				return
 
 			}
 
 			Id1, err := strconv.ParseInt(awards[1], 10, 32)
 			if err != nil {
-				httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+				HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 				return
 
 			}
 
 			Num1, err := strconv.ParseInt(awards[2], 10, 32)
 			if err != nil {
-				httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+				HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 				return
 
 			}
@@ -105,12 +105,12 @@ func GmCreateAdminMail(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(mail)
-	//通知游戏服
-	err, _ := HttpRequest(js, "/gm/mail")
+	// 按区服转发到对应 main_server；Server<=0 时用配置默认 URL
+	err, _ := HttpRequestToServer(int(Info.Server), js, "/gm/mail")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, "fail")
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "fail")
 	} else {
-		httpRetGame(c, SUCCESS, "success")
+		HTTPRetGame(c, SUCCESS, "success")
 	}
 	////全服
 	//if Info.Fullserversend {
@@ -119,10 +119,10 @@ func GmCreateAdminMail(c *gin.Context) {
 	//	_, err := AdminEngine.Table(define.AdminMailTable).Insert(mail)
 	//	if err != nil {
 	//		log.Error("插入错误:%v", err)
-	//		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	//		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 	//		return
 	//	}
 	//}
 
-	//httpRetGame(c, SUCCESS, "success")
+	//HTTPRetGame(c, SUCCESS, "success")
 }

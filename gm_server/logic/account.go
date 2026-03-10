@@ -3,6 +3,7 @@ package logic
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/name5566/leaf/log"
@@ -13,8 +14,10 @@ import (
 	"xfx/gm_server/dto"
 )
 
-// http返回 游戏专用 码只返回200 不然不返
-func httpRetGame(c *gin.Context, code int, message string, data ...map[string]interface{}) {
+const maxPlayerListLimit = 500 // 无 uid 时单次最多返回账号数，防止全表扫
+
+// HTTPRetGame 游戏接口统一返回格式，HTTP 状态码固定 200，业务码在 body 的 errcode
+func HTTPRetGame(c *gin.Context, code int, message string, data ...map[string]interface{}) {
 
 	ret := gin.H{
 		"errcode": code,
@@ -31,8 +34,8 @@ func httpRetGame(c *gin.Context, code int, message string, data ...map[string]in
 
 }
 
-// http返回
-func httpRet(c *gin.Context, code int, message string, data ...map[string]interface{}) {
+// HTTPRet 通用 HTTP JSON 返回
+func HTTPRet(c *gin.Context, code int, message string, data ...map[string]interface{}) {
 	if data != nil && len(data) > 0 {
 		//这里只走data[0] ...只是为了省参用 后续多参默认无效
 		c.JSON(code, gin.H{
@@ -49,38 +52,38 @@ func httpRet(c *gin.Context, code int, message string, data ...map[string]interf
 
 }
 
-// 获取玩家信息
+// 获取玩家信息（仅 MySQL account 表）
 func GmGetPlayerInfo(c *gin.Context) {
 	rawData, _ := c.GetRawData()
-
 	var req dto.GmReqPlayerInfo
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
 		return
 	}
 
 	log.Debug("请求玩家数据 : %d, %s", req.ServerId, req.Uid)
 	pl := make([]model.Account, 0)
-	if len(req.Uid) <= 0 {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Find(&pl)
+	if strings.TrimSpace(req.Uid) == "" {
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Limit(maxPlayerListLimit).Find(&pl)
 		if err != nil {
-			log.Error("getserverlist find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			log.Error("GmGetPlayerInfo find err :%v", err)
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
 		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", req.ServerId, req.Uid).Find(&pl)
 		if err != nil {
-			log.Error("getserverlist find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			log.Error("GmGetPlayerInfo find err :%v", err)
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	}
-
 	js, _ := json.Marshal(pl)
-	httpRetGame(c, SUCCESS, "success", map[string]any{
+	HTTPRetGame(c, SUCCESS, "success", map[string]any{
 		"data":       string(js),
 		"totalCount": len(pl),
 	})
@@ -89,35 +92,35 @@ func GmGetPlayerInfo(c *gin.Context) {
 // 获取玩家游戏数据（经 main_server 读 Redis Player）
 func GmGetPlayerGameInfo(c *gin.Context) {
 	rawData, _ := c.GetRawData()
-
 	var req dto.GmReqPlayerInfo
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
 		return
 	}
 
 	log.Debug("请求玩家游戏数据 : %d, %s", req.ServerId, req.Uid)
-
 	pl := make([]model.Account, 0)
-	if len(req.Uid) <= 0 {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Find(&pl)
+	if strings.TrimSpace(req.Uid) == "" {
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Limit(maxPlayerListLimit).Find(&pl)
 		if err != nil {
-			log.Error("getserverlist find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			log.Error("GmGetPlayerGameInfo find err :%v", err)
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
 		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", req.ServerId, req.Uid).Find(&pl)
 		if err != nil {
-			log.Error("getserverlist find err :%v", err.Error())
-			httpRetGame(c, ERR_DB, err.Error())
+			log.Error("GmGetPlayerGameInfo find err :%v", err)
+			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	}
 	if len(pl) == 0 {
-		httpRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
+		HTTPRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
 		return
 	}
 
@@ -126,9 +129,9 @@ func GmGetPlayerGameInfo(c *gin.Context) {
 		playerIds = append(playerIds, pl[i].RedisId)
 	}
 	body, _ := json.Marshal(model.GMPlayerIdsReq{PlayerIds: playerIds})
-	err, respBody := HttpRequest(body, "/gm/player/game-info")
+	err, respBody := HttpRequestToServer(req.ServerId, body, "/gm/player/game-info")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	forwardMainServerResponse(c, respBody)
@@ -139,29 +142,30 @@ func GmHero(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
 	var req dto.GmReqPlayerHero
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 || strings.TrimSpace(req.Uid) == "" {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId and uid required")
 		return
 	}
 
 	log.Debug("请求玩家角色数据 : %d, %s", req.ServerId, req.Uid)
-
 	playerId, err := getPlayerIdByServerAndUid(req.ServerId, req.Uid)
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	if playerId == 0 {
-		httpRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
 	body, _ := json.Marshal(model.GMPlayerIdReq{PlayerId: playerId})
-	err, respBody := HttpRequest(body, "/gm/hero")
+	err, respBody := HttpRequestToServer(req.ServerId, body, "/gm/hero")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	forwardMainServerResponse(c, respBody)
@@ -172,37 +176,38 @@ func GmEditHero(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
 	var req dto.GmReqPlayerHero
-	err := json.Unmarshal(rawData, &req)
-	if err != nil {
-		log.Fatal("解析失败:", err)
-		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	if req.ServerId <= 0 || strings.TrimSpace(req.Uid) == "" || req.Data == nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId, uid and data required")
 		return
 	}
 
 	log.Debug("请求玩家编辑角色数据 : %d, %s", req.ServerId, req.Uid)
-
 	playerId, err := getPlayerIdByServerAndUid(req.ServerId, req.Uid)
 	if err != nil {
-		httpRetGame(c, ERR_DB, err.Error())
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	if playerId == 0 {
-		httpRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
 	// 先拉取当前 hero，在内存中改单条后写回
 	bodyGet, _ := json.Marshal(model.GMPlayerIdReq{PlayerId: playerId})
-	err, respBody := HttpRequest(bodyGet, "/gm/hero")
+	err, respBody := HttpRequestToServer(req.ServerId, bodyGet, "/gm/hero")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	var wrap struct {
 		Data string `json:"data"`
 	}
 	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		httpRetGame(c, ERR_SERVER_INTERNAL, "parse hero response err")
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero response err")
 		return
 	}
 	var heroLineup struct {
@@ -210,7 +215,7 @@ func GmEditHero(c *gin.Context) {
 		LineUp interface{} `json:"LineUp"`
 	}
 	if err := json.Unmarshal([]byte(wrap.Data), &heroLineup); err != nil || heroLineup.Hero == nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, "parse hero data err")
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero data err")
 		return
 	}
 	if heroLineup.Hero.Hero != nil {
@@ -226,9 +231,9 @@ func GmEditHero(c *gin.Context) {
 		PlayerId int64           `json:"player_id"`
 		Data     json.RawMessage `json:"data"`
 	}{PlayerId: playerId, Data: dataJs})
-	err, setResp := HttpRequest(setBody, "/gm/hero/set")
+	err, setResp := HttpRequestToServer(req.ServerId, setBody, "/gm/hero/set")
 	if err != nil {
-		httpRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
 	forwardMainServerResponse(c, setResp)

@@ -8,19 +8,12 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"xfx/gm_server/conf"
 )
 
-// HttpRequest 向 main_server 发送 GM 请求
-// path 示例："/gm/mail"、"/gm/notice"
-func HttpRequest(jsonData []byte, path string) (error, string) {
-	baseURL := conf.Server.MainServerHttpUrl
-	if baseURL == "" {
-		// 兼容老配置，默认本机 9505
-		baseURL = "http://127.0.0.1:9505"
-	}
-	baseURL = strings.TrimRight(baseURL, "/")
+// HttpRequestToServer 向指定区服的 main_server 发送 GM 请求；serverId 为区服 id，<=0 时用配置默认 URL
+// path 示例："/gm/mail"、"/gm/player/game-info"
+func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, string) {
+	baseURL := getMainServerURL(serverId)
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
@@ -53,7 +46,7 @@ func HttpRequest(jsonData []byte, path string) (error, string) {
 		return fmt.Errorf("read response failed: %w", err), ""
 	}
 
-	// main_server 的 GM 接口统一通过 httpRetGame 返回 {errcode, errmsg, ...}
+	// main_server 的 GM 接口统一通过 HTTPRetGame 返回 {errcode, errmsg, ...}
 	var wrapper struct {
 		ErrCode int    `json:"errcode"`
 		ErrMsg  string `json:"errmsg"`
@@ -65,4 +58,9 @@ func HttpRequest(jsonData []byte, path string) (error, string) {
 	}
 
 	return nil, string(body)
+}
+
+// HttpRequest 向默认 main_server 发送 GM 请求（serverId=0，使用配置默认 URL），兼容旧调用
+func HttpRequest(jsonData []byte, path string) (error, string) {
+	return HttpRequestToServer(0, jsonData, path)
 }

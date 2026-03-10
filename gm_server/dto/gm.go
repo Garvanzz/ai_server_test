@@ -16,10 +16,13 @@ type GMRespUserInfo struct {
 	Avatar      []string
 }
 
+// GMGetServerList 区服列表项（与 login 区服设计一致，数据来自 game_server）
 type GMGetServerList struct {
-	Name string
-	Id   int64
-	Time string
+	Name      string `json:"name"`
+	Id        int64  `json:"id"`
+	Time      string `json:"time"`
+	GroupId   int    `json:"groupId,omitempty"`   // 区服组 ID
+	GroupName string `json:"groupName,omitempty"`  // 区服组名称
 }
 
 type GmAccount struct {
@@ -194,34 +197,36 @@ type GMResServerCenter struct {
 	ServerState string
 }
 
-// 游戏服务器列表
+// GMRespServerItem 区服详情（含关联游戏服、进程状态），数据来自 game_server 区服行
 type GMRespServerItem struct {
-	Channel        int
-	Ip             string
-	Port           int
-	RedisPort      int
-	MysqlAddr      string
-	ServerState    string
-	OpenServerTime string
-	StopServerTime string
-	ServerName     string
-	Id             int64
-	LoginServerUrl string
-	Group          int
-	RunState       string
-	GameServer     string
-	GameServerId   int
+	Id             int64  `json:"id"`
+	ServerName     string `json:"serverName"`
+	GroupId        int    `json:"groupId"`        // 区服组 ID
+	GroupName      string `json:"groupName"`      // 区服组名称
+	Channel        int    `json:"channel"`
+	Ip             string `json:"ip"`
+	Port           int    `json:"port"`
+	RedisPort          int    `json:"redisPort"`
+	MysqlAddr          string `json:"mysqlAddr"`
+	LoginServerUrl     string `json:"loginServerUrl"`
+	MainServerHttpUrl  string `json:"mainServerHttpUrl"`  // 大厅服 HTTP 地址，GM 转发用
+	ServerState        string `json:"serverState"`        // 正常/拥挤/爆满/维护/未开服/停服
+	OpenServerTime string `json:"openServerTime"`
+	StopServerTime string `json:"stopServerTime"`
+	RunState       string `json:"runState"`        // 运行中/离线（大厅服进程）
+	GameServer     string `json:"gameServer"`     // 关联游戏服名称
+	GameServerId   int    `json:"gameServerId"`   // 关联游戏服 ID
 }
 
-// 游戏游戏服务器列表
+// GMGameRespServerItem 游戏服进程简要信息（game_server 表 group_id=0）
 type GMGameRespServerItem struct {
-	Ip         string
-	Port       int
-	RedisPort  int
-	MysqlAddr  string
-	ServerName string
-	Id         int64
-	RunState   string
+	Id         int64  `json:"id"`
+	ServerName string `json:"serverName"`
+	Ip         string `json:"ip"`
+	Port       int    `json:"port"`
+	RedisPort  int    `json:"redisPort"`
+	MysqlAddr  string `json:"mysqlAddr"`
+	RunState   string `json:"runState"`
 }
 
 // 订单信息

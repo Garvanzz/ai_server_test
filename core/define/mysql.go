@@ -2,11 +2,12 @@ package define
 
 const (
 	AccountTable        = "account"          // 玩家账号表
+	AdminTable          = "admin"            // GM 后台管理员表
 	AdminMailTable      = "admin_mail"       // 后台邮件表
 	PlayerMailInfoTable = "player_mail_info" // 个人邮件表
 	SysMailInfoTable    = "sys_mail_info"    // 系统邮件表
-	ServerGroupTable    = "server_group"     // 区服组表
-	GameServerTable     = "game_server"      // 区服表
+	ServerGroupTable    = "server_group"     // 区服组表（仅分组：id, name, sort_order）
+	GameServerTable     = "game_server"      // 区服表（区服 group_id>0；游戏服进程 group_id=0）
 	PayCacheOrderTable  = "pay_cache_order"  // 支付缓存订单信息
 	PayOrderTable       = "pay_order"        // 支付缓存订单信息
 	HotUpdateTable      = "hot_update"       // 热更

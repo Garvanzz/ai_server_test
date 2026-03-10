@@ -6,6 +6,15 @@ import (
 	"os/exec"
 )
 
+// GitResult 用于 Git 拉取/克隆结果
+type GitResult struct {
+	Success    bool
+	Message    string
+	Directory  string
+	Branch     string
+	LastCommit string
+}
+
 func GitPullOrClone(targetDir, repoURL string) GitResult {
 	result := GitResult{Directory: targetDir}
 
