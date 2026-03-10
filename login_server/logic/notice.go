@@ -2,12 +2,12 @@ package logic
 
 import (
 	"encoding/json"
+	"xfx/core/define"
+	"xfx/core/model"
+	dto2 "xfx/login_server/dto"
 
 	"slices"
-	"xfx/login_server/define"
 	"xfx/login_server/internal/middleware"
-	"xfx/login_server/model/dto"
-	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -15,25 +15,25 @@ import (
 
 // GetNotices 获取公告
 func GetNotices(c *gin.Context) {
-	var req dto.ReqNoticeList
+	var req dto2.ReqNoticeList
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
 	log.Debug(" 获取公告： %v", req)
 
-	var items []entity.NoticeItem
-	err := AccountEngine.Table(define.TableNotice).
+	var items []model.NoticeItem
+	err := AccountEngine.Table(define.NoticeTable).
 		Where("(channel = ? OR channel = 0) AND (server_id = ? OR server_id = 0)",
 			req.Channel, req.ServerId).
 		Find(&items)
 	if err != nil {
 		log.Error("获取公告错误: %s", err)
-		middleware.RetGame(c, define.ERR_DB, "params err1")
+		middleware.RetGame(c, dto2.ERR_DB, "params err1")
 		return
 	}
 
-	slices.SortFunc(items, func(a, b entity.NoticeItem) int {
+	slices.SortFunc(items, func(a, b model.NoticeItem) int {
 		return int(a.EffectTime - b.EffectTime)
 	})
 
@@ -46,7 +46,7 @@ func GetNotices(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(items)
-	middleware.RetGame(c, define.SUCCESS, "success",
+	middleware.RetGame(c, dto2.SUCCESS, "success",
 		map[string]any{
 			"data": js,
 		})

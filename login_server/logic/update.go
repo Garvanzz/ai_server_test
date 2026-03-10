@@ -1,10 +1,10 @@
 package logic
 
 import (
-	"xfx/login_server/define"
+	"xfx/core/define"
+	"xfx/core/model"
+	dto2 "xfx/login_server/dto"
 	"xfx/login_server/internal/middleware"
-	"xfx/login_server/model/dto"
-	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -12,26 +12,26 @@ import (
 
 // ForceUpdate 更新
 func ForceUpdate(c *gin.Context) {
-	var forceUpdate dto.ForceUpdate
+	var forceUpdate dto2.ForceUpdate
 	if err := c.ShouldBindJSON(&forceUpdate); err != nil {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
 	log.Debug(" version %v, chanel %v", forceUpdate.Version, forceUpdate.Channel)
 
 	//取库
-	item := entity.HotUpdateItem{}
-	has, err := AccountEngine.Table(define.TableHotUpdate).Where("channel=?", forceUpdate.Channel).Get(&item)
+	item := model.HotUpdateItem{}
+	has, err := AccountEngine.Table(define.HotUpdateTable).Where("channel=?", forceUpdate.Channel).Get(&item)
 	if err != nil {
 		log.Error("获取线上版本错误: %s", err)
-		middleware.RetGame(c, define.ERR_DB, "params err1")
+		middleware.RetGame(c, dto2.ERR_DB, "params err1")
 		return
 	}
 
 	if !has {
 		log.Error("获取线上版本错误: %s", err)
-		middleware.RetGame(c, define.ERR_ACCOUNT_NOT_FOUND, "params err1")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_NOT_FOUND, "params err1")
 		return
 	}
 
@@ -61,7 +61,7 @@ func ForceUpdate(c *gin.Context) {
 	//}
 	version := item.Version
 	if version == forceUpdate.Version {
-		middleware.RetGame(c, define.SUCCESS, "success",
+		middleware.RetGame(c, dto2.SUCCESS, "success",
 			map[string]any{
 				"Status": 2,
 				"Url":    "",
@@ -69,7 +69,7 @@ func ForceUpdate(c *gin.Context) {
 		return
 	}
 
-	middleware.RetGame(c, define.SUCCESS, "success",
+	middleware.RetGame(c, dto2.SUCCESS, "success",
 		map[string]any{
 			"Status":  0,
 			"Url":     "",

@@ -1,7 +1,8 @@
 // 模拟客户端：先登录 login_server 获取 token，再连 main_server TCP 发 C2SLogin，并随机请求部分游戏接口。
 // 用法（示例）：
-//   go run . -login http://127.0.0.1:9033 -main 127.0.0.1:8082 -n 1 -register -interval 2s
-//   go run . -account myuser -password mypass -main 127.0.0.1:8082 -register=false
+//
+//	go run . -login http://127.0.0.1:9033 -main 127.0.0.1:8082 -n 1 -register -interval 2s
+//	go run . -account myuser -password mypass -main 127.0.0.1:8082 -register=false
 package main
 
 import (
@@ -9,6 +10,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"xfx/pkg/log"
 )
@@ -16,7 +18,23 @@ import (
 func main() {
 	log.DefaultInit()
 
-	cfg := LoadConfig()
+	cfg := &Config{
+		LoginServerURL: "http://127.0.0.1:9007",
+		// 游戏服 TCP 地址（若为空则从 GetServerList 取 serverId 对应服）
+		MainServerAddr: "127.0.0.1:8082",
+		// 区服 ID（与登录请求、GetServerList 一致）
+		ServerID: 1,
+		// 账号密码（可选，不填则用 AccountPrefix+序号）
+		//Account  string
+		//Password string
+		// 多客户端时账号前缀与数量
+		AccountPrefix: "test",
+		ClientCount:   10,
+		DoRegister:    true,
+		TestInterval:  5 * time.Second,
+		RunDuration:   0,
+	}
+
 	loginClient := NewLoginClient(cfg.LoginServerURL)
 
 	stopCh := make(chan struct{})

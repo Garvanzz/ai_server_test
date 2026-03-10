@@ -265,7 +265,7 @@ func (mgr *Manager) OnCreateGuild(ctx *proto_player.Context, req *proto_guild.C2
 
 	// 检查是否有重名的帮会
 	rdb, _ := db.GetEngine()
-	exist, err := rdb.Mysql.Table(define.TableGuild).Where("guild_name = ?", req.Name).Exist()
+	exist, err := rdb.Mysql.Table(define.GuildTable).Where("guild_name = ?", req.Name).Exist()
 	if err != nil {
 		log.Error("guild name err:%v", err)
 		return false
@@ -633,7 +633,7 @@ func (mgr *Manager) OnLeaveGuild(ctx *proto_player.Context, req *proto_guild.C2S
 
 		rdb, _ := db.GetEngine()
 
-		n, err := rdb.Mysql.Table(define.TableGuild).Where("id = ?", ent.guild.Id).Delete()
+		n, err := rdb.Mysql.Table(define.GuildTable).Where("id = ?", ent.guild.Id).Delete()
 		if err != nil {
 			log.Error("delete guild error:", err)
 			return
@@ -759,7 +759,7 @@ func (mgr *Manager) OnGetEvents(ctx *proto_player.Context, req *proto_guild.C2SG
 	logs := make([]*model.GuildLog, 0)
 	rdb, _ := db.GetEngine()
 
-	err := rdb.Mysql.Table(define.TableGuildLog).Where("guild_id = ?", info.GuildId).Desc("timestamp").Limit(define.LogCountMax).Find(&logs)
+	err := rdb.Mysql.Table(define.GuildLogTable).Where("guild_id = ?", info.GuildId).Desc("timestamp").Limit(define.LogCountMax).Find(&logs)
 	if err != nil {
 		log.Error("load guild log error:%v", err)
 		return

@@ -132,6 +132,9 @@ func (c *GameClient) Run(loginResult *LoginResult, cfg *Config, stopCh <-chan st
 
 	ticker := time.NewTicker(cfg.TestInterval)
 	defer ticker.Stop()
+	// 心跳：定期发送 C2SPing，避免服务端超时断开（默认 30s）
+	pingTicker := time.NewTicker(15 * time.Second)
+	defer pingTicker.Stop()
 	runDeadline := time.Time{}
 	if cfg.RunDuration > 0 {
 		runDeadline = time.Now().Add(cfg.RunDuration)
@@ -141,6 +144,11 @@ func (c *GameClient) Run(loginResult *LoginResult, cfg *Config, stopCh <-chan st
 		select {
 		case <-stopCh:
 			return
+		case <-pingTicker.C:
+			if err := c.Send(&proto_player.C2SPing{}); err != nil {
+				log.Debug("game client %d send ping err: %v", c.ID, err)
+				return
+			}
 		case <-ticker.C:
 			if !runDeadline.IsZero() && time.Now().After(runDeadline) {
 				return

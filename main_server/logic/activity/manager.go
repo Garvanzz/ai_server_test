@@ -420,7 +420,7 @@ func (m *Manager) register(cfgId int64) *entity {
 	} else if activityConf.ActTime == define.ActTimeServerConfigured {
 		rdb, _ := db.GetEngine()
 		serverItem := new(model.ServerItem)
-		ok, err := rdb.Mysql.Table(define.ServerGroup).Where("id = ?", m.App.GetEnv().ID).Get(serverItem)
+		ok, err := rdb.Mysql.Table(define.GameServerTable).Where("id = ?", m.App.GetEnv().ID).Get(serverItem)
 		if !ok || err != nil {
 			panic("mysql数据库连接失败")
 		}

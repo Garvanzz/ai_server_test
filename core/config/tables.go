@@ -33,7 +33,6 @@ var (
 	EquipSell           = NewTable[conf.EquipSell]("EquipSell")
 	Drop                = NewTable[conf.Drop]("Drop")
 	BoxLevelDrop        = NewTable[conf.BoxLevelDrop]("BoxLevelDrop")
-	PlayerLevel         = NewTable[conf.PlayerLevel]("PlayerLevel")
 	DaySign             = NewTable[conf.DaySign]("DaySign")
 	Handbook            = NewTable[conf.HandBook]("Handbook")
 	HandbookAward       = NewTable[conf.HandBookAward]("HandbookAward")

@@ -46,38 +46,32 @@ func InitConfig(confPath string) {
 		panic("config parser func is nil")
 	}
 
-	// 首次加载配置
-	CfgMgr.Reload()
+	CfgMgr.reload(true)
 
 	if CfgMgr.reloadOnChange {
 		go CfgMgr.watchConfigChange()
 	}
 }
 
-// 提取出的 Reload 方法示例
-func (m *Manager) Reload() {
-	// 1. 加载所有最新文件
+func (m *Manager) reload(flag bool) {
 	data := m.loadFile()
 
-	// 2. 创建一个全新的 Map 准备接收数据
 	newAllJson := make(map[string]any)
 
-	// 3. 调用 Parse 进行解析和校验
 	err := m.parserFunc(data, newAllJson)
 	if err != nil {
-		// 【热更失败处理】
-		// 打印错误日志，保留旧的 configData 不做替换，直接 return
-		// log.Error("Hot-reload failed! error: %v", err)
+		if flag {
+			panic(err)
+		}
+
 		fmt.Printf("Hot-reload failed! error: %v\n", err)
 		return
 	}
 
-	// 4. 解析和校验全部成功，执行无锁原子替换
 	m.configData.Store(newAllJson)
-	// log.Info("Configurations hot-reloaded successfully!")
 	fmt.Println("Configurations hot-reloaded successfully!")
 
-	// 5. 通知各模块配置已热更，可重新拉取配置（如活动模块会重置 checked 并在下一 tick 重算时间）
+	// 通知各模块配置已热更
 	event.DoEvent(define.EventTypeConfigReload, nil)
 }
 
@@ -97,11 +91,8 @@ func (m *Manager) watchConfigChange() {
 			if !ok {
 				return
 			}
-			// 过滤掉 chmod 等无关事件，只监听写入或创建
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				// 注意：在生产环境中建议在这里加一个防抖(Debounce)逻辑，
-				// 防止短时间内多次修改触发多次 Reload
-				m.Reload()
+				m.reload(false)
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -112,7 +103,7 @@ func (m *Manager) watchConfigChange() {
 	}
 }
 
-// 获取当前的配置 Map（包内使用）
+// 获取当前的配置 Map
 func (m *Manager) getAll() map[string]any {
 	data := m.configData.Load()
 	if data == nil {

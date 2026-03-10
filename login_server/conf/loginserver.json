@@ -1,7 +1,7 @@
 {
   "Log": {
     "WriteFile": false,
-    "FilePath": "./lobby.log",
+    "FilePath": "./login.log",
     "Level": "DEBUG",
     "Prefix": "",
     "MaxSize": 100,
@@ -10,8 +10,8 @@
     "Compress": true
   },
   "HttpPort": ":9007",
-  "RedisAddr": "127.0.0.1:6379",
+  "RedisAddr": "172.16.1.50:6379",
   "RedisPassword": "",
-  "RedisDbNum":1,
+  "RedisDbNum":2,
   "AccountAddr": "root:@Xiao1998@tcp(47.121.121.101:5001)/wenjiacheng?&charset=utf8mb4&collation=utf8mb4_general_ci"
 }

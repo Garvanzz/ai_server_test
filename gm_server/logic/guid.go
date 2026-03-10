@@ -2,12 +2,14 @@ package logic
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+
+	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/gm_server/db"
-	"xfx/gm_server/define"
-	"xfx/gm_server/gm_model"
+	"xfx/gm_server/dto"
 	"xfx/pkg/log"
 )
 
@@ -38,16 +40,16 @@ func GmGetGuidList(c *gin.Context) {
 	//}
 
 	var guids []model.GuildDB
-	err := db.AccountDb.Table(define.TableGuild).Find(&guids)
+	err := db.AccountDb.Table(define.GuildTable).Find(&guids)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
 		httpRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
-	opts := make([]*gm_model.GMGuidOption, 0)
+	opts := make([]*dto.GMGuidOption, 0)
 	for i := 0; i < len(guids); i++ {
-		opts = append(opts, &gm_model.GMGuidOption{
+		opts = append(opts, &dto.GMGuidOption{
 			GuidId:          int32(guids[i].Id),
 			GuidName:        guids[i].GuildName,
 			GuidGrowth:      int32(0),

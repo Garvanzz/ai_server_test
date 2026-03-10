@@ -3,11 +3,11 @@ package logic
 import (
 	"fmt"
 	"time"
+	dto2 "xfx/login_server/dto"
 
-	"xfx/login_server/define"
+	"xfx/core/define"
+	"xfx/core/model"
 	"xfx/login_server/internal/middleware"
-	"xfx/login_server/model/dto"
-	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 
@@ -18,14 +18,14 @@ const TokenExpire = 60 * 60 * 2  // token 失效(秒) 2 小时
 const VerifyCodeExpire = 60 * 10 // 验证码失效(秒)
 
 func Register(c *gin.Context) {
-	var registerUser dto.RegisterUser
+	var registerUser dto2.RegisterUser
 	if err := c.ShouldBindJSON(&registerUser); err != nil {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
 
 	if registerUser.Platform < 1 || registerUser.Platform > 3 {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
 
@@ -38,42 +38,33 @@ func Register(c *gin.Context) {
 
 	//玩家注册的话 账号不能为空
 	if len(registerUser.Account) == 0 {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "register account error")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "register account error")
 		return
 	}
 
-	p := new(entity.Account)
-
-	if has, _ := AccountEngine.IsTableExist(define.TableAccount); !has {
-		// 同步结构体与数据库表
-		err := AccountEngine.Sync2(p)
-		if err != nil {
-			log.Error("Failed to sync database: %v", err)
-		}
-	}
-
+	p := new(model.Account)
 	p.Account = registerUser.Account
 	p.Platform = registerUser.Platform
 	uid := ""
 
-	has, err := AccountEngine.Table(define.TableAccount).Where("account = ?", p.Account).Exist()
+	has, err := AccountEngine.Table(define.AccountTable).Where("account = ?", p.Account).Exist()
 	if err != nil {
 		log.Error("register find err :%v", err.Error())
-		middleware.RetGame(c, define.ERR_DB, err.Error())
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 	if has {
-		middleware.RetGame(c, define.ERR_ACCOUNT_EXISTS, "account exists")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_EXISTS, "account exists")
 		return
 	}
 
 	//检测uid重复否 重复则重新拿
 	uid = utils.RandomNumeric(10)
 	for {
-		has, err := AccountEngine.Table(define.TableAccount).Where("uid = ?", uid).Exist()
+		has, err := AccountEngine.Table(define.AccountTable).Where("uid = ?", uid).Exist()
 		if err != nil {
 			log.Error("register find uid err :%v", err.Error())
-			middleware.RetGame(c, define.ERR_DB, err.Error())
+			middleware.RetGame(c, dto2.ERR_DB, err.Error())
 			return
 		}
 		if !has {
@@ -89,21 +80,21 @@ func Register(c *gin.Context) {
 	p.CreateTime = now
 	p.ServerId = registerUser.ServerId
 
-	_, err = AccountEngine.Table(define.TableAccount).Insert(p)
+	_, err = AccountEngine.Table(define.AccountTable).Insert(p)
 	if err != nil {
 		log.Error("register player account db err : %v", err)
-		middleware.RetGame(c, define.ERR_DB, err.Error())
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 
-	middleware.RetGame(c, define.SUCCESS, "success", map[string]interface{}{"account": p.Account})
+	middleware.RetGame(c, dto2.SUCCESS, "success", map[string]interface{}{"account": p.Account})
 }
 
 // Login 登录
 func Login(c *gin.Context) {
-	var loginUser dto.LoginUser
+	var loginUser dto2.LoginUser
 	if err := c.ShouldBindJSON(&loginUser); err != nil {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
 
@@ -117,31 +108,31 @@ func Login(c *gin.Context) {
 
 	// 判断平台 id 是否正确
 	if loginUser.Platform < 1 || loginUser.Platform > 100 {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
 
 	//账号不能为空
 	if len(loginUser.Account) <= 0 {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "account not found")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "account not found")
 		return
 	}
 
-	player := new(entity.Account)
+	player := new(model.Account)
 	player.Account = loginUser.Account
-	has, err := AccountEngine.Table(define.TableAccount).Get(player)
+	has, err := AccountEngine.Table(define.AccountTable).Get(player)
 	if err != nil {
 		log.Error("account failed, err : %v", err)
-		middleware.RetGame(c, define.ERR_DB, "db err")
+		middleware.RetGame(c, dto2.ERR_DB, "db err")
 		return
 	}
 	if !has {
-		middleware.RetGame(c, define.ERR_ACCOUNT_NOT_FOUND, "account not found")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
 
 	if player.LoginBan != 0 && player.LoginBan > time.Now().Unix() {
-		middleware.RetGame(c, define.ERR_ACCOUNT_BANNED, "account banned")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_BANNED, "account banned")
 		return
 	}
 
@@ -173,21 +164,21 @@ func Login(c *gin.Context) {
 
 	//验证密码
 	if player.Password != loginUser.Password {
-		middleware.RetGame(c, define.ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
 		return
 	}
 
-	var serverItem entity.ServerItem
-	has, err = AccountEngine.Table(define.TableGameServer).Where("id = ?", loginUser.ServerId).Get(&serverItem)
+	var serverItem model.ServerItem
+	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", loginUser.ServerId).Get(&serverItem)
 	if err != nil {
 		log.Error("get server list find db err :%v", err.Error())
-		middleware.RetGame(c, define.ERR_DB, "get server list find db err")
+		middleware.RetGame(c, dto2.ERR_DB, "get server list find db err")
 		return
 	}
 
 	if !has {
 		log.Error("get server list id error")
-		middleware.RetGame(c, define.ERR_DB, "get server list id error")
+		middleware.RetGame(c, dto2.ERR_DB, "get server list id error")
 		return
 	}
 
@@ -196,7 +187,7 @@ func Login(c *gin.Context) {
 		_, err = RedisExec("del", fmt.Sprintf("%s:%v", define.LoginToken, player.LastToken))
 		if err != nil {
 			log.Error("del last token failed, err : %v", err)
-			middleware.RetGame(c, define.ERR_DB, err.Error())
+			middleware.RetGame(c, dto2.ERR_DB, err.Error())
 			return
 		}
 	}
@@ -210,23 +201,23 @@ func Login(c *gin.Context) {
 	player.OnlineTime = time.Now()
 	player.ServerId = int(serverItem.Id)
 
-	n, err := AccountEngine.Table(define.TableAccount).Where("uid = ?", player.Uid).
+	n, err := AccountEngine.Table(define.AccountTable).Where("uid = ?", player.Uid).
 		Cols("last_token", "online_time", "server_id").Update(player)
 	if err != nil {
-		middleware.RetGame(c, define.ERR_DB, err.Error())
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		log.Error("login save last token failed, err :%v", err)
 		return
 	}
 	if n == 0 {
 		log.Error("login save last token failed")
-		middleware.RetGame(c, define.ERR_DB, "login failed")
+		middleware.RetGame(c, dto2.ERR_DB, "login failed")
 		return
 	}
 
 	// token 存入 redis
 	_, err = RedisExec("set", fmt.Sprintf("%s:%v", define.LoginToken, loginToken), player.Uid, "ex", fmt.Sprintf("%v", TokenExpire))
 	if err != nil {
-		middleware.RetGame(c, define.ERR_DB, err.Error())
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 
@@ -239,7 +230,7 @@ func Login(c *gin.Context) {
 
 	log.Debug("login success")
 
-	middleware.RetGame(c, define.SUCCESS, "success",
+	middleware.RetGame(c, dto2.SUCCESS, "success",
 		map[string]any{
 			"serverId":          serverItem.Id,
 			"token":             loginToken,

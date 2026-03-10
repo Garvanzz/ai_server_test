@@ -35,7 +35,7 @@ func Start(app module.App) {
 	currentServerId = app.GetEnv().ID
 	Engine = new(CDBEngine)
 	Engine.Redis = NewRedisPool(app.GetEnv().Redis.Host, app.GetEnv().Redis.Password, app.GetEnv().Redis.DbNum, app.GetEnv().Redis)
-	Engine.Mysql = NewMysqlEngine(app.GetEnv().Mysql.CommonAddr, app.GetEnv().Mysql)
+	Engine.Mysql = NewMysqlEngine(app.GetEnv().Mysql)
 
 	if cfg := app.GetEnv().LoginRedis; cfg != nil && cfg.Host != "" {
 		LoginRedisPool = NewRedisPool(cfg.Host, cfg.Password, cfg.DbNum, cfg)
@@ -62,8 +62,8 @@ func Close() {
 	}
 }
 
-func NewMysqlEngine(addr string, cfg *env.Mysql) *xorm.Engine {
-	_engine, err := xorm.NewEngine("mysql", addr)
+func NewMysqlEngine(cfg *env.Mysql) *xorm.Engine {
+	_engine, err := xorm.NewEngine("mysql", cfg.CommonAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func NewMysqlEngine(addr string, cfg *env.Mysql) *xorm.Engine {
 
 	err = _engine.Ping()
 	if err != nil {
-		fmt.Println("数据库地址:", addr)
+		fmt.Println("数据库地址:", cfg.CommonAddr, err)
 		panic("mysql数据库连接失败")
 	}
 	return _engine

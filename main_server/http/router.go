@@ -30,6 +30,25 @@ func (m *HttpModule) register() {
 
 		// 背包
 		gm.POST("/item", m.GMGrantItem)
+		gm.POST("/bag", m.GMGetBag)
+		gm.POST("/item/delete", m.GMDeleteItem)
+
+		// 装备
+		gm.POST("/equip", m.GMGetEquip)
+		gm.POST("/equip/set", m.GMSetEquip)
+		gm.POST("/equip/delete", m.GMDeleteEquip)
+
+		// 关卡
+		gm.POST("/stage", m.GMGetStage)
+		gm.POST("/stage/set", m.GMSetStage)
+
+		// 英雄
+		gm.POST("/hero", m.GMGetHero)
+		gm.POST("/hero/set", m.GMSetHero)
+
+		// 玩家游戏信息（Redis Player / 批量）
+		gm.POST("/player/game-info", m.GMGetPlayerGameInfo)
+		gm.POST("/player/info", m.GMGetPlayerInfo)
 
 		// 时间调试（游戏逻辑时间偏移）
 		gm.GET("/time", m.GMTimeGet)

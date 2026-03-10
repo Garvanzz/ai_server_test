@@ -9,7 +9,34 @@ import (
 	"xfx/main_server/global"
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/base"
+	"xfx/main_server/player/cdkey"
+	"xfx/main_server/player/collection"
+	"xfx/main_server/player/danaotiangong"
+	"xfx/main_server/player/destiny"
+	"xfx/main_server/player/divine"
+	drawhero "xfx/main_server/player/draw"
+	"xfx/main_server/player/equip"
+	"xfx/main_server/player/fashion"
+	"xfx/main_server/player/gemappraisal"
+	"xfx/main_server/player/handbook"
+	"xfx/main_server/player/hero"
+	"xfx/main_server/player/huaguoshan"
+	"xfx/main_server/player/idle_box"
 	"xfx/main_server/player/internal"
+	"xfx/main_server/player/lineup"
+	"xfx/main_server/player/magic"
+	"xfx/main_server/player/mission"
+	"xfx/main_server/player/openbox"
+	"xfx/main_server/player/pet"
+	"xfx/main_server/player/playerprop"
+	"xfx/main_server/player/rank"
+	"xfx/main_server/player/shenjidraw"
+	"xfx/main_server/player/shop"
+	"xfx/main_server/player/skill"
+	"xfx/main_server/player/stage"
+	"xfx/main_server/player/task"
+	"xfx/main_server/player/transaction"
+	"xfx/main_server/player/welfare"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 	"xfx/pkg/utils/sensitive"
@@ -25,11 +52,36 @@ func (pl *PlayerAgent) OnSave(isSync bool) {
 	//离线时间
 	dbData.OfflineTime = utils.Now().Unix()
 
-
 	db.RedisExec("hmset", redis.Args{}.Add(fmt.Sprintf("%s:%d", define.Player, pl.model.Id)).AddFlat(dbData)...)
 
 	base.Save(pl.model, isSync)
+	playerprop.Save(pl.model, isSync)
 	bag.Save(pl.model, isSync)
+	shop.Save(pl.model, isSync)
+	handbook.Save(pl.model, isSync)
+	task.Save(pl.model, isSync)
+	hero.Save(pl.model, isSync)
+	drawhero.Save(pl.model, isSync)
+	stage.Save(pl.model, isSync)
+	lineup.Save(pl.model, isSync)
+	equip.Save(pl.model, isSync)
+	welfare.Save(pl.model, isSync)
+	openbox.Save(pl.model, isSync)
+	idle_box.Save(pl.model, isSync)
+	skill.Save(pl.model, isSync)
+	magic.Save(pl.model, isSync)
+	destiny.Save(pl.model, isSync)
+	shenjidraw.Save(pl.model, isSync)
+	collection.Save(pl.model, isSync)
+	divine.Save(pl.model, isSync)
+	gemappraisal.Save(pl.model, isSync)
+	pet.Save(pl.model, isSync)
+	danaotiangong.Save(pl.model, isSync)
+	mission.Save(pl.model, isSync)
+	fashion.Save(pl.model, isSync)
+	transaction.Save(pl.model, isSync)
+	huaguoshan.Save(pl.model, isSync)
+	cdkey.Save(pl.model, isSync)
 }
 
 func LoadPlayerData(id int64) (*model.Player, error) {
@@ -48,7 +100,33 @@ func LoadPlayerData(id int64) (*model.Player, error) {
 	pl := new(model.Player)
 	loadProps(pl, dst)
 	base.Load(pl)
+	playerprop.Load(pl)
 	bag.Load(pl)
+	shop.Load(pl)
+	handbook.Load(pl)
+	task.Load(pl)
+	hero.Load(pl)
+	drawhero.Load(pl)
+	stage.Load(pl)
+	lineup.Load(pl)
+	equip.Load(pl)
+	welfare.Load(pl)
+	openbox.Load(pl)
+	idle_box.Load(pl)
+	skill.Load(pl)
+	magic.Load(pl)
+	shenjidraw.Load(pl)
+	destiny.Load(pl)
+	collection.Load(pl)
+	divine.Load(pl)
+	gemappraisal.Load(pl)
+	pet.Load(pl)
+	danaotiangong.Load(pl)
+	mission.Load(pl)
+	fashion.Load(pl)
+	transaction.Load(pl)
+	huaguoshan.Load(pl)
+	cdkey.Load(pl)
 
 	return pl, nil
 }
@@ -67,7 +145,38 @@ func Born(uid string, serverId int) (*model.Player, error) {
 
 	initPlayerProp(pl)
 	base.Init(pl, uid)
+	playerprop.Init(pl)
 	bag.Init(pl)
+	shop.Init(pl)
+	handbook.Init(pl)
+	task.Init(pl)
+	hero.Init(pl)
+	drawhero.Init(pl)
+	stage.Init(pl)
+	lineup.Init(pl)
+	equip.Init(pl)
+	welfare.Init(pl)
+	openbox.Init(pl)
+	idle_box.Init(pl)
+	skill.Init(pl)
+	magic.Init(pl)
+	destiny.Init(pl)
+	shenjidraw.Init(pl)
+	collection.Init(pl)
+	divine.Init(pl)
+	gemappraisal.Init(pl)
+	pet.Init(pl)
+	danaotiangong.Init(pl)
+	mission.Init(pl)
+	fashion.Init(pl)
+	transaction.Init(pl)
+	huaguoshan.Init(pl)
+	cdkey.Init(pl)
+
+	_, err = db.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), id)
+	if err != nil {
+		return nil, err
+	}
 
 	return pl, nil
 }
@@ -91,7 +200,7 @@ func loadProps(pl *model.Player, info *model.PlayerInfo) {
 	pl.Props[define.PlayerPropClanId] = int64(info.ClanId)
 	pl.Props[define.PlayerPropHeroId] = int64(info.HeroId)
 	pl.Props[define.PlayerPropBubbleId] = int64(info.BubbleId)
-	pl.Props[define.PlayerPropPower] = int64(info.Power)
+	pl.Props[define.PlayerPropPower] = info.Power
 	pl.Props[define.PlayerPropServerId] = int64(info.ServerId)
 }
 
@@ -156,6 +265,7 @@ func ReqChangePlayerName(ctx global.IPlayer, pl *model.Player, req *proto_player
 	internal.SubItems(ctx, pl, costItems)
 
 	pl.Base.Name = req.Name
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -179,6 +289,7 @@ func ReqChangeTitle(ctx global.IPlayer, pl *model.Player, req *proto_player.C2SC
 	}
 
 	pl.Props[define.PlayerPropTitle] = int64(req.Id)
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -195,6 +306,7 @@ func ReqChangeHead(ctx global.IPlayer, pl *model.Player, req *proto_player.C2SCh
 	}
 
 	pl.Props[define.PlayerPropFaceId] = int64(req.Id)
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -219,6 +331,7 @@ func ReqChangeHeadFrame(ctx global.IPlayer, pl *model.Player, req *proto_player.
 	}
 
 	pl.Props[define.PlayerPropFaceSlotId] = int64(req.Frame)
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -243,6 +356,7 @@ func ReqChangeBubble(ctx global.IPlayer, pl *model.Player, req *proto_player.C2S
 	}
 
 	pl.Props[define.PlayerPropBubbleId] = int64(req.Id)
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -258,6 +372,7 @@ func ReqChangeSex(ctx global.IPlayer, pl *model.Player, req *proto_player.C2SCha
 	}
 
 	pl.Props[define.PlayerPropSex] = int64(req.Id)
+	internal.PushPlayerData(ctx, pl)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -269,6 +384,7 @@ func ReqPlayerChangePower(ctx global.IPlayer, pl *model.Player, req *proto_playe
 	//要做战力校验
 
 	pl.Props[define.PlayerPropPower] = req.Power
+	rank.UpdatePowerRank(ctx, pl, req.Power)
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
 }
@@ -329,6 +445,12 @@ func ReqTransformJob(ctx global.IPlayer, pl *model.Player, req *proto_player.C2S
 	pl.Props[define.PlayerPropHeroId] = int64(heroId)
 
 	internal.SubItems(ctx, pl, costItems)
+	internal.PushPlayerData(ctx, pl)
+
+	//同步布阵
+	for _, v := range pl.Lineup.LineUps {
+		internal.UpdateLineUp(ctx, pl, v.Type, v.HeroId)
+	}
 
 	res.CODE = proto_player.LOGINERRORCODE_ERROR_OK
 	ctx.Send(res)
@@ -390,6 +512,10 @@ func OnRet(ctx global.IPlayer, pl *model.Player, ret *db.RedisRet) {
 	}
 
 	switch ret.OpType {
+	case define.RedisRetRank:
+		rank.OnRetRankData(ctx, pl, ret)
+	case define.RedisRetStage:
+		stage.OnRetStageData(ctx, pl, ret)
 	default:
 	}
 }

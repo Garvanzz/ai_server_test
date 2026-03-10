@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"xfx/core/define"
+	"xfx/core/model"
+	"xfx/login_server/dto"
 
-	"xfx/login_server/define"
 	"xfx/login_server/internal/middleware"
-	"xfx/login_server/model/dto"
-	"xfx/login_server/model/entity"
 	"xfx/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -22,21 +22,21 @@ func GetServerList(c *gin.Context) {
 		log.Debug("GetServerList channel=%d (attribution only)", req.Channel)
 	}
 
-	metaList := make([]entity.ServerGroupMeta, 0)
-	_ = AccountEngine.Table(define.TableServerGroup).Asc("sort_order", "id").Find(&metaList)
+	metaList := make([]model.ServerGroup, 0)
+	_ = AccountEngine.Table(define.ServerGroupTable).Asc("sort_order", "id").Find(&metaList)
 
-	metaMap := make(map[int64]entity.ServerGroupMeta)
+	metaMap := make(map[int64]model.ServerGroup)
 	sortOrders := make(map[int]int)
 	for i, m := range metaList {
 		metaMap[m.Id] = m
 		sortOrders[int(m.Id)] = m.SortOrder*1000 + i
 	}
 
-	items := make([]entity.ServerItem, 0)
-	err := AccountEngine.Table(define.TableGameServer).Asc("group_id", "id").Find(&items)
+	items := make([]model.ServerItem, 0)
+	err := AccountEngine.Table(define.GameServerTable).Asc("group_id", "id").Find(&items)
 	if err != nil {
 		log.Error("get server list find err :%v", err.Error())
-		middleware.RetGame(c, define.ERR_DB, err.Error())
+		middleware.RetGame(c, dto.ERR_DB, err.Error())
 		return
 	}
 
@@ -86,7 +86,7 @@ func GetServerList(c *gin.Context) {
 	}
 	js, _ := json.Marshal(serverMap)
 
-	middleware.RetGame(c, define.SUCCESS, "success", map[string]interface{}{
+	middleware.RetGame(c, dto.SUCCESS, "success", map[string]interface{}{
 		"ServerList": string(js),
 	})
 }

@@ -13,6 +13,13 @@ type Equip struct {
 	Brace    *BraceOption             //背饰
 }
 
+// EnchantOption 附魔
+type EnchantOption struct {
+	Id    int32 // 符咒ID
+	Level int32 // 等级
+	Exp   int32 // 经验
+}
+
 // 背饰
 type BraceOption struct {
 	BraceAuraItems    map[int32]*BraceAuraItem
@@ -85,12 +92,6 @@ type CacheSuccinctIndex struct {
 	Index      int   //序列
 	SkillId    int32 //技能ID
 	EquipIndex int   //装备部位
-}
-
-type EnchantOption struct {
-	Id    int32 //符咒ID
-	Level int32 //等级
-	Exp   int32 //经验
 }
 
 type MountOption struct {

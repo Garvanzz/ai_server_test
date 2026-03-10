@@ -81,7 +81,7 @@ func TestParse_MissingRegistered(t *testing.T) {
 func TestManager_Reload(t *testing.T) {
 	dir := getTestdataDir(t)
 	m := NewManager(dir, false, Parse)
-	m.Reload()
+	m.reload(false)
 	all := m.getAll()
 	if _, ok := all["Global"]; !ok {
 		t.Fatalf("after Reload, getAll() should contain Global, got keys: %v", keys(all))
@@ -92,7 +92,7 @@ func TestManager_Reload_InvalidDir(t *testing.T) {
 	// 空目录且没有 Global.json 时，Parse 会失败，Reload 不会 Store，getAll 仍为空
 	emptyDir := t.TempDir()
 	m := NewManager(emptyDir, false, Parse)
-	m.Reload()
+	m.reload(false)
 	all := m.getAll()
 	if len(all) != 0 {
 		t.Errorf("Reload with dir missing Global.json should not store new data, got len(all)=%d", len(all))
@@ -140,7 +140,7 @@ func TestLoadRealConfigDir(t *testing.T) {
 		return
 	}
 	m := NewManager(configDir, false, Parse)
-	m.Reload()
+	m.reload(false)
 	all := m.getAll()
 	if len(all) == 0 {
 		t.Fatal("real config dir load failed: getAll() is empty")

@@ -24,20 +24,3 @@ type Account struct {
 	ChatBanReason  string    `json:"chatBanReason"` //聊天封禁原因
 	ServerId       int       `json:"serverId"`      //服务器ID
 }
-
-// ServerItem 服务器列表信息（滚服：每服独立 Redis，MySQL 全服共享，不再按服配置）
-type ServerItem struct {
-	Id             int64  `json:"id"`
-	Channel        int    `json:"channel"` //渠道
-	Ip             string `json:"ip"`
-	Port           int    `json:"port"`
-	RedisHost      string `json:"redisHost"`      // 可选；为空时用 env 的 Redis Host + 本表 RedisPort
-	RedisPort      int    `json:"redisPort"`      // 本服 Redis 端口
-	MysqlAddr      string `json:"mysqlAddr"`      // 已弃用：MySQL 统一用 env.Mysql.CommonAddr，仅保留供 GM/展示兼容
-	ServerState    int    `json:"serverState"`    //0：正常 1：拥挤 2：爆满 3：维护 4：未开服 5：停服
-	OpenServerTime int64  `json:"openServerTime"` //开服时间
-	StopServerTime int64  `json:"stopServerTime"` //停服时间
-	ServerName     string `json:"serverName"`     //服务器名字
-	LoginServerUrl string `json:"loginServerUrl"` //登录服务器
-	ServerGroup    int    `json:"server_group"`   //服务器组
-}

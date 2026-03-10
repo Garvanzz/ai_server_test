@@ -17,7 +17,7 @@ func NewTable[T any](jsonName string) *Table[T] {
 	return t
 }
 
-// Get 按 ID 获取配置，不存在则 panic（fail-fast）。
+// Get 按 ID 获取配置，不存在则
 func (t *Table[T]) Get(id int64) T {
 	m := t.All()
 	v, ok := m[id]
@@ -42,7 +42,6 @@ func (t *Table[T]) Find32(id int32) (T, bool) { return t.Find(int64(id)) }
 
 // All 返回整张配置表 map
 func (t *Table[T]) All() map[int64]T {
-	// 每次读取时，先通过 getAll() 原子获取当前最新的配置 map
 	allConfigs := CfgMgr.getAll()
 	return allConfigs[t.name].(map[int64]T)
 }

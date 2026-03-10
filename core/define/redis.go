@@ -1,9 +1,10 @@
 package define
 
 const (
-	LoginToken     = "LoginToken"
-	Account        = "Account"
-	PlayerGuildKey = "player_guild"
+	LoginToken            = "LoginToken"
+	Account               = "Account"
+	PlayerGuildKey        = "player_guild"
+	PlayerLastLoginServer = "LastLoginServer"
 )
 
 const (

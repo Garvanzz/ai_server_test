@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -24,6 +25,10 @@ type LoginClient struct {
 }
 
 func NewLoginClient(baseURL string) *LoginClient {
+	// URL 必须带 scheme，否则 url.Parse 会报错：first path segment in URL cannot contain colon
+	if baseURL != "" && !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "http://" + baseURL
+	}
 	return &LoginClient{
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},

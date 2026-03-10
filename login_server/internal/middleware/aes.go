@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
-
-	"github.com/gin-gonic/gin"
-	"xfx/login_server/define"
+	"xfx/login_server/dto"
 	"xfx/pkg/log"
 	"xfx/pkg/utils/crypto"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AesDecryptGame 游戏请求体 AES 解密中间件（原始 body 为密文，解密后替换 body）
@@ -16,19 +16,19 @@ func AesDecryptGame(key []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		payload, err := c.GetRawData()
 		if err != nil {
-			RetGame(c, define.ERR_SERVER_INTERNAL, "ERR_SERVER_INTERNAL")
+			RetGame(c, dto.ERR_SERVER_INTERNAL, "ERR_SERVER_INTERNAL")
 			c.Abort()
 			return
 		}
 		if len(payload) == 0 {
-			RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params error")
+			RetGame(c, dto.ERR_ACCOUNT_PARAMS_ERROR, "params error")
 			c.Abort()
 			return
 		}
 		data, err := crypto.AesPkcs7Decrypt(payload, key)
 		if err != nil {
 			log.Error("login server aes decrypt error: %v", err)
-			RetGame(c, define.ERR_ACCOUNT_PARAMS_ERROR, "params error")
+			RetGame(c, dto.ERR_ACCOUNT_PARAMS_ERROR, "params error")
 			c.Abort()
 			return
 		}

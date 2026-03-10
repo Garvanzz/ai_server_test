@@ -6,14 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"xfx/gm_server/db"
 	"xfx/gm_server/define"
-	"xfx/gm_server/gm_model"
+	"xfx/gm_server/dto"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 )
 
 // 登录账号
 func GmLogin(c *gin.Context) {
-	var loginUser gm_model.GMLogin
+	var loginUser dto.GMLogin
 	if err := c.ShouldBindJSON(&loginUser); err != nil {
 		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
@@ -27,7 +27,7 @@ func GmLogin(c *gin.Context) {
 		return
 	}
 
-	player := new(gm_model.GmAccount)
+	player := new(dto.GmAccount)
 	player.UserName = loginUser.UserName
 	player.Password = loginUser.Password
 
@@ -63,7 +63,7 @@ func GmLoginout(c *gin.Context) {
 func GmAdminUserInfo(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
-	var gmUserInfo gm_model.GMUserInfo
+	var gmUserInfo dto.GMUserInfo
 	err := json.Unmarshal(rawData, &gmUserInfo)
 	if err != nil {
 		log.Fatal("解析失败:", err)
@@ -78,7 +78,7 @@ func GmAdminUserInfo(c *gin.Context) {
 		return
 	}
 
-	player := new(gm_model.GmAccount)
+	player := new(dto.GmAccount)
 	player.UserName = gmUserInfo.UserName
 
 	has, err := db.AccountDb.Table(define.Admin).Get(player)

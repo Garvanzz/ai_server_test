@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"xfx/pkg/gate"
 	"xfx/pkg/gate/tcpgate"
+	"xfx/pkg/log"
 	"xfx/pkg/module"
 )
 
@@ -29,6 +30,7 @@ func (gt *Gate) CreateAgent(gate gate.Gate, session gate.Session) (gate.Agent, e
 
 	_, err := gt.Context.Create(fmt.Sprintf("session#%d", session.ID()), agent)
 	if err != nil {
+		log.Error("* gate CreateAgent session:%v failed: %v", session.ID(), err)
 		return nil, err
 	}
 

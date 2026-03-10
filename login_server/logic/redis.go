@@ -1,8 +1,9 @@
 package logic
 
 import (
-	"github.com/gomodule/redigo/redis"
 	"time"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 var RedisPool *redis.Pool

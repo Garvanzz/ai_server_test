@@ -16,8 +16,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-var inputDir = "../logic"
-var outputDir = "../invoke"
+var inputDir = "../../main_server/logic"
+var outputDir = "../../main_server/invoke"
 
 func main() {
 	if err := run(); err != nil {

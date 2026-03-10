@@ -27,12 +27,6 @@ const (
 	SaveMaxCount  = 1         // 每次tick 最大帮会落库数量
 )
 
-const (
-	TableGuild      = "guild"
-	TableGuildApply = "guild_apply"
-	TableGuildLog   = "guild_log"
-)
-
 // 帮会职位
 const (
 	GuildOrdinary   = 1 // 成员

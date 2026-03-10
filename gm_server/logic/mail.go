@@ -2,18 +2,19 @@ package logic
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"strconv"
 	"strings"
 	"time"
 	"xfx/core/model"
-	"xfx/gm_server/gm_model"
+	"xfx/gm_server/dto"
 	"xfx/pkg/log"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 后台邮件创建
 func GmCreateAdminMail(c *gin.Context) {
-	var Info gm_model.GmMailInfo
+	var Info dto.GmMailInfo
 	if err := c.ShouldBindJSON(&Info); err != nil {
 		httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
@@ -105,7 +106,7 @@ func GmCreateAdminMail(c *gin.Context) {
 
 	js, _ := json.Marshal(mail)
 	//通知游戏服
-	err, _ := HttpRequest(js, "GMSendMail")
+	err, _ := HttpRequest(js, "/gm/mail")
 	if err != nil {
 		httpRetGame(c, ERR_SERVER_INTERNAL, "fail")
 	} else {

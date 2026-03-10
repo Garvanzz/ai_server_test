@@ -17,9 +17,6 @@ func main() {
 	logic.AccountEngine = logic.NewMysqlEngine(conf.Server.AccountAddr)
 	logic.InitRedis(conf.Server.RedisAddr, conf.Server.RedisPassword, conf.Server.RedisDbNum)
 
-	// 确保表的存在
-	logic.EnsureServerTables()
-
 	// 正式服直接改成发布模式
 	gin.SetMode(gin.ReleaseMode)
 

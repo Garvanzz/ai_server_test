@@ -3,7 +3,6 @@ package friend
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
 	"xfx/core/config"
 	"xfx/core/config/conf"
@@ -17,6 +16,8 @@ import (
 	"xfx/pkg/utils"
 	"xfx/proto/proto_friend"
 	"xfx/proto/proto_public"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // 请求添加好友
@@ -88,7 +89,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 	}
 	conn := rdb.Mysql
 	// 检查是否已经有好友申请
-	exist, err := conn.Table(define.FriendApply).Where("player_id = ? AND target_id = ?", pl.Id, targetRedisId).Exist()
+	exist, err := conn.Table(define.FriendApplyTable).Where("player_id = ? AND target_id = ?", pl.Id, targetRedisId).Exist()
 	if err != nil {
 		log.Error("add friend db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -104,7 +105,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 	}
 
 	// 判断条数
-	applyCount, err := conn.Table(define.FriendApply).Where("target_id = ?", targetRedisId).Count()
+	applyCount, err := conn.Table(define.FriendApplyTable).Where("target_id = ?", targetRedisId).Count()
 	if err != nil {
 		log.Error("reqAddFriend db error3:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -126,7 +127,7 @@ func ReqAddFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SReq
 		TargetId: targetRedisId,
 	}
 
-	_, err = conn.Table(define.FriendApply).Insert(apply)
+	_, err = conn.Table(define.FriendApplyTable).Insert(apply)
 	if err != nil {
 		log.Error("insert friend apply error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_ADDFriendFaild
@@ -203,7 +204,7 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 	//是否申请
 	conn := rdb.Mysql
 	// 检查是否已经有好友申请
-	exist, err := conn.Table(define.FriendApply).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
+	exist, err := conn.Table(define.FriendApplyTable).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
 	if err != nil {
 		log.Error("add friend db error:%v", err)
 		r.IsApply = false
@@ -320,7 +321,7 @@ func ReqFriendApplyList(ctx global.IPlayer, pl *model.Player) {
 
 	conn := rdb.Mysql
 	list := make([]*model.FriendApply, 0)
-	err = conn.Table(define.FriendApply).Where("target_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
+	err = conn.Table(define.FriendApplyTable).Where("target_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
 	if err != nil {
 		log.Error("reqFriendApplyList db error:%v", err)
 		ctx.Send(res)
@@ -410,7 +411,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 	conn := rdb.Mysql
 
 	apply := new(model.FriendApply)
-	_, err = conn.Table(define.FriendApply).Where("id = ?", msg.ApplyId).Get(apply)
+	_, err = conn.Table(define.FriendApplyTable).Where("id = ?", msg.ApplyId).Get(apply)
 	if err != nil {
 		log.Error("reqDealFriendApply db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -426,7 +427,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 	}
 
 	// delete apply
-	n, err := conn.Table(define.FriendApply).Where("id = ?", apply.Id).Delete()
+	n, err := conn.Table(define.FriendApplyTable).Where("id = ?", apply.Id).Delete()
 	if err != nil || n != 1 {
 		log.Error("reqDealFriendApply delete error:%v,%v", err, n)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -493,7 +494,7 @@ func ReqDealFriendApply(ctx global.IPlayer, pl *model.Player, msg *proto_friend.
 
 	//同步列表
 	list := make([]*model.FriendApply, 0)
-	err = conn.Table(define.FriendApply).Where("target_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
+	err = conn.Table(define.FriendApplyTable).Where("target_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
 	if err != nil {
 		log.Error("syncFriendApplyList db error:%v", err)
 		ctx.Send(res)
@@ -731,7 +732,6 @@ func ReqGetFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 func ReqOneKeyFriendGift(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SOneKeyFriendGift) {
 	res := &proto_friend.S2COneKeyFriendGift{}
 
-
 	reply, err := db.RedisExec("smembers", fmt.Sprintf("%s:%d", define.Friend, pl.Id))
 	if err != nil {
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -881,7 +881,7 @@ func ReqBlockFriendList(ctx global.IPlayer, pl *model.Player) {
 
 	conn := rdb.Mysql
 	list := make([]*model.FriendBlock, 0)
-	err = conn.Table(define.FriendBlock).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
+	err = conn.Table(define.FriendBlockTable).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
 	if err != nil {
 		log.Error("reqFriendBlockList db error:%v", err)
 		ctx.Send(res)
@@ -927,7 +927,7 @@ func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SR
 
 	conn := rdb.Mysql
 	block := new(model.FriendBlock)
-	has, err := conn.Table(define.FriendBlock).Where("target_id = ? AND player_id ", req.PlayerId, pl.Id).Exist(&block)
+	has, err := conn.Table(define.FriendBlockTable).Where("target_id = ? AND player_id ", req.PlayerId, pl.Id).Exist(&block)
 	if err != nil {
 		log.Error("reqFriendBlockList db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -953,7 +953,7 @@ func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SR
 
 	block.TargetId = req.PlayerId
 	block.PlayerId = pl.Id
-	_, err = conn.Table(define.FriendBlock).Insert(&block)
+	_, err = conn.Table(define.FriendBlockTable).Insert(&block)
 	if err != nil {
 		log.Error("reqFriendBlock db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -962,7 +962,7 @@ func ReqBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SR
 	}
 
 	list := make([]*model.FriendBlock, 0)
-	err = conn.Table(define.FriendBlock).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
+	err = conn.Table(define.FriendBlockTable).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
 	if err != nil {
 		log.Error("reqFriendBlockList db error:%v", err)
 		ctx.Send(res)
@@ -999,7 +999,7 @@ func ReqUnLockBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_frien
 
 	conn := rdb.Mysql
 	block := new(model.FriendBlock)
-	has, err := conn.Table(define.FriendBlock).Where("target_id = ? AND player_id ", req.PlayerId, pl.Id).Exist(&block)
+	has, err := conn.Table(define.FriendBlockTable).Where("target_id = ? AND player_id ", req.PlayerId, pl.Id).Exist(&block)
 	if err != nil {
 		log.Error("reqFriendBlockList db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -1016,7 +1016,7 @@ func ReqUnLockBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_frien
 
 	block.TargetId = req.PlayerId
 	block.PlayerId = pl.Id
-	_, err = conn.Table(define.FriendBlock).Delete(&block)
+	_, err = conn.Table(define.FriendBlockTable).Delete(&block)
 	if err != nil {
 		log.Error("reqFriendBlock db error:%v", err)
 		res.Code = proto_friend.CommonErrorCode_ERR_DBERR
@@ -1025,7 +1025,7 @@ func ReqUnLockBlockFriend(ctx global.IPlayer, pl *model.Player, req *proto_frien
 	}
 
 	list := make([]*model.FriendBlock, 0)
-	err = conn.Table(define.FriendBlock).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
+	err = conn.Table(define.FriendBlockTable).Where("player_id = ?", pl.Id).Limit(int(int64(config.Global.Get().MaxFriendNum))).Find(&list)
 	if err != nil {
 		log.Error("reqFriendBlockList db error:%v", err)
 		ctx.Send(res)
@@ -1118,7 +1118,7 @@ func ReqTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2
 		//是否申请
 		conn := rdb.Mysql
 		// 检查是否已经有好友申请
-		exist, err := conn.Table(define.FriendApply).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
+		exist, err := conn.Table(define.FriendApplyTable).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
 		if err != nil {
 			log.Error("add friend db error:%v", err)
 			continue
@@ -1207,7 +1207,7 @@ func ReqRefreshTuijianFriend(ctx global.IPlayer, pl *model.Player, req *proto_fr
 		//是否申请
 		conn := rdb.Mysql
 		// 检查是否已经有好友申请
-		exist, err := conn.Table(define.FriendApply).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
+		exist, err := conn.Table(define.FriendApplyTable).Where("player_id = ? AND target_id = ?", pl.Id, playerInfo.Id).Exist()
 		if err != nil {
 			log.Error("add friend db error:%v", err)
 			continue

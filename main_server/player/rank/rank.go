@@ -3,7 +3,6 @@ package rank
 import (
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"strconv"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -14,6 +13,8 @@ import (
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 	"xfx/proto/proto_rank"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // ReqRankingData 请求排行榜数据

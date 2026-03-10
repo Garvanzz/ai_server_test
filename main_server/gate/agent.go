@@ -103,7 +103,7 @@ func (a *Agent) OnStart(ctx agent.Context) {
 }
 
 func (a *Agent) OnStop() { // actor stop call
-	log.Debug("* agent %d actor stopped", a.GetSession().ID())
+	log.Debug("* agent session:%v playerId:%v actor stopped", a.GetSession().ID(), a.playerId)
 	a.GetSession().Close()
 
 	if a.playerId != 0 {
@@ -136,6 +136,8 @@ func (a *Agent) Close() error {
 func (a *Agent) OnTick(delta time.Duration) {
 	a.pingTime -= delta
 	if a.pingTime <= 0 {
+		// 玩家超时未 ping，踢下线
+		log.Info("* gate agent[session:%v playerId:%v] kick: ping timeout", a.GetSession().ID(), a.playerId)
 		// Session.Close → CloseCallback → agent.Close → Context.Stop → OnStop → Disconnect
 		a.GetSession().Close()
 	}
@@ -147,6 +149,7 @@ func (a *Agent) OnMessage(msg any) any {
 	case *sessionmsg:
 		a.OnSessionMessage(m.msg)
 	case *proto_player.S2CKick:
+		log.Info("* gate agent[session:%v playerId:%v] kick: server notify", a.GetSession().ID(), a.playerId)
 		a.playerId = 0
 		a.playerPid = nil
 		a.Send(m)

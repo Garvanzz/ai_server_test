@@ -148,7 +148,7 @@ func (mgr *Manager) loadGuildData() {
 
 	guildDBs := make([]*model.GuildDB, 0)
 	rdb, _ := db.GetEngine()
-	err = rdb.Mysql.Table(define.TableGuild).Find(&guildDBs)
+	err = rdb.Mysql.Table(define.GuildTable).Find(&guildDBs)
 	if err != nil {
 		log.Error("load all guild info error:%v", err)
 		return
@@ -233,7 +233,7 @@ func (ent *entity) onSave() bool {
 
 	guildDB := guildToGuildDb(ent.guild)
 	if guildDB.Id == 0 { // 插入联盟信息
-		n, err := rdb.Mysql.Table(define.TableGuild).Insert(guildDB)
+		n, err := rdb.Mysql.Table(define.GuildTable).Insert(guildDB)
 		if err != nil {
 			log.Error("insert guild db error: %v", err)
 			return false
@@ -246,7 +246,7 @@ func (ent *entity) onSave() bool {
 
 		ent.guild.Id = guildDB.Id
 	} else {
-		_, err := rdb.Mysql.Table(define.TableGuild).Where("id = ?", guildDB.Id).AllCols().Update(guildDB)
+		_, err := rdb.Mysql.Table(define.GuildTable).Where("id = ?", guildDB.Id).AllCols().Update(guildDB)
 		if err != nil {
 			log.Error("update guild db error: %v", err)
 			return false
@@ -305,7 +305,7 @@ func (ent *entity) addGuildLog(action int32, dbId []int64, params ...string) {
 	guildLog.DbId = dbId
 
 	rdb, _ := db.GetEngine()
-	n, err := rdb.Mysql.Table(define.TableGuildLog).Insert(guildLog)
+	n, err := rdb.Mysql.Table(define.GuildLogTable).Insert(guildLog)
 	if err != nil {
 		log.Error("insert guild log error:%v,%v", err, guildLog)
 		return
@@ -376,7 +376,7 @@ func (ent *entity) ProtoTomemInfo(info *proto_guild.MemberInfo) *model.Member {
 // 删除帮会数据
 func deleteGuildData(guildId int64) {
 	rdb, _ := db.GetEngine()
-	_, err := rdb.Mysql.Table(define.TableGuildLog).Where("guild_id = ?", guildId).Delete()
+	_, err := rdb.Mysql.Table(define.GuildLogTable).Where("guild_id = ?", guildId).Delete()
 	if err != nil {
 		log.Error("delete guild log error:%,n:%v", err)
 		return

@@ -1,17 +1,22 @@
 package db
 
 import (
-	"github.com/gomodule/redigo/redis"
 	"time"
 	"xfx/core/db"
 	"xfx/gm_server/conf"
+	"xfx/pkg/env"
+
+	"github.com/gomodule/redigo/redis"
+
 	"xorm.io/xorm"
 )
 
 var AccountDb *xorm.Engine
 
 func init() {
-	AccountDb = db.NewMysqlEngine(conf.Server.AccountAddr)
+	AccountDb = db.NewMysqlEngine(&env.Mysql{
+		CommonAddr: conf.Server.AccountAddr,
+	})
 }
 
 type RedisEngine struct {
