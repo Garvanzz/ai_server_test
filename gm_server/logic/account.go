@@ -2,7 +2,6 @@ package logic
 
 import (
 	"encoding/json"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,42 +14,6 @@ import (
 )
 
 const maxPlayerListLimit = 500 // 无 uid 时单次最多返回账号数，防止全表扫
-
-// HTTPRetGame 游戏接口统一返回格式，HTTP 状态码固定 200，业务码在 body 的 errcode
-func HTTPRetGame(c *gin.Context, code int, message string, data ...map[string]interface{}) {
-
-	ret := gin.H{
-		"errcode": code,
-		"errmsg":  message,
-	}
-	if data != nil && len(data) > 0 {
-		//只认第一个data 其他直接抛 用...主要是为了省参
-		for k, v := range data[0] {
-			ret[k] = v
-		}
-	}
-	log.Debug(" ret %v", ret)
-	c.JSON(http.StatusOK, ret)
-
-}
-
-// HTTPRet 通用 HTTP JSON 返回
-func HTTPRet(c *gin.Context, code int, message string, data ...map[string]interface{}) {
-	if data != nil && len(data) > 0 {
-		//这里只走data[0] ...只是为了省参用 后续多参默认无效
-		c.JSON(code, gin.H{
-			"code":    code,
-			"message": message,
-			"data":    data[0],
-		})
-	} else {
-		c.JSON(code, gin.H{
-			"code":    code,
-			"message": message,
-		})
-	}
-
-}
 
 // 获取玩家信息（仅 MySQL account 表）
 func GmGetPlayerInfo(c *gin.Context) {

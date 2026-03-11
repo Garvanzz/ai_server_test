@@ -29,17 +29,18 @@ CREATE TABLE IF NOT EXISTS account (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '玩家账号';
 
 CREATE TABLE IF NOT EXISTS game_server (
-  id               BIGINT       NOT NULL PRIMARY KEY,
-  channel          INT          NOT NULL DEFAULT 0,
-  ip               VARCHAR(64)  NOT NULL DEFAULT '',
-  port             INT          NOT NULL DEFAULT 0,
-  server_state     TINYINT      NOT NULL DEFAULT 0,
-  open_server_time BIGINT       NOT NULL DEFAULT 0,
-  stop_server_time BIGINT       NOT NULL DEFAULT 0,
-  group_id         INT          NOT NULL DEFAULT 0,
-  server_name      VARCHAR(64)  NOT NULL DEFAULT '',
-  exe_name         VARCHAR(128) NOT NULL DEFAULT '',
-  exe_path         VARCHAR(255) NOT NULL DEFAULT ''
+  id                   BIGINT       NOT NULL PRIMARY KEY,
+  channel              INT          NOT NULL DEFAULT 0,
+  ip                   VARCHAR(64)  NOT NULL DEFAULT '',
+  port                 INT          NOT NULL DEFAULT 0,
+  server_state         TINYINT      NOT NULL DEFAULT 0,
+  open_server_time     BIGINT       NOT NULL DEFAULT 0,
+  stop_server_time     BIGINT       NOT NULL DEFAULT 0,
+  group_id             INT          NOT NULL DEFAULT 0,
+  server_name          VARCHAR(64)  NOT NULL DEFAULT '',
+  exe_name             VARCHAR(128) NOT NULL DEFAULT '',
+  exe_path             VARCHAR(255) NOT NULL DEFAULT '',
+  main_server_http_url VARCHAR(128) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '区服表';
 
 CREATE TABLE IF NOT EXISTS server_group (

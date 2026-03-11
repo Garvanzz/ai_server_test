@@ -9,13 +9,9 @@ import (
 )
 
 var Server struct {
-	Log           *env.Log
-	RedisAddr     string
-	RedisPassword string
-	RedisDbNum    int
-	HttpPort      string
-	AccountAddr   string
-	// MainServerHttpUrl main_server 的 HTTP 基础地址，例如 http://127.0.0.1:9505
+	Log               *env.Log
+	HttpPort          string
+	AccountAddr       string
 	MainServerHttpUrl string
 }
 

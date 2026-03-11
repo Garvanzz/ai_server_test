@@ -197,25 +197,20 @@ type GMResServerCenter struct {
 	ServerState string
 }
 
-// GMRespServerItem 区服详情（含关联游戏服、进程状态），数据来自 game_server 区服行
+// GMRespServerItem 区服详情（含进程状态），数据来自 game_server 区服行
 type GMRespServerItem struct {
-	Id             int64  `json:"id"`
-	ServerName     string `json:"serverName"`
-	GroupId        int    `json:"groupId"`        // 区服组 ID
-	GroupName      string `json:"groupName"`      // 区服组名称
-	Channel        int    `json:"channel"`
-	Ip             string `json:"ip"`
-	Port           int    `json:"port"`
-	RedisPort          int    `json:"redisPort"`
-	MysqlAddr          string `json:"mysqlAddr"`
-	LoginServerUrl     string `json:"loginServerUrl"`
-	MainServerHttpUrl  string `json:"mainServerHttpUrl"`  // 大厅服 HTTP 地址，GM 转发用
-	ServerState        string `json:"serverState"`        // 正常/拥挤/爆满/维护/未开服/停服
-	OpenServerTime string `json:"openServerTime"`
-	StopServerTime string `json:"stopServerTime"`
-	RunState       string `json:"runState"`        // 运行中/离线（大厅服进程）
-	GameServer     string `json:"gameServer"`     // 关联游戏服名称
-	GameServerId   int    `json:"gameServerId"`   // 关联游戏服 ID
+	Id                int64  `json:"id"`
+	ServerName        string `json:"serverName"`
+	GroupId           int    `json:"groupId"`           // 区服组 ID
+	GroupName         string `json:"groupName"`         // 区服组名称
+	Channel           int    `json:"channel"`
+	Ip                string `json:"ip"`
+	Port              int    `json:"port"`
+	MainServerHttpUrl string `json:"mainServerHttpUrl"` // 大厅服 HTTP 地址，GM 转发用
+	ServerState       string `json:"serverState"`       // 正常/拥挤/爆满/维护/未开服/停服
+	OpenServerTime    string `json:"openServerTime"`
+	StopServerTime    string `json:"stopServerTime"`
+	RunState          string `json:"runState"` // 运行中/离线（大厅服进程）
 }
 
 // GMGameRespServerItem 游戏服进程简要信息（game_server 表 group_id=0）

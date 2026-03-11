@@ -54,8 +54,18 @@ func GmLogin(c *gin.Context) {
 		})
 }
 
-// GmLogout GM 登出，清除登录态
+// GmLogout GM 登出，清除服务端 token，使当前 token 立即失效
 func GmLogout(c *gin.Context) {
+	token := c.GetHeader(TokenHeaderName)
+	if token != "" {
+		player := new(dto.GmAccount)
+		player.Token = token
+		has, err := db.AccountDb.Table(define.AdminTable).Where("token = ?", token).Get(player)
+		if err == nil && has {
+			player.Token = ""
+			_, _ = db.AccountDb.Table(define.AdminTable).Where("user_name = ?", player.UserName).MustCols("token").Update(player)
+		}
+	}
 	HTTPRetGame(c, SUCCESS, "success")
 }
 
@@ -66,7 +76,7 @@ func GmAdminUserInfo(c *gin.Context) {
 	var gmUserInfo dto.GMUserInfo
 	err := json.Unmarshal(rawData, &gmUserInfo)
 	if err != nil {
-		log.Fatal("解析失败:", err)
+		log.Error("解析失败: %v", err)
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
 	}
@@ -110,12 +120,5 @@ func GmAdminUserInfo(c *gin.Context) {
 		map[string]any{
 			"username":    player.Name,
 			"permissions": permiss,
-			"avatar": []string{
-				"https://gcore.jsdelivr.net/gh/zxwk1998/image/avatar/avatar_1.png",
-				"https://gcore.jsdelivr.net/gh/zxwk1998/image/avatar/avatar_2.png",
-				"https://gcore.jsdelivr.net/gh/zxwk1998/image/avatar/avatar_3.png",
-				"https://gcore.jsdelivr.net/gh/zxwk1998/image/avatar/avatar_4.png",
-				"https://gcore.jsdelivr.net/gh/zxwk1998/image/avatar/avatar_5.png",
-			},
 		})
 }

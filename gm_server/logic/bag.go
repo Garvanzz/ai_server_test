@@ -2,12 +2,10 @@ package logic
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
-	"xfx/core/config"
 	"xfx/core/model"
 	"xfx/gm_server/dto"
 	"xfx/pkg/log"
@@ -73,21 +71,11 @@ func GmAddItem(c *gin.Context) {
 		return
 	}
 
-	itemCfgs := config.Item.All()
-	itemCfg, ok := itemCfgs[int64(req.ItemId)]
-	if !ok {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, fmt.Sprintf("item %d not found in config", req.ItemId))
-		return
-	}
-
+	// 道具 id 校验与 Type 由 main_server 根据 config 完成，gm_server 只转发
 	gmReq := model.GMGrantItemReq{
 		PlayerId: playerId,
 		Items: []model.MailItem{
-			{
-				Id:   int32(req.ItemId),
-				Num:  int32(req.ItemNum),
-				Type: itemCfg.Type,
-			},
+			{Id: int32(req.ItemId), Num: int32(req.ItemNum), Type: 0},
 		},
 	}
 	js, _ := json.Marshal(gmReq)
@@ -124,20 +112,8 @@ func GmOneKeyAddItem(c *gin.Context) {
 		return
 	}
 
-	confs := config.Item.All()
-	items := make([]model.MailItem, 0, len(confs))
-	for _, v := range confs {
-		items = append(items, model.MailItem{
-			Id:   v.Id,
-			Num:  50000,
-			Type: v.Type,
-		})
-	}
-
-	gmReq := model.GMGrantItemReq{
-		PlayerId: playerId,
-		Items:    items,
-	}
+	// 一键发放全部：由 main_server 根据 config.Item 构建列表并发放
+	gmReq := model.GMGrantItemReq{PlayerId: playerId, GrantAll: true}
 	js, _ := json.Marshal(gmReq)
 	if err, _ := HttpRequestToServer(req.ServerId, js, "/gm/item"); err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())

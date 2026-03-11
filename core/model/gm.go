@@ -9,9 +9,11 @@ type GMKickReq struct {
 }
 
 // GMGrantItemReq 发放道具请求（Items 格式同邮件附件）
+// GrantAll 为 true 时表示一键发放全部配置道具，此时 Items 可为空，由游戏服从 config 构建
 type GMGrantItemReq struct {
 	PlayerId int64      `json:"player_id" binding:"required"`
-	Items    []MailItem `json:"items" binding:"required"`
+	Items    []MailItem `json:"items"`   // 单条/多条发放时必填；GrantAll 时可为空
+	GrantAll bool       `json:"grant_all"` // 一键发放全部道具时由 gm_server 设为 true
 }
 
 // GMPlayerIdReq 仅需 player_id 的 GM 请求（查背包/装备/关卡/英雄/玩家游戏信息等）
