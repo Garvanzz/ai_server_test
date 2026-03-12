@@ -598,7 +598,7 @@ func (m *C2SLogin) GetAccount() string {
 }
 
 type S2CLogin struct {
-	Timestamp            int64                    `protobuf:"varint,1,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
+	Timestamp            int64                    `protobuf:"varint,1,opt,name=CreateTime,proto3" json:"CreateTime,omitempty"`
 	EndTimeUnix          int64                    `protobuf:"varint,2,opt,name=EndTimeUnix,proto3" json:"EndTimeUnix,omitempty"`
 	ZoneOffset           int64                    `protobuf:"varint,3,opt,name=ZoneOffset,proto3" json:"ZoneOffset,omitempty"`
 	State                proto_public.CommonState `protobuf:"varint,4,opt,name=State,proto3,enum=Proto.Public.CommonState" json:"State,omitempty"`

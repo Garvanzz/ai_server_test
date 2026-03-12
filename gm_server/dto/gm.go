@@ -217,10 +217,8 @@ type GMRespServerItem struct {
 type GMGameRespServerItem struct {
 	Id         int64  `json:"id"`
 	ServerName string `json:"serverName"`
-	Ip         string `json:"ip"`
-	Port       int    `json:"port"`
-	RedisPort  int    `json:"redisPort"`
-	MysqlAddr  string `json:"mysqlAddr"`
+	ExeName    string `json:"exeName"`
+	ExePath    string `json:"exePath"`
 	RunState   string `json:"runState"`
 }
 

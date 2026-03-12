@@ -14,6 +14,9 @@ import (
 // path 示例："/gm/mail"、"/gm/player/game-info"
 func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, string) {
 	baseURL := getMainServerURL(serverId)
+	if baseURL == "" {
+		return fmt.Errorf("main_server URL not configured"), ""
+	}
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
@@ -21,7 +24,7 @@ func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, str
 
 	// 创建自定义客户端
 	client := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 30, // 增加超时时间到30秒
 	}
 
 	// 创建请求
@@ -32,6 +35,7 @@ func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, str
 
 	// 设置请求头
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	// 发送请求
 	resp, err := client.Do(req)
@@ -46,6 +50,11 @@ func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, str
 		return fmt.Errorf("read response failed: %w", err), ""
 	}
 
+	// 检查 HTTP 状态码
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http status %d: %s", resp.StatusCode, string(body)), string(body)
+	}
+
 	// main_server 的 GM 接口统一通过 HTTPRetGame 返回 {errcode, errmsg, ...}
 	var wrapper struct {
 		ErrCode int    `json:"errcode"`
@@ -58,9 +67,4 @@ func HttpRequestToServer(serverId int, jsonData []byte, path string) (error, str
 	}
 
 	return nil, string(body)
-}
-
-// HttpRequest 向默认 main_server 发送 GM 请求（serverId=0，使用配置默认 URL），兼容旧调用
-func HttpRequest(jsonData []byte, path string) (error, string) {
-	return HttpRequestToServer(0, jsonData, path)
 }

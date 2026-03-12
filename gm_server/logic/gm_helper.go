@@ -14,22 +14,38 @@ import (
 
 // getMainServerURL 根据区服 id 从 game_server 表取 main_server HTTP 地址；未配置或 serverId<=0 时用 conf 默认
 func getMainServerURL(serverId int) string {
+	var baseURL string
 	if serverId <= 0 {
-		return defaultMainServerBaseURL()
+		baseURL = defaultMainServerBaseURL()
+	} else {
+		var item model.ServerItem
+		ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+		if err != nil || !ok {
+			baseURL = defaultMainServerBaseURL()
+		} else if strings.TrimSpace(item.MainServerHttpUrl) == "" {
+			baseURL = defaultMainServerBaseURL()
+		} else {
+			baseURL = strings.TrimRight(strings.TrimSpace(item.MainServerHttpUrl), "/")
+		}
 	}
-	var item model.ServerItem
-	ok, _ := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
-	if !ok || strings.TrimSpace(item.MainServerHttpUrl) == "" {
-		return defaultMainServerBaseURL()
+	// 确保 URL 有 http:// 或 https:// 前缀
+	if baseURL != "" && !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "http://" + baseURL
 	}
-	return strings.TrimRight(strings.TrimSpace(item.MainServerHttpUrl), "/")
+	return baseURL
 }
 
 func defaultMainServerBaseURL() string {
-	if u := strings.TrimSpace(conf.Server.MainServerHttpUrl); u != "" {
-		return strings.TrimRight(u, "/")
+	u := strings.TrimSpace(conf.Server.MainServerHttpUrl)
+	if u == "" {
+		return "http://127.0.0.1:9505"
 	}
-	return "http://127.0.0.1:9505"
+	u = strings.TrimRight(u, "/")
+	// 确保 URL 有 http:// 或 https:// 前缀
+	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		u = "http://" + u
+	}
+	return u
 }
 
 // getPlayerIdByServerAndUid 根据 server_id、uid 查 Account 得到 RedisId（player_id），供转发 main_server 用

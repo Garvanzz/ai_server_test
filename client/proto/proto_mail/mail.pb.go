@@ -30,7 +30,7 @@ type Mail struct {
 	Item                 []*proto_public.Item `protobuf:"bytes,5,rep,name=Item,proto3" json:"Item,omitempty"`
 	GotItem              bool                 `protobuf:"varint,6,opt,name=GotItem,proto3" json:"GotItem,omitempty"`
 	CfgId                int32                `protobuf:"varint,7,opt,name=CfgId,proto3" json:"CfgId,omitempty"`
-	Params               []string             `protobuf:"bytes,8,rep,name=Params,proto3" json:"Params,omitempty"`
+	Params               []string             `protobuf:"bytes,8,rep,name=Content,proto3" json:"Content,omitempty"`
 	ExpireTime           int64                `protobuf:"varint,9,opt,name=ExpireTime,proto3" json:"ExpireTime,omitempty"`
 	SenderName           string               `protobuf:"bytes,10,opt,name=SenderName,proto3" json:"SenderName,omitempty"`
 	MailType             int32                `protobuf:"varint,11,opt,name=MailType,proto3" json:"MailType,omitempty"`

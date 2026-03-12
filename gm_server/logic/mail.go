@@ -16,11 +16,26 @@ import (
 func GmCreateAdminMail(c *gin.Context) {
 	var Info dto.GmMailInfo
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err: "+err.Error())
 		return
 	}
 
-	log.Debug(" Info %v", Info)
+	log.Debug("Info %v", Info)
+
+	// 参数校验
+	if Info.Server <= 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "server required")
+		return
+	}
+	if len(Info.Title) == 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "title required")
+		return
+	}
+	if len(Info.Content) == 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "content required")
+		return
+	}
+
 	mail := new(model.GMMailInfo)
 	mail.CreatorName = c.ClientIP()
 	mail.CnContent = Info.Content
@@ -105,13 +120,14 @@ func GmCreateAdminMail(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(mail)
-	// 按区服转发到对应 main_server；Server<=0 时用配置默认 URL
-	err, _ := HttpRequestToServer(int(Info.Server), js, "/gm/mail")
+	// 按区服转发到对应 main_server；Server<=0 时返回错误
+	err, respStr := HttpRequestToServer(int(Info.Server), js, "/gm/mail")
 	if err != nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "fail")
-	} else {
-		HTTPRetGame(c, SUCCESS, "success")
+		log.Error("GmCreateAdminMail forward err: %v, resp: %s", err, respStr)
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "forward failed: "+err.Error())
+		return
 	}
+	HTTPRetGame(c, SUCCESS, "success")
 	////全服
 	//if Info.Fullserversend {
 	//

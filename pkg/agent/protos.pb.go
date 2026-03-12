@@ -594,7 +594,7 @@ func (this *PingMessage) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PingMessage{`,
-		`Timestamp:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
+		`CreateTime:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -604,7 +604,7 @@ func (this *PongMessage) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PongMessage{`,
-		`Timestamp:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
+		`CreateTime:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -826,7 +826,7 @@ func (m *PingMessage) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CreateTime", wireType)
 			}
 			m.Timestamp = 0
 			for shift := uint(0); ; shift += 7 {
@@ -895,7 +895,7 @@ func (m *PongMessage) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CreateTime", wireType)
 			}
 			m.Timestamp = 0
 			for shift := uint(0); ; shift += 7 {

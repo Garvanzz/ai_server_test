@@ -2,10 +2,11 @@ package model
 
 // 好友申请
 type FriendApply struct {
-	Id       int32
-	PlayerId int64 // 申请发起人
-	TargetId int64
-	Msg      string
+	Id         int32
+	PlayerId   int64 // 申请发起人
+	TargetId   int64
+	Msg        string
+	CreateTime int64
 }
 
 // 好友赠礼, //Redis每天0点删除

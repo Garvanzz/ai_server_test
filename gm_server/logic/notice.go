@@ -16,27 +16,30 @@ import (
 func GmSendNotice(c *gin.Context) {
 	var Info model.NoticeItem
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err: "+err.Error())
 		return
 	}
 
-	log.Debug(" Info %v", Info)
+	log.Debug("Info %v", Info)
 
 	if len(Info.Content) <= 0 {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "content required")
 		return
 	}
 
-	item := model.NoticeOpt{
+	// 使用正确的结构体，包含所有字段
+	item := model.NoticeItem{
 		Channel:    Info.Channel,
 		ServerId:   Info.ServerId,
+		Title:      Info.Title,
 		Content:    Info.Content,
 		ExpireTime: Info.ExpireTime,
 		EffectTime: time.Now().Unix(),
 	}
 	_, err := db.AccountDb.Table(define.NoticeTable).Insert(&item)
 	if err != nil {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		log.Error("GmSendNotice insert err: %v", err)
+		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 
@@ -55,19 +58,24 @@ func GmSendNotice(c *gin.Context) {
 func GmSendHorse(c *gin.Context) {
 	var Info model.HorseItem
 	if err := c.ShouldBindJSON(&Info); err != nil {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err1")
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err: "+err.Error())
 		return
 	}
 
-	log.Debug(" horse Info %v", Info)
+	log.Debug("horse Info %v", Info)
 
 	if len(Info.Content) == 0 {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "content required")
 		return
 	}
 
+	if Info.ServerId <= 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
+		return
+	}
+
 	js, _ := json.Marshal(Info)
-	// 按区服转发到对应 main_server；ServerId<=0 时用配置默认 URL
+	// 按区服转发到对应 main_server
 	err, _ := HttpRequestToServer(int(Info.ServerId), js, "/gm/horse")
 	if err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())

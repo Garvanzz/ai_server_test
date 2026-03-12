@@ -3,8 +3,8 @@ package model
 import (
 	"encoding/json"
 	"time"
-	"xfx/pkg/utils"
 	"xfx/core/config/conf"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_mail"
 	"xfx/proto/proto_public"
 )
@@ -85,7 +85,7 @@ func (mail *PlayerMailInfo) ToProto() *proto_mail.Mail {
 
 	var attachmentInfo *proto_public.AttachmentOption
 	if mail.IsHasAttachment && len(mail.Params) >= 2 {
-		// 从 Params[1] 反序列化 AttachmentData
+		// 从 Content[1] 反序列化 AttachmentData
 		var attachmentData AttachmentData
 		orderId := utils.MustParseInt64(mail.Params[0])
 		err := json.Unmarshal([]byte(mail.Params[1]), &attachmentData)
