@@ -8,19 +8,20 @@ import (
 	"xfx/pkg/log"
 )
 
-type HuaguoshanModClient struct {
+type ParadiseModClient struct {
 	invoke Invoker
 	Type   string
 }
 
-func HuaguoshanClient(invoker Invoker) HuaguoshanModClient {
-	return HuaguoshanModClient{
+// ParadiseClient returns a ParadiseModClient for the given invoker
+func ParadiseClient(invoker Invoker) ParadiseModClient {
+	return ParadiseModClient{
 		invoke: invoker,
-		Type:   define.ModuleHuaguoshan,
+		Type:   define.ModuleParadise,
 	}
 }
 
-func (c HuaguoshanModClient) CreateInvite(senderId int64, senderName string, receiverId int64) (*model.PartnerInvite) {
+func (c ParadiseModClient) CreateInvite(senderId int64, senderName string, receiverId int64) (*model.PartnerInvite) {
 	result, err := c.invoke.Invoke(c.Type, "CreateInvite", senderId, senderName, receiverId)
 	if err != nil {
 		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "CreateInvite", err)
@@ -39,7 +40,7 @@ func (c HuaguoshanModClient) CreateInvite(senderId int64, senderName string, rec
 	return v
 }
 
-func (c HuaguoshanModClient) GetInvite(inviteId int64) (*model.PartnerInvite) {
+func (c ParadiseModClient) GetInvite(inviteId int64) (*model.PartnerInvite) {
 	result, err := c.invoke.Invoke(c.Type, "GetInvite", inviteId)
 	if err != nil {
 		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetInvite", err)
@@ -58,7 +59,7 @@ func (c HuaguoshanModClient) GetInvite(inviteId int64) (*model.PartnerInvite) {
 	return v
 }
 
-func (c HuaguoshanModClient) GetReceiverInvites(receiverId int64) ([]*model.PartnerInvite) {
+func (c ParadiseModClient) GetReceiverInvites(receiverId int64) ([]*model.PartnerInvite) {
 	result, err := c.invoke.Invoke(c.Type, "GetReceiverInvites", receiverId)
 	if err != nil {
 		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetReceiverInvites", err)
@@ -77,7 +78,7 @@ func (c HuaguoshanModClient) GetReceiverInvites(receiverId int64) ([]*model.Part
 	return v
 }
 
-func (c HuaguoshanModClient) ProcessInvite(inviteId int64, accept bool) (*model.PartnerInvite, error) {
+func (c ParadiseModClient) ProcessInvite(inviteId int64, accept bool) (*model.PartnerInvite, error) {
 	result, err := c.invoke.Invoke(c.Type, "ProcessInvite", inviteId, accept)
 	if err != nil {
 		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "ProcessInvite", err)

@@ -1,4 +1,4 @@
-package huaguoshan
+package paradise
 
 import (
 	"xfx/pkg/utils"
@@ -21,12 +21,12 @@ func ReqStartMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguosha
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Wine == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Wine == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否正在酿造
-	if pl.Huaguoshan.Wine.CurMakingWineId > 0 {
+	if pl.Paradise.Wine.CurMakingWineId > 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 		ctx.Send(resp)
 		return
@@ -34,7 +34,7 @@ func ReqStartMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguosha
 
 	// 获取酒架配置
 	wineRackConfs := config.WineRack.All()
-	wineRackConf := wineRackConfs[int64(pl.Huaguoshan.Wine.CurWineRack)]
+	wineRackConf := wineRackConfs[int64(pl.Paradise.Wine.CurWineRack)]
 	if !wineRackConf.CanMakeWineType(req.Type) {
 		log.Error("CanMakeWineType ： %v, %v", req.Type, wineRackConf.Type)
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
@@ -68,14 +68,14 @@ func ReqStartMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguosha
 
 	// 开始酿造
 	now := utils.Now().Unix()
-	pl.Huaguoshan.Wine.CurMakingWineId = req.Id
-	pl.Huaguoshan.Wine.CurMakingWineStarTime = int32(now)
-	pl.Huaguoshan.Wine.CurMakingWineEndTime = int32(now + int64(wineRackConf.MakeTime))
+	pl.Paradise.Wine.CurMakingWineId = req.Id
+	pl.Paradise.Wine.CurMakingWineStarTime = int32(now)
+	pl.Paradise.Wine.CurMakingWineEndTime = int32(now + int64(wineRackConf.MakeTime))
 
 	// 返回最新状态
-	resp.Opt = pl.Huaguoshan.Wine.ToMakeWineOption()
+	resp.Opt = pl.Paradise.Wine.ToMakeWineOption()
 
-	log.Debug("Player %d start make wine type=%d, endTime=%d", pl.Id, req.Type, pl.Huaguoshan.Wine.CurMakingWineEndTime)
+	log.Debug("Player %d start make wine type=%d, endTime=%d", pl.Id, req.Type, pl.Paradise.Wine.CurMakingWineEndTime)
 	ctx.Send(resp)
 }
 
@@ -86,30 +86,30 @@ func ReqCutMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguoshan.
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Wine == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Wine == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否正在酿造
-	if pl.Huaguoshan.Wine.CurMakingWineId > 0 {
+	if pl.Paradise.Wine.CurMakingWineId > 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 		ctx.Send(resp)
 		return
 	}
 
-	if !utils.ContainsInt32(pl.Huaguoshan.Wine.OwerWineRack, req.RackId) {
+	if !utils.ContainsInt32(pl.Paradise.Wine.OwerWineRack, req.RackId) {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
-	pl.Huaguoshan.Wine.CurWineRack = req.RackId
+	pl.Paradise.Wine.CurWineRack = req.RackId
 
 	// 返回最新状态
-	resp.Opt = pl.Huaguoshan.Wine.ToMakeWineOption()
+	resp.Opt = pl.Paradise.Wine.ToMakeWineOption()
 	resp.Code = proto_public.CommonErrorCode_ERR_OK
 
-	log.Debug("Player %d cut, endTime=%d", pl.Id, pl.Huaguoshan.Wine.CurMakingWineEndTime)
+	log.Debug("Player %d cut, endTime=%d", pl.Id, pl.Paradise.Wine.CurMakingWineEndTime)
 	ctx.Send(resp)
 }
 
@@ -120,22 +120,22 @@ func ReqCollectMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Wine == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Wine == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否正在酿造
-	if pl.Huaguoshan.Wine.CurMakingWineId <= 0 {
+	if pl.Paradise.Wine.CurMakingWineId <= 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
 
 	//检查时间
-	if pl.Huaguoshan.Wine.CurMakingWineId > 0 {
+	if pl.Paradise.Wine.CurMakingWineId > 0 {
 		now := utils.Now().Unix()
 		// 如果已完成，自动收取
-		if now >= int64(pl.Huaguoshan.Wine.CurMakingWineEndTime) {
+		if now >= int64(pl.Paradise.Wine.CurMakingWineEndTime) {
 			autoCollectWine(ctx, pl)
 		} else {
 			// 正在酿造中
@@ -146,34 +146,34 @@ func ReqCollectMakeWine(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 	}
 
 	// 返回最新状态
-	resp.Opt = pl.Huaguoshan.Wine.ToMakeWineOption()
+	resp.Opt = pl.Paradise.Wine.ToMakeWineOption()
 
-	log.Debug("Player %d start , endTime=%d", pl.Id, pl.Huaguoshan.Wine.CurMakingWineEndTime)
+	log.Debug("Player %d start , endTime=%d", pl.Id, pl.Paradise.Wine.CurMakingWineEndTime)
 	ctx.Send(resp)
 }
 
 // autoCollectWine 自动收取酿造完成的酒
 func autoCollectWine(ctx global.IPlayer, pl *model.Player) {
-	if pl.Huaguoshan.Wine.CurMakingWineId == 0 {
+	if pl.Paradise.Wine.CurMakingWineId == 0 {
 		return
 	}
 
-	wineItemId := pl.Huaguoshan.Wine.CurMakingWineId
+	wineItemId := pl.Paradise.Wine.CurMakingWineId
 	awards := []conf.ItemE{
 		conf.ItemE{
 			ItemType: define.ItemTypeItem,
 			ItemNum:  1,
-			ItemId:   pl.Huaguoshan.Wine.CurMakingWineId,
+			ItemId:   pl.Paradise.Wine.CurMakingWineId,
 		},
 	}
 
 	bag.AddAward(ctx, pl, awards, true)
 
 	// 清空酿造状态
-	pl.Huaguoshan.Wine.CurMakingWineId = 0
-	pl.Huaguoshan.Wine.CurWineRack = 0
-	pl.Huaguoshan.Wine.CurMakingWineStarTime = 0
-	pl.Huaguoshan.Wine.CurMakingWineEndTime = 0
+	pl.Paradise.Wine.CurMakingWineId = 0
+	pl.Paradise.Wine.CurWineRack = 0
+	pl.Paradise.Wine.CurMakingWineStarTime = 0
+	pl.Paradise.Wine.CurMakingWineEndTime = 0
 
 	log.Debug("Player %d auto collect wine, wineId=%d", pl.Id, wineItemId)
 }

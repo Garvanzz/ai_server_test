@@ -13,7 +13,7 @@ import (
 	"xfx/main_server/logic/battle"
 	"xfx/main_server/logic/common"
 	"xfx/main_server/logic/guild"
-	"xfx/main_server/logic/huaguoshan"
+	"xfx/main_server/logic/paradise"
 	"xfx/main_server/logic/login"
 	"xfx/main_server/logic/mail"
 	"xfx/main_server/logic/match"
@@ -50,7 +50,7 @@ func main() {
 		battle.Module(),
 		activity.Module(),
 		transaction.Module(),
-		huaguoshan.Module(),
+		paradise.Module(),
 	)
 }
 
@@ -62,6 +62,9 @@ func startup(app module.App) {
 	utils.SetTimeOffsetEnabled(app.GetEnv().Debug)
 
 	db.Start(app)
+
+	// 从 Redis 加载之前保存的时间偏移
+	utils.LoadTimeOffsetFromRedis()
 
 	//加载敏感词库
 	sensitive.Init()

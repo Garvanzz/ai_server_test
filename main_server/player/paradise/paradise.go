@@ -1,4 +1,4 @@
-package huaguoshan
+package paradise
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ import (
 )
 
 func Init(pl *model.Player) {
-	pl.Huaguoshan = &model.Huaguoshan{
-		Partner: &model.HuaguoshanPartner{
+	pl.Paradise = &model.Paradise{
+		Partner: &model.ParadisePartner{
 			PartnerId:          0,
 			Intimacy:           0,
 			IntimacyLevel:      0,
@@ -32,14 +32,14 @@ func Init(pl *model.Player) {
 			UnlockedBuffs:      []int32{},
 			UnlockedHeadFrames: []int32{},
 		},
-		Wine: &model.HuaguoshanWine{
+			Wine: &model.ParadiseWine{
 			CurMakingWineId:       0,
 			CurMakingWineStarTime: 0,
 			CurMakingWineEndTime:  0,
 			CurWineRack:           101,
 			OwerWineRack:          []int32{101},
 		},
-		Peach: &model.HuaguoshanPeach{
+			Peach: &model.ParadisePeach{
 			CurTreeId:              0,
 			CurPlantPeachStage:     0,
 			CurPlantPeachStartTime: 0,
@@ -51,14 +51,14 @@ func Init(pl *model.Player) {
 }
 
 func Save(pl *model.Player, isSync bool) {
-	j, err := json.Marshal(pl.Huaguoshan)
+	j, err := json.Marshal(pl.Paradise)
 	if err != nil {
-		log.Error("player[%v],save huaguoshan marshal error:%v", pl.Id, err)
+		log.Error("player[%v],save paradise marshal error:%v", pl.Id, err)
 		return
 	}
 
 	if isSync {
-		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerHuaguoshan, pl.Id), j)
+		db.RedisExec("SET", fmt.Sprintf("%s:%d", define.PlayerParadise, pl.Id), j)
 	} else {
 		// TODO: 异步存储
 		//global.ServerG.GetDBEngine().Request(p, EVENTYPE_DB_RET_SET_SHOP, int64(0), "SET", fmt.Sprintf("shop:%d", p.dbId), j)
@@ -66,9 +66,9 @@ func Save(pl *model.Player, isSync bool) {
 }
 
 func Load(pl *model.Player) {
-	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerHuaguoshan, pl.Id))
+	reply, err := db.RedisExec("GET", fmt.Sprintf("%s:%d", define.PlayerParadise, pl.Id))
 	if err != nil {
-		log.Error("player[%v],load huaguoshan error:%v", pl.Id, err)
+		log.Error("player[%v],load paradise error:%v", pl.Id, err)
 		return
 	}
 
@@ -77,12 +77,12 @@ func Load(pl *model.Player) {
 		return
 	}
 
-	m := new(model.Huaguoshan)
+	m := new(model.Paradise)
 	err = json.Unmarshal(reply.([]byte), &m)
 	if err != nil {
-		log.Error("player[%v],load huaguoshan unmarshal error:%v", pl.Id, err)
+		log.Error("player[%v],load paradise unmarshal error:%v", pl.Id, err)
 	}
-	pl.Huaguoshan = m
+	pl.Paradise = m
 
 	// TODO:load new tasks
 }
@@ -92,9 +92,9 @@ func ReqInitHuaguoshan(ctx global.IPlayer, pl *model.Player, req *proto_huaguosh
 	resp := &proto_huaguoshan.S2CInitHuaguoshan{}
 
 	// 初始化花果山数据(如果不存在)
-	if pl.Huaguoshan == nil {
-		pl.Huaguoshan = &model.Huaguoshan{
-			Partner: &model.HuaguoshanPartner{
+	if pl.Paradise == nil {
+		pl.Paradise = &model.Paradise{
+			Partner: &model.ParadisePartner{
 				PartnerId:          0,
 				Intimacy:           0,
 				IntimacyLevel:      0,
@@ -110,14 +110,14 @@ func ReqInitHuaguoshan(ctx global.IPlayer, pl *model.Player, req *proto_huaguosh
 				UnlockedBuffs:      []int32{},
 				UnlockedHeadFrames: []int32{},
 			},
-			Wine: &model.HuaguoshanWine{
+			Wine: &model.ParadiseWine{
 				CurMakingWineId:       0,
 				CurMakingWineStarTime: 0,
 				CurMakingWineEndTime:  0,
 				CurWineRack:           101,
 				OwerWineRack:          []int32{101},
 			},
-			Peach: &model.HuaguoshanPeach{
+			Peach: &model.ParadisePeach{
 				CurTreeId:              0,
 				CurPlantPeachStage:     0,
 				CurPlantPeachStartTime: 0,
@@ -129,22 +129,22 @@ func ReqInitHuaguoshan(ctx global.IPlayer, pl *model.Player, req *proto_huaguosh
 	}
 
 	// 返回伴侣信息
-	resp.HasPartner = pl.Huaguoshan.Partner.PartnerId > 0
+	resp.HasPartner = pl.Paradise.Partner.PartnerId > 0
 	if resp.HasPartner {
 		// 查询伴侣玩家信息
-		partnerInfo := getPlayerInfo(ctx, pl.Huaguoshan.Partner.PartnerId)
+		partnerInfo := getPlayerInfo(ctx, pl.Paradise.Partner.PartnerId)
 		resp.PartnerInfo = partnerInfo
 	}
 
 	// 返回酿酒数据
-	resp.Wine = pl.Huaguoshan.Wine.ToMakeWineOption()
+	resp.Wine = pl.Paradise.Wine.ToMakeWineOption()
 
 	// 检查是否完成当前阶段，如果完成则自动进入下一阶段
 	checkAndAdvanceStage(pl)
 
 	// 返回种桃数据
-	resp.Peach = pl.Huaguoshan.Peach.ToPlantPeachOption()
-	log.Debug("初始花果山数据:%v", resp)
+	resp.Peach = pl.Paradise.Peach.ToPlantPeachOption()
+	log.Debug("初始乐园数据:%v", resp)
 	ctx.Send(resp)
 }
 
@@ -159,7 +159,7 @@ func getPlayerInfo(ctx global.IPlayer, playerId int64) *proto_public.CommonPlaye
 }
 
 // checkDailyReset 检查每日重置
-func checkDailyReset(partner *model.HuaguoshanPartner) {
+func checkDailyReset(partner *model.ParadisePartner) {
 	now := utils.Now()
 	if partner.LastRelieveTime > 0 {
 		if !utils.CheckIsSameDayBySec(partner.LastGiveResetTime, now.Unix(), 0) {

@@ -6,15 +6,15 @@ import (
 	"xfx/proto/proto_public"
 )
 
-// Huaguoshan 花果山数据(玩家维度)
-type Huaguoshan struct {
-	Partner *HuaguoshanPartner `redis:"partner" json:"partner"` // 伴侣数据
-	Wine    *HuaguoshanWine    `redis:"wine" json:"wine"`       // 酿酒数据(后续实现)
-	Peach   *HuaguoshanPeach   `redis:"peach" json:"peach"`     // 种桃数据(后续实现)
+// Paradise 乐园数据(玩家维度)
+type Paradise struct {
+	Partner *ParadisePartner `redis:"partner" json:"partner"` // 伴侣数据
+	Wine    *ParadiseWine    `redis:"wine" json:"wine"`       // 酿酒数据(后续实现)
+	Peach   *ParadisePeach   `redis:"peach" json:"peach"`     // 种桃数据(后续实现)
 }
 
-// HuaguoshanPartner 伴侣数据
-type HuaguoshanPartner struct {
+// ParadisePartner 伴侣数据
+type ParadisePartner struct {
 	PartnerId          int64   `redis:"partner_id" json:"partner_id"`                     // 伴侣ID (0=无伴侣)
 	Intimacy           int32   `redis:"intimacy" json:"intimacy"`                         // 当前亲密度
 	IntimacyLevel      int32   `redis:"intimacy_level" json:"intimacy_level"`             // 亲密度等级
@@ -31,8 +31,8 @@ type HuaguoshanPartner struct {
 	UnlockedMounts     []int32 `redis:"unlocked_mounts" json:"unlocked_mounts"`           // 已解锁
 }
 
-// HuaguoshanWine 酿酒数据(后续实现)
-type HuaguoshanWine struct {
+// ParadiseWine 酿酒数据(后续实现)
+type ParadiseWine struct {
 	CurMakingWineId       int32   `redis:"cur_making_wine_id" json:"cur_making_wine_id"`
 	CurMakingWineStarTime int32   `redis:"cur_making_wine_star_time" json:"cur_making_wine_star_time"`
 	CurMakingWineEndTime  int32   `redis:"cur_making_wine_end_time" json:"cur_making_wine_end_time"`
@@ -40,8 +40,8 @@ type HuaguoshanWine struct {
 	OwerWineRack          []int32 `redis:"ower_wine_rack" json:"ower_wine_rack"`
 }
 
-// HuaguoshanPeach 种桃数据(后续实现)
-type HuaguoshanPeach struct {
+// ParadisePeach 种桃数据(后续实现)
+type ParadisePeach struct {
 	CurTreeId              int32        `redis:"cur_tree_id" json:"cur_tree_id"`
 	CurPlantPeachStage     int32        `redis:"cur_plant_peach_stage" json:"cur_plant_peach_stage"`
 	CurPlantPeachStartTime int64        `redis:"cur_plant_peach_start_time" json:"cur_plant_peach_start_time"`
@@ -62,7 +62,7 @@ type PartnerInvite struct {
 }
 
 // ToPartnerOption 转换为协议结构
-func (p *HuaguoshanPartner) ToPartnerOption(partnerInfo *proto_public.CommonPlayerInfo) *proto_huaguoshan.PartnerOption {
+func (p *ParadisePartner) ToPartnerOption(partnerInfo *proto_public.CommonPlayerInfo) *proto_huaguoshan.PartnerOption {
 	opt := &proto_huaguoshan.PartnerOption{
 		HasPartner:      p.PartnerId > 0,
 		PartnerInfo:     partnerInfo,
@@ -83,7 +83,7 @@ func (p *HuaguoshanPartner) ToPartnerOption(partnerInfo *proto_public.CommonPlay
 }
 
 // ToMakeWineOption 转换为酿酒协议(后续实现)
-func (w *HuaguoshanWine) ToMakeWineOption() *proto_huaguoshan.MakeWineOption {
+func (w *ParadiseWine) ToMakeWineOption() *proto_huaguoshan.MakeWineOption {
 	if w == nil {
 		return &proto_huaguoshan.MakeWineOption{}
 	}
@@ -97,7 +97,7 @@ func (w *HuaguoshanWine) ToMakeWineOption() *proto_huaguoshan.MakeWineOption {
 }
 
 // ToPlantPeachOption 转换为种桃协议(后续实现)
-func (p *HuaguoshanPeach) ToPlantPeachOption() *proto_huaguoshan.PlantPeachOption {
+func (p *ParadisePeach) ToPlantPeachOption() *proto_huaguoshan.PlantPeachOption {
 	if p == nil {
 		return &proto_huaguoshan.PlantPeachOption{}
 	}

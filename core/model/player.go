@@ -43,7 +43,7 @@ type Player struct {
 	Danaotiangong *Danaotiangong //大闹天宫
 	Mission       *Mission       //副本
 	Transaction   *Transaction   //交易所
-	Huaguoshan    *Huaguoshan    //花果山
+	Paradise      *Paradise      //乐园
 	Cdkey         *PlayerCdkey    //兑换码
 }
 

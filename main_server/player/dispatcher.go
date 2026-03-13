@@ -23,7 +23,7 @@ import (
 	"xfx/main_server/player/guild"
 	"xfx/main_server/player/handbook"
 	"xfx/main_server/player/hero"
-	"xfx/main_server/player/huaguoshan"
+	"xfx/main_server/player/paradise"
 	"xfx/main_server/player/idle_box"
 	"xfx/main_server/player/lineup"
 	"xfx/main_server/player/login"
@@ -694,29 +694,29 @@ func dispatch(ctx global.IPlayer, pl *model.Player, _msg any) any {
 
 	// 花果山
 	case *proto_huaguoshan.C2SInitHuaguoshan:
-		huaguoshan.ReqInitHuaguoshan(ctx, pl, msg)
+		paradise.ReqInitHuaguoshan(ctx, pl, msg)
 	case *proto_huaguoshan.C2SInitPartner:
-		huaguoshan.ReqInitPartner(ctx, pl, msg)
+		paradise.ReqInitPartner(ctx, pl, msg)
 	case *proto_huaguoshan.C2SGetPartnerInviteList:
-		huaguoshan.ReqGetPartnerInviteList(ctx, pl, msg)
+		paradise.ReqGetPartnerInviteList(ctx, pl, msg)
 	case *proto_huaguoshan.C2SPartnerInvite:
-		huaguoshan.ReqPartnerInvite(ctx, pl, msg)
+		paradise.ReqPartnerInvite(ctx, pl, msg)
 	case *proto_huaguoshan.C2SLogicPartnerInvite:
-		huaguoshan.ReqLogicPartnerInvite(ctx, pl, msg)
+		paradise.ReqLogicPartnerInvite(ctx, pl, msg)
 	case *proto_huaguoshan.C2SRelieveParterner:
-		huaguoshan.ReqRelievePartner(ctx, pl, msg)
+		paradise.ReqRelievePartner(ctx, pl, msg)
 	case *proto_huaguoshan.C2SParternerGive:
-		huaguoshan.ReqPartnerGive(ctx, pl, msg)
+		paradise.ReqPartnerGive(ctx, pl, msg)
 	case *proto_huaguoshan.C2SStartMakeWine:
-		huaguoshan.ReqStartMakeWine(ctx, pl, msg)
+		paradise.ReqStartMakeWine(ctx, pl, msg)
 	case *proto_huaguoshan.C2SCutWineRack:
-		huaguoshan.ReqCutMakeWine(ctx, pl, msg)
+		paradise.ReqCutMakeWine(ctx, pl, msg)
 	case *proto_huaguoshan.C2SCollectWine:
-		huaguoshan.ReqCollectMakeWine(ctx, pl, msg)
+		paradise.ReqCollectMakeWine(ctx, pl, msg)
 	case *proto_huaguoshan.C2SStartPlantPeach:
-		huaguoshan.ReqStartPlantPeach(ctx, pl, msg)
+		paradise.ReqStartPlantPeach(ctx, pl, msg)
 	case *proto_huaguoshan.C2SLogicPlantPeach:
-		huaguoshan.ReqLogicPlantPeach(ctx, pl, msg)
+		paradise.ReqLogicPlantPeach(ctx, pl, msg)
 
 	case *messages.SysMessage: // 系统消息
 		dispatchSysMessage(ctx, pl, msg.Content)

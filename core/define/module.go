@@ -11,5 +11,5 @@ const (
 	ModuleMail        = "Mail"
 	ModuleHttp        = "Http"
 	ModuleTransaction = "Transaction"
-	ModuleHuaguoshan  = "Huaguoshan"
+	ModuleParadise  = "Paradise"
 )

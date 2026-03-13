@@ -20,7 +20,7 @@ import (
 	"xfx/main_server/player/gemappraisal"
 	"xfx/main_server/player/handbook"
 	"xfx/main_server/player/hero"
-	"xfx/main_server/player/huaguoshan"
+	paradise "xfx/main_server/player/paradise"
 	"xfx/main_server/player/idle_box"
 	"xfx/main_server/player/internal"
 	"xfx/main_server/player/lineup"
@@ -80,7 +80,7 @@ func (pl *PlayerAgent) OnSave(isSync bool) {
 	mission.Save(pl.model, isSync)
 	fashion.Save(pl.model, isSync)
 	transaction.Save(pl.model, isSync)
-	huaguoshan.Save(pl.model, isSync)
+	paradise.Save(pl.model, isSync)
 	cdkey.Save(pl.model, isSync)
 }
 
@@ -125,7 +125,7 @@ func LoadPlayerData(id int64) (*model.Player, error) {
 	mission.Load(pl)
 	fashion.Load(pl)
 	transaction.Load(pl)
-	huaguoshan.Load(pl)
+	paradise.Load(pl)
 	cdkey.Load(pl)
 
 	return pl, nil
@@ -170,7 +170,7 @@ func Born(uid string, serverId int) (*model.Player, error) {
 	mission.Init(pl)
 	fashion.Init(pl)
 	transaction.Init(pl)
-	huaguoshan.Init(pl)
+	paradise.Init(pl)
 	cdkey.Init(pl)
 
 	_, err = db.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), id)

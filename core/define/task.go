@@ -25,7 +25,7 @@ const (
 	TaskGetGuajiAwardTime          = 22 //  领取挂机奖励次数
 	TaskJingjichangChallengeTime   = 23 //  竞技场挑战次数
 	TaskDanaotiangongChallengeTime = 24 //  大闹天宫挑战次数
-	TaskHuaguoshanTreeWaterTime    = 25 //  花果山种树浇水次数
+	TaskParadiseTreeWaterTime    = 25 //  乐园种树浇水次数
 	TaskMainHeroLevelUpXiuweiTime  = 26 //  主角升级修为次数
 )
 

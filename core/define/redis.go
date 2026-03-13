@@ -38,7 +38,7 @@ const (
 	BRDanaotiangong    = "BRDanaotiangong"
 	PlayerMission      = "Mission"
 	PlayerFashion      = "Fashion"
-	PlayerHuaguoshan   = "Huaguoshan"
+	PlayerParadise   = "Paradise"
 	PlayerCdkey        = "Cdkey"
 )
 
@@ -89,8 +89,8 @@ const (
 
 // 花果山
 const (
-	HuaguoshanPartner       = "HuaguoshanPartner"
-	HuaguoshanPartnerInvite = "HuaguoshanPartnerInvite"
+	ParadisePartner       = "ParadisePartner"
+	ParadisePartnerInvite = "ParadisePartnerInvite"
 )
 
 const (

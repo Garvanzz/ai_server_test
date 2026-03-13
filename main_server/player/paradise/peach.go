@@ -1,4 +1,4 @@
-package huaguoshan
+package paradise
 
 import (
 	"xfx/pkg/utils"
@@ -22,8 +22,8 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Peach == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Peach == nil {
+		initParadiseData(pl)
 	}
 
 	// 获取树配置
@@ -37,7 +37,7 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 
 	// 检查是否拥有该树
 	hasTree := false
-	for _, id := range pl.Huaguoshan.Peach.OwerTreeId {
+	for _, id := range pl.Paradise.Peach.OwerTreeId {
 		if id == req.TreeId {
 			hasTree = true
 			break
@@ -50,7 +50,7 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 	}
 
 	// 检查是否已经在种植中
-	if pl.Huaguoshan.Peach.CurTreeId > 0 {
+	if pl.Paradise.Peach.CurTreeId > 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 		ctx.Send(resp)
 		return
@@ -64,16 +64,16 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 
 	// 开始第一阶段
 	now := utils.Now().Unix()
-	pl.Huaguoshan.Peach.CurTreeId = req.TreeId
-	pl.Huaguoshan.Peach.CurPlantPeachStage = 1
-	pl.Huaguoshan.Peach.CurPlantPeachStartTime = now
-	pl.Huaguoshan.Peach.Awards = treeConf.Award
-	pl.Huaguoshan.Peach.CurPlantPeachEndTime = now + int64(treeConf.GetStageTime(1))
+	pl.Paradise.Peach.CurTreeId = req.TreeId
+	pl.Paradise.Peach.CurPlantPeachStage = 1
+	pl.Paradise.Peach.CurPlantPeachStartTime = now
+	pl.Paradise.Peach.Awards = treeConf.Award
+	pl.Paradise.Peach.CurPlantPeachEndTime = now + int64(treeConf.GetStageTime(1))
 
 	// 返回最新状态
-	resp.Option = pl.Huaguoshan.Peach.ToPlantPeachOption()
+	resp.Option = pl.Paradise.Peach.ToPlantPeachOption()
 
-	log.Debug("Player %d start plant peach treeId=%d, stage=1, endTime=%d", pl.Id, req.TreeId, pl.Huaguoshan.Peach.CurPlantPeachEndTime)
+	log.Debug("Player %d start plant peach treeId=%d, stage=1, endTime=%d", pl.Id, req.TreeId, pl.Paradise.Peach.CurPlantPeachEndTime)
 	ctx.Send(resp)
 }
 
@@ -103,12 +103,12 @@ func waterPeach(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Peach == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Peach == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否在种植中
-	if pl.Huaguoshan.Peach.CurTreeId == 0 {
+	if pl.Paradise.Peach.CurTreeId == 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
@@ -116,7 +116,7 @@ func waterPeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 获取树配置
 	peachTreeConfs := config.PeachTree.All()
-	treeConf, exists := peachTreeConfs[int64(pl.Huaguoshan.Peach.CurTreeId)]
+	treeConf, exists := peachTreeConfs[int64(pl.Paradise.Peach.CurTreeId)]
 	if !exists {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
@@ -138,26 +138,26 @@ func waterPeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 缩短当前阶段时间
 	now := utils.Now().Unix()
-	newEndTime := pl.Huaguoshan.Peach.CurPlantPeachEndTime - int64(treeConf.CoolDownTime)
+	newEndTime := pl.Paradise.Peach.CurPlantPeachEndTime - int64(treeConf.CoolDownTime)
 
 	// 确保不会缩短到当前时间之前
 	if newEndTime < now {
 		newEndTime = now
 	}
 
-	pl.Huaguoshan.Peach.CurPlantPeachEndTime = newEndTime
+	pl.Paradise.Peach.CurPlantPeachEndTime = newEndTime
 
 	// 检查是否完成当前阶段，如果完成则自动进入下一阶段
 	checkAndAdvanceStageByConf(pl, &treeConf)
 
 	// 返回最新状态
-	resp.Opt = pl.Huaguoshan.Peach.ToPlantPeachOption()
+	resp.Opt = pl.Paradise.Peach.ToPlantPeachOption()
 	resp.Code = proto_public.CommonErrorCode_ERR_OK
 
 	//任务
-	task.Dispatch(ctx, pl, define.TaskHuaguoshanTreeWaterTime, 1, 0, true)
+	task.Dispatch(ctx, pl, define.TaskParadiseTreeWaterTime, 1, 0, true)
 
-	log.Debug("Player %d water peach, new endTime=%d, stage=%d", pl.Id, pl.Huaguoshan.Peach.CurPlantPeachEndTime, pl.Huaguoshan.Peach.CurPlantPeachStage)
+	log.Debug("Player %d water peach, new endTime=%d, stage=%d", pl.Id, pl.Paradise.Peach.CurPlantPeachEndTime, pl.Paradise.Peach.CurPlantPeachStage)
 	ctx.Send(resp)
 }
 
@@ -168,12 +168,12 @@ func fertilizePeach(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Peach == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Peach == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否在种植中
-	if pl.Huaguoshan.Peach.CurTreeId == 0 {
+	if pl.Paradise.Peach.CurTreeId == 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
@@ -181,7 +181,7 @@ func fertilizePeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 获取树配置
 	peachTreeConfs := config.PeachTree.All()
-	treeConf, exists := peachTreeConfs[int64(pl.Huaguoshan.Peach.CurTreeId)]
+	treeConf, exists := peachTreeConfs[int64(pl.Paradise.Peach.CurTreeId)]
 	if !exists {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
@@ -202,21 +202,21 @@ func fertilizePeach(ctx global.IPlayer, pl *model.Player) {
 	internal.SubItems(ctx, pl, costs)
 
 	// 检查是否在成熟期(阶段3产量翻倍)
-	if pl.Huaguoshan.Peach.CurPlantPeachStage == 3 {
-		for _, v := range pl.Huaguoshan.Peach.Awards {
+	if pl.Paradise.Peach.CurPlantPeachStage == 3 {
+		for _, v := range pl.Paradise.Peach.Awards {
 			v.ItemNum += treeConf.AddNum * 2
 		}
 	} else {
-		for _, v := range pl.Huaguoshan.Peach.Awards {
+		for _, v := range pl.Paradise.Peach.Awards {
 			v.ItemNum += treeConf.AddNum
 		}
 	}
 
 	// 返回最新状态
-	resp.Opt = pl.Huaguoshan.Peach.ToPlantPeachOption()
+	resp.Opt = pl.Paradise.Peach.ToPlantPeachOption()
 	resp.Code = proto_public.CommonErrorCode_ERR_OK
 
-	log.Debug("Player %d fertilize peach, treeId=%d", pl.Id, pl.Huaguoshan.Peach.CurTreeId)
+	log.Debug("Player %d fertilize peach, treeId=%d", pl.Id, pl.Paradise.Peach.CurTreeId)
 	ctx.Send(resp)
 }
 
@@ -227,12 +227,12 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	// 初始化数据
-	if pl.Huaguoshan == nil || pl.Huaguoshan.Peach == nil {
-		initHuaguoshanData(pl)
+	if pl.Paradise == nil || pl.Paradise.Peach == nil {
+		initParadiseData(pl)
 	}
 
 	// 检查是否在种植中
-	if pl.Huaguoshan.Peach.CurTreeId == 0 {
+	if pl.Paradise.Peach.CurTreeId == 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
@@ -240,7 +240,7 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 检查时间是否已到
 	now := utils.Now().Unix()
-	if now < pl.Huaguoshan.Peach.CurPlantPeachEndTime {
+	if now < pl.Paradise.Peach.CurPlantPeachEndTime {
 		resp.Code = proto_public.CommonErrorCode_ERR_LIMITTIME
 		ctx.Send(resp)
 		return
@@ -248,7 +248,7 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 获取树配置
 	peachTreeConfs := config.PeachTree.All()
-	treeConf, exists := peachTreeConfs[int64(pl.Huaguoshan.Peach.CurTreeId)]
+	treeConf, exists := peachTreeConfs[int64(pl.Paradise.Peach.CurTreeId)]
 	if !exists {
 		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
@@ -256,17 +256,17 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	// 发放奖励
-	bag.AddAward(ctx, pl, pl.Huaguoshan.Peach.Awards, true)
+	bag.AddAward(ctx, pl, pl.Paradise.Peach.Awards, true)
 
 	// 清空种植状态
-	pl.Huaguoshan.Peach.CurTreeId = 0
-	pl.Huaguoshan.Peach.CurPlantPeachStage = 0
-	pl.Huaguoshan.Peach.CurPlantPeachStartTime = 0
-	pl.Huaguoshan.Peach.CurPlantPeachEndTime = 0
-	pl.Huaguoshan.Peach.Awards = make([]conf.ItemE, 0)
+	pl.Paradise.Peach.CurTreeId = 0
+	pl.Paradise.Peach.CurPlantPeachStage = 0
+	pl.Paradise.Peach.CurPlantPeachStartTime = 0
+	pl.Paradise.Peach.CurPlantPeachEndTime = 0
+	pl.Paradise.Peach.Awards = make([]conf.ItemE, 0)
 
 	// 返回最新状态
-	resp.Option = pl.Huaguoshan.Peach.ToPlantPeachOption()
+	resp.Option = pl.Paradise.Peach.ToPlantPeachOption()
 	resp.Code = proto_public.CommonErrorCode_ERR_OK
 
 	log.Debug("Player %d collect peach, treeId=%d", pl.Id, treeConf.Id)
@@ -276,19 +276,19 @@ func collectPeach(ctx global.IPlayer, pl *model.Player) {
 // checkAndAdvanceStage 检查并推进阶段
 func checkAndAdvanceStage(pl *model.Player) {
 	// 检查是否在种植中
-	if pl.Huaguoshan.Peach.CurTreeId <= 0 {
+	if pl.Paradise.Peach.CurTreeId <= 0 {
 		return
 	}
 
 	// 检查时间是否已到
 	now := utils.Now().Unix()
-	if now >= pl.Huaguoshan.Peach.CurPlantPeachEndTime {
+	if now >= pl.Paradise.Peach.CurPlantPeachEndTime {
 		return
 	}
 
 	// 获取树配置
 	peachTreeConfs := config.PeachTree.All()
-	treeConf, exists := peachTreeConfs[int64(pl.Huaguoshan.Peach.CurTreeId)]
+	treeConf, exists := peachTreeConfs[int64(pl.Paradise.Peach.CurTreeId)]
 	if !exists {
 		return
 	}
@@ -300,14 +300,14 @@ func checkAndAdvanceStageByConf(pl *model.Player, treeConf *conf.PeachTree) {
 	now := utils.Now().Unix()
 
 	// 循环检查是否可以进入下一阶段
-	for pl.Huaguoshan.Peach.CurPlantPeachStage < 5 && now >= pl.Huaguoshan.Peach.CurPlantPeachEndTime {
+	for pl.Paradise.Peach.CurPlantPeachStage < 5 && now >= pl.Paradise.Peach.CurPlantPeachEndTime {
 		// 进入下一阶段
-		pl.Huaguoshan.Peach.CurPlantPeachStage++
-		pl.Huaguoshan.Peach.CurPlantPeachStartTime = now
+		pl.Paradise.Peach.CurPlantPeachStage++
+		pl.Paradise.Peach.CurPlantPeachStartTime = now
 
-		nextStageTime := treeConf.GetStageTime(pl.Huaguoshan.Peach.CurPlantPeachStage)
-		pl.Huaguoshan.Peach.CurPlantPeachEndTime = now + int64(nextStageTime)
+		nextStageTime := treeConf.GetStageTime(pl.Paradise.Peach.CurPlantPeachStage)
+		pl.Paradise.Peach.CurPlantPeachEndTime = now + int64(nextStageTime)
 
-		log.Debug("Player %d advance to stage %d, endTime=%d", pl.Id, pl.Huaguoshan.Peach.CurPlantPeachStage, pl.Huaguoshan.Peach.CurPlantPeachEndTime)
+		log.Debug("Player %d advance to stage %d, endTime=%d", pl.Id, pl.Paradise.Peach.CurPlantPeachStage, pl.Paradise.Peach.CurPlantPeachEndTime)
 	}
 }

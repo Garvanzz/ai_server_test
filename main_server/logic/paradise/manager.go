@@ -1,4 +1,4 @@
-package huaguoshan
+package paradise
 
 import (
 	"encoding/json"
@@ -42,9 +42,9 @@ func (m *Manager) OnInit(app module.App) {
 
 func (m *Manager) loadData() {
 
-	reply, err := db.RedisExec("GET", define.HuaguoshanPartnerInvite)
+	reply, err := db.RedisExec("GET", define.ParadisePartnerInvite)
 	if err != nil {
-		log.Error("load huaguoshan partner invite error: %v", err)
+		log.Error("load paradise partner invite error: %v", err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (m *Manager) loadData() {
 		data := make(map[string]interface{})
 		err = json.Unmarshal(reply.([]byte), &data)
 		if err != nil {
-			log.Error("unmarshal huaguoshan data error: %v", err)
+			log.Error("unmarshal paradise data error: %v", err)
 			return
 		}
 
@@ -69,10 +69,10 @@ func (m *Manager) loadData() {
 		}
 	}
 
-	log.Debug("huaguoshan loadData success, inviteId: %d, invites: %d", m.inviteId, len(m.invites))
+	log.Debug("paradise loadData success, inviteId: %d, invites: %d", m.inviteId, len(m.invites))
 }
 
-func (m *Manager) GetType() string { return define.ModuleHuaguoshan }
+func (m *Manager) GetType() string { return define.ModuleParadise }
 
 func (m *Manager) OnTick(delta time.Duration) {
 	now := utils.Now().Unix()
@@ -96,11 +96,11 @@ func (m *Manager) saveToRedis() {
 
 	b, err := json.Marshal(data)
 	if err != nil {
-		log.Error("marshal huaguoshan data error: %v", err)
+		log.Error("marshal paradise data error: %v", err)
 		return
 	}
 
-	db.RedisExec("SET", define.HuaguoshanPartnerInvite, string(b))
+	db.RedisExec("SET", define.ParadisePartnerInvite, string(b))
 }
 
 func (m *Manager) OnMessage(msg interface{}) interface{} {
