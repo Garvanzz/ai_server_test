@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -601,30 +602,102 @@ func unzip(src, dest string) error {
 	return nil
 }
 
-// GmSetServerTime 设置 GM 所在机器系统时间（执行 date -s，需 root，慎用）
+// GmSetServerTime 设置游戏服务器时间偏移（转发到 main_server 的 /gm/time/set_offset 接口）
 func GmSetServerTime(c *gin.Context) {
 	var Info dto.GmSetServerTime
 	if err := c.ShouldBindJSON(&Info); err != nil {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", strings.TrimSpace(Info.SetTime), time.Local)
+
+	// 解析目标时间
+	targetTime, err := time.ParseInLocation("2006-01-02 15:04:05", strings.TrimSpace(Info.SetTime), time.Local)
 	if err != nil {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "时间格式错误，需 2006-01-02 15:04:05")
 		return
 	}
-	if t.Unix() <= time.Now().Unix() {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "不允许将时间设置为过去或当前")
-		return
+
+	// 计算目标时间与当前时间的差值（天数）
+	now := time.Now()
+	diff := targetTime.Sub(now)
+	offsetDays := int64(diff.Hours() / 24)
+
+	// 构造请求 main_server 的参数
+	reqBody := map[string]int64{
+		"offset_days": offsetDays,
 	}
-	timeStr := t.Format("2006-01-02 15:04:05")
-	cmd := exec.Command("date", "-s", timeStr)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Error("GmSetServerTime failed: %v, output: %s", err, string(out))
+	js, _ := json.Marshal(reqBody)
+
+	// 转发到 main_server 的时间偏移接口
+	err, respStr := HttpRequestToServer(int(Info.Server), js, "/gm/time/set_offset")
+	if err != nil {
+		log.Error("GmSetServerTime forward to main_server err: %v, resp: %s", err, respStr)
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, "设置时间失败: "+err.Error())
 		return
 	}
-	HTTPRetGame(c, SUCCESS, "success")
+
+	// 将 main_server 的响应原样返回
+	forwardMainServerResponse(c, respStr)
+}
+
+// GmGetServerTime 获取游戏服务器当前时间（转发到 main_server 的 /gm/time 接口）
+func GmGetServerTime(c *gin.Context) {
+	// 从查询参数或 POST body 中获取 serverId
+	serverIdStr := c.Query("server")
+	if serverIdStr == "" {
+		// 尝试从 POST body 获取
+		var req struct {
+			Server int32 `json:"server"`
+		}
+		if c.Request.Method == "POST" {
+			if err := c.ShouldBindJSON(&req); err == nil {
+				serverIdStr = fmt.Sprintf("%d", req.Server)
+			}
+		}
+	}
+
+	serverId := 0
+	if serverIdStr != "" {
+		if id, err := strconv.Atoi(serverIdStr); err == nil {
+			serverId = id
+		}
+	}
+
+	baseURL := getMainServerURL(serverId)
+	if baseURL == "" {
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "main_server URL not configured")
+		return
+	}
+
+	url := baseURL + "/gm/time"
+
+	// 创建 GET 请求
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Error("GmGetServerTime request failed: %v", err)
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "获取时间失败: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error("GmGetServerTime read response failed: %v", err)
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "读取响应失败: "+err.Error())
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Error("GmGetServerTime http status: %d, body: %s", resp.StatusCode, string(body))
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, fmt.Sprintf("http status %d", resp.StatusCode))
+		return
+	}
+
+	// 将 main_server 的响应原样返回
+	c.Data(http.StatusOK, "application/json", body)
 }
 
 // GmStartGameServer 启动游戏服进程（仅 game_server 表中 group_id=0 的记录）
@@ -643,7 +716,7 @@ func GmStartGameServer(c *gin.Context) {
 	}
 	log.Debug("请求启动游戏服 serverId:%v", serverId)
 
-	serverItem := new(dto.GameServerItem)
+	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
 	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
 	if err != nil {
@@ -706,7 +779,7 @@ func GmStopGameServer(c *gin.Context) {
 
 	log.Debug("请求服务中心数据:%v", serverId)
 
-	serverItem := new(dto.GameServerItem)
+	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
 	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
 	if err != nil {
@@ -761,7 +834,7 @@ func GmReStartGameServer(c *gin.Context) {
 
 	log.Debug("请求服务中心数据:%v", serverId)
 
-	serverItem := new(dto.GameServerItem)
+	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
 	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
 	if err != nil {
@@ -808,7 +881,7 @@ func GmReStartGameServer(c *gin.Context) {
 func GmGetGameServerProcessList(c *gin.Context) {
 	log.Debug("请求游戏服进程列表")
 
-	var serverItem []dto.GameServerItem
+	var serverItem []model.ServerItem
 	err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Find(&serverItem)
 	if err != nil {
 		log.Error("GmGetGameServerProcessList find err :%v", err)
@@ -823,11 +896,9 @@ func GmGetGameServerProcessList(c *gin.Context) {
 		}
 		items = append(items, &dto.GMGameRespServerItem{
 			Id:         serverItem[i].Id,
-			Ip:         serverItem[i].Ip,
-			Port:       serverItem[i].Port,
 			ServerName: serverItem[i].ServerName,
-			RedisPort:  serverItem[i].RedisPort,
-			MysqlAddr:  serverItem[i].MysqlAddr,
+			ExeName:    serverItem[i].ExeName,
+			ExePath:    serverItem[i].ExePath,
 			RunState:   runState,
 		})
 	}

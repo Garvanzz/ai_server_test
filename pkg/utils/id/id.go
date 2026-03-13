@@ -2,7 +2,7 @@ package id
 
 // Package snowflake provides a very simple Twitter snowflake generator and parser.
 // +-------------------------------------------------------+
-// | 40 Bit Timestamp | 10 Bit WorkID | 14 Bit Sequence ID |
+// | 40 Bit CreateTime | 10 Bit WorkID | 14 Bit Sequence ID |
 // +-------------------------------------------------------+
 
 import (

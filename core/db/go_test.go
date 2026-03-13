@@ -27,11 +27,11 @@ type mockConn struct {
 	doFunc func(cmd string, args ...interface{}) (interface{}, error)
 }
 
-func (m *mockConn) Close() error                                           { return nil }
-func (m *mockConn) Err() error                                             { return nil }
-func (m *mockConn) Send(string, ...interface{}) error                      { return nil }
-func (m *mockConn) Flush() error                                           { return nil }
-func (m *mockConn) Receive() (interface{}, error)                          { return nil, nil }
+func (m *mockConn) Close() error                      { return nil }
+func (m *mockConn) Err() error                        { return nil }
+func (m *mockConn) Send(string, ...interface{}) error { return nil }
+func (m *mockConn) Flush() error                      { return nil }
+func (m *mockConn) Receive() (interface{}, error)     { return nil, nil }
 func (m *mockConn) Do(cmd string, args ...interface{}) (interface{}, error) {
 	if m.doFunc != nil {
 		return m.doFunc(cmd, args...)
@@ -84,10 +84,10 @@ func newCaptureAgent() *captureAgent {
 	}
 }
 
-func (a *captureAgent) OnStart(agent.Context)                { close(a.started) }
-func (a *captureAgent) OnStop()                              {}
-func (a *captureAgent) OnTerminated(agent.PID, int)          {}
-func (a *captureAgent) OnTick(time.Duration)                 {}
+func (a *captureAgent) OnStart(agent.Context)       { close(a.started) }
+func (a *captureAgent) OnStop()                     {}
+func (a *captureAgent) OnTerminated(agent.PID, int) {}
+func (a *captureAgent) OnTick(time.Duration)        {}
 func (a *captureAgent) OnMessage(msg interface{}) interface{} {
 	a.received <- msg
 	return nil
@@ -422,7 +422,7 @@ func TestGoCallbackToActor(t *testing.T) {
 		t.Fatalf("Err: want nil, got %v", ret.Err)
 	}
 	if len(ret.Params) != 2 || ret.Params[0] != 100 || ret.Params[1] != 200 {
-		t.Fatalf("Params: want [100,200], got %v", ret.Params)
+		t.Fatalf("Content: want [100,200], got %v", ret.Params)
 	}
 }
 
@@ -557,7 +557,7 @@ func TestRedisAsyncExecFullLoop(t *testing.T) {
 		t.Fatalf("Err: want nil, got %v", ret.Err)
 	}
 	if len(ret.Params) != 2 || ret.Params[0] != 111 || ret.Params[1] != 222 {
-		t.Fatalf("Params: want [111,222], got %v", ret.Params)
+		t.Fatalf("Content: want [111,222], got %v", ret.Params)
 	}
 }
 

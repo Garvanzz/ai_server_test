@@ -75,12 +75,12 @@ type GuildApply struct {
 
 // GuildLog 帮会日志
 type GuildLog struct {
-	Id        int64    // 自增id
-	GuildId   int64    // 帮会id
-	Timestamp int64    // 发生时间
-	Action    int32    // 事件类型
-	DbId      []int64  // 玩家id
-	Params    []string // 参数
+	Id         int64    // 自增id
+	GuildId    int64    // 帮会id
+	CreateTime int64    // 发生时间
+	Action     int32    // 事件类型
+	PlayerId   []int64  // 玩家id
+	Content    []string // 参数
 }
 
 // Member 帮会成员信息

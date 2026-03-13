@@ -85,8 +85,9 @@ func Register(r *gin.Engine) {
 	}
 
 	// ========== 上传、服务器时间、配置、编译 ==========
-	gm.POST("/upload", logic.GmUpload)
+	gm.GET("/server/time", logic.GmGetServerTime)
 	gm.POST("/server/time", logic.GmSetServerTime)
+	gm.POST("/upload", logic.GmUpload)
 	gm.POST("/config/update", logic.GmUpdateConfig)
 	gm.POST("/config/game-update", logic.GmGameUpdateConfig)
 	gm.POST("/build", logic.GmBuildServer)

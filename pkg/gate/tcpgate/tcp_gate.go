@@ -1,7 +1,10 @@
 package tcpgate
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"xfx/pkg/gate"
 	"xfx/pkg/gate/tcpgate/codec"
 	"xfx/pkg/log"
@@ -64,7 +67,14 @@ func (gt *Gate) handleConnect(sess *tcp.Session) {
 	for {
 		msg, err := sess.Receive()
 		if err != nil {
-			log.Error("gate handler msg error:%v", err)
+			// 区分正常断开（EOF）和真正的错误
+			if err == io.EOF {
+				log.Debug("session %d disconnected (EOF)", sess.ID())
+			} else if errors.Is(err, net.ErrClosed) {
+				log.Debug("session %d disconnected (connection closed)", sess.ID())
+			} else {
+				log.Error("gate handler msg error: %v", err)
+			}
 			return
 		}
 		agent.OnRecv(msg)

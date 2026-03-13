@@ -143,12 +143,6 @@ func GmGetCacheOrderList(c *gin.Context) {
 		}
 	}
 
-	err := db.AccountDb.Table(define.PayCacheOrderTable).Find(&orderItem)
-	if err != nil {
-		log.Error("getserverlist2 find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
 	items := make([]*dto.GMRespRechargeOrder, 0)
 	for i := 0; i < len(orderItem); i++ {
 		amount := fmt.Sprintf("%.0f", orderItem[i].Amount)

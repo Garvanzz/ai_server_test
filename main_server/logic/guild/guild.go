@@ -300,9 +300,9 @@ func (ent *entity) addGuildLog(action int32, dbId []int64, params ...string) {
 	guildLog := new(model.GuildLog)
 	guildLog.GuildId = ent.guild.Id
 	guildLog.Action = action
-	guildLog.Timestamp = utils.Now().Unix()
-	guildLog.Params = params
-	guildLog.DbId = dbId
+	guildLog.CreateTime = utils.Now().Unix()
+	guildLog.Content = params
+	guildLog.PlayerId = dbId
 
 	rdb, _ := db.GetEngine()
 	n, err := rdb.Mysql.Table(define.GuildLogTable).Insert(guildLog)
@@ -402,7 +402,7 @@ func (ent *entity) boardCast(message proto.Message) {
 //	push.Talk.Header.Type = 2    //类型 2=系统
 //	push.Talk.Player = nil
 //	push.Talk.Msg = ""
-//	push.Talk.Timestamp = utils.Now().Unix()
+//	push.Talk.CreateTime = utils.Now().Unix()
 //	push.Talk.Goods = nil
 //	push.Talk.SysMsgId = messageId
 //	push.Talk.SysMsgCN = cn

@@ -768,9 +768,9 @@ func (mgr *Manager) OnGetEvents(ctx *proto_player.Context, req *proto_guild.C2SG
 	ret := make([]*proto_guild.Event, 0, len(logs))
 	for _, v := range logs {
 		ret = append(ret, &proto_guild.Event{
-			Timestamp: v.Timestamp,
+			Timestamp: v.CreateTime,
 			Action:    v.Action,
-			Params:    v.Params,
+			Params:    v.Content,
 		})
 	}
 

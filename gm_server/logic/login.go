@@ -46,7 +46,12 @@ func GmLogin(c *gin.Context) {
 	//生成登录token
 	loginToken := fmt.Sprintf("%x", utils.RandomNumeric(15))
 	player.Token = loginToken
-	db.AccountDb.Table(define.AdminTable).Where("user_name = ?", player.UserName).MustCols("token").Update(player)
+	_, err = db.AccountDb.Table(define.AdminTable).Where("user_name = ?", player.UserName).MustCols("token").Update(player)
+	if err != nil {
+		log.Error("GmLogin update token err: %v", err)
+		HTTPRetGame(c, ERR_DB, "update token failed")
+		return
+	}
 
 	HTTPRetGame(c, SUCCESS, "success",
 		map[string]any{
@@ -57,13 +62,24 @@ func GmLogin(c *gin.Context) {
 // GmLogout GM 登出，清除服务端 token，使当前 token 立即失效
 func GmLogout(c *gin.Context) {
 	token := c.GetHeader(TokenHeaderName)
-	if token != "" {
-		player := new(dto.GmAccount)
-		player.Token = token
-		has, err := db.AccountDb.Table(define.AdminTable).Where("token = ?", token).Get(player)
-		if err == nil && has {
-			player.Token = ""
-			_, _ = db.AccountDb.Table(define.AdminTable).Where("user_name = ?", player.UserName).MustCols("token").Update(player)
+	if token == "" {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "token required")
+		return
+	}
+
+	player := new(dto.GmAccount)
+	player.Token = token
+	has, err := db.AccountDb.Table(define.AdminTable).Where("token = ?", token).Get(player)
+	if err != nil {
+		log.Error("GmLogout find err: %v", err)
+		HTTPRetGame(c, ERR_DB, "db error")
+		return
+	}
+	if has {
+		player.Token = ""
+		_, updateErr := db.AccountDb.Table(define.AdminTable).Where("user_name = ?", player.UserName).MustCols("token").Update(player)
+		if updateErr != nil {
+			log.Error("GmLogout clear token err: %v", updateErr)
 		}
 	}
 	HTTPRetGame(c, SUCCESS, "success")
