@@ -112,11 +112,14 @@ func ReqDelAllMails(ctx global.IPlayer, pl *model.Player, req *proto_mail.C2SDel
 	}
 
 	conn := rdb.Mysql
+	serverId := int(pl.GetProp(define.PlayerPropServerId))
 
 	mails := make([]*model.PlayerMailInfo, 0)
-	sql := fmt.Sprintf("select * FROM %s where account_id = %s ORDER BY id limit %d",
-		define.PlayerMailInfoTable, pl.Uid, define.MailStorageLimit)
-	err = conn.SQL(sql).Find(&mails)
+	err = conn.Table(define.PlayerMailInfoTable).
+		Where("server_id = ? AND account_id = ?", serverId, pl.Uid).
+		Desc("id").
+		Limit(define.MailStorageLimit).
+		Find(&mails)
 	if err != nil {
 		log.Error("ReqDelAllMails get ids error:%v", err)
 		return
@@ -256,8 +259,9 @@ func ReqCollectAllMailItems(ctx global.IPlayer, pl *model.Player, req *proto_mai
 
 // 检查新系统邮件 返回拉取到的新系统邮件
 func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
+	serverId := int(pl.GetProp(define.PlayerPropServerId))
 	account := new(model.Account)
-	_, err := db.Engine.Mysql.Table("account").Where("uid = ?", pl.Uid).ForUpdate().Get(account)
+	_, err := db.Engine.Mysql.Table("account").Where("uid = ? AND server_id = ?", pl.Uid, serverId).ForUpdate().Get(account)
 	if err != nil {
 		log.Error("check new mail error:%v", err)
 		return
@@ -273,7 +277,7 @@ func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 	}
 
 	account.SystemMailId = maxSystemMailId
-	_, err = db.Engine.Mysql.Table("account").Where("id = ?", account.Id).MustCols("sys_mail_id").Update(account)
+	_, err = db.Engine.Mysql.Table("account").Where("id = ? AND server_id = ?", account.Id, serverId).MustCols("sys_mail_id").Update(account)
 	if err != nil {
 		log.Error("check new system mail error:%v", err)
 		return
@@ -299,16 +303,18 @@ func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 
 		// 生成新的个人邮件
 		newMail := &model.PlayerMailInfo{
-			SysId:      sysMail.Id,
-			MailInfos:  sysMail.MailInfos,
-			CreateTime: now,
-			Items:      sysMail.Items,
-			GotItem:    gotItem,
-			CfgId:      sysMail.CfgId,                       //系统邮件默认0
-			Params:     sysMail.Params,                      //默认无参数
-			ExpireTime: define.MailStorageLimit*86400 + now, // 根据配置设置过期时间
-			AccountId:  pl.Uid,
-			Type:       mailType,
+			ServerId:       serverId,
+			OriginServerId: serverId,
+			SysId:          sysMail.Id,
+			MailInfos:      sysMail.MailInfos,
+			CreateTime:     now,
+			Items:          sysMail.Items,
+			GotItem:        gotItem,
+			CfgId:          sysMail.CfgId,                       //系统邮件默认0
+			Params:         sysMail.Params,                      //默认无参数
+			ExpireTime:     define.MailStorageLimit*86400 + now, // 根据配置设置过期时间
+			AccountId:      pl.Uid,
+			Type:           mailType,
 		}
 
 		if ok := insertDBMail(pl.Cache.App.GetEnv().ID, newMail); !ok {
@@ -333,7 +339,7 @@ func updateDBMail(serverId int, mail *model.PlayerMailInfo) (ok bool) {
 		return false
 	}
 
-	num, err := conn.Where("id = ?", mail.Id).MustCols("got_item").Update(mail)
+	num, err := conn.Where("id = ? AND server_id = ?", mail.Id, serverId).MustCols("got_item").Update(mail)
 	if err != nil {
 		log.Error("update DB mail error:%v", err)
 		return false
@@ -359,10 +365,11 @@ func getMailsFromDB(serverId int, dbId int64) []*model.PlayerMailInfo {
 	now := utils.Now().Unix()
 
 	mails := make([]*model.PlayerMailInfo, 0)
-	sql := fmt.Sprintf("select * from %s where (db_id = %d AND sys_id = %d) OR sys_id = %d ORDER BY id DESC limit %d",
-		define.PlayerMailInfoTable, dbId, 0, serverId, define.MailStorageLimit)
-
-	err = conn.SQL(sql).Find(&mails)
+	err = conn.Table(define.PlayerMailInfoTable).
+		Where("server_id = ? AND ((db_id = ? AND sys_id = 0) OR (sys_id > 0))", serverId, dbId).
+		Desc("id").
+		Limit(define.MailStorageLimit).
+		Find(&mails)
 	if err != nil {
 		log.Error("get DB mails error:%v", err)
 		return nil
@@ -390,7 +397,7 @@ func getMailById(serverId int, id int64) *model.PlayerMailInfo {
 	conn := rdb.Mysql
 
 	mail := new(model.PlayerMailInfo)
-	_, err = conn.Where("id = ?", id).Get(mail)
+	_, err = conn.Where("id = ? AND server_id = ?", id, serverId).Get(mail)
 	if err != nil {
 		log.Error("get mail from db by id error %v", err)
 		return nil
@@ -413,6 +420,10 @@ func insertDBMail(serverId int, mail *model.PlayerMailInfo) bool {
 	}
 	conn := rdb.Mysql
 
+	mail.ServerId = serverId
+	if mail.OriginServerId == 0 {
+		mail.OriginServerId = serverId
+	}
 	num, err := conn.Insert(mail)
 	if err != nil {
 		log.Error("insert DB mail error:%v", err)
@@ -438,7 +449,7 @@ func deleteDBMail(serverId int, id int64) bool {
 
 	conn := rdb.Mysql
 
-	num, err := conn.Table(define.PlayerMailInfoTable).Where("id = ?", id).Delete()
+	num, err := conn.Table(define.PlayerMailInfoTable).Where("id = ? AND server_id = ?", id, serverId).Delete()
 	if err != nil {
 		log.Error("delete DB mail error:%v", err)
 		return false

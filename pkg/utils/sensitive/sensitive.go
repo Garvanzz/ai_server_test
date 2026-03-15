@@ -21,8 +21,8 @@
 //	clean := filter.Remove("这是一段文本")
 package sensitive
 
-// Filter 敏感词过滤器接口。
-type Filter interface {
+// WordFilter 敏感词过滤器接口。
+type WordFilter interface {
 	// FindAll 找到文本中所有敏感词。
 	FindAll(text string) []string
 	// FindAllCount 找到所有敏感词及出现次数。
@@ -37,13 +37,23 @@ type Filter interface {
 	Remove(text string) string
 }
 
+// Filter 全局敏感词过滤器（兼容旧调用：sensitive.Filter.IsSensitive(...)）。
+var Filter WordFilter
+
+// Init 初始化全局过滤器。
+func Init() {
+	if Filter == nil {
+		Filter = NewDFA()
+	}
+}
+
 // New 创建新的敏感词过滤器（使用 DFA 算法）。
-func New() Filter {
+func New() WordFilter {
 	return NewDFA()
 }
 
 // LoadFromFiles 从文件加载敏感词并创建过滤器。
-func LoadFromFiles(paths ...string) (Filter, error) {
+func LoadFromFiles(paths ...string) (WordFilter, error) {
 	filter := NewDFA()
 	for _, path := range paths {
 		if err := filter.LoadFromFile(path); err != nil {
@@ -54,7 +64,7 @@ func LoadFromFiles(paths ...string) (Filter, error) {
 }
 
 // LoadFromStrings 从字符串数组创建过滤器。
-func LoadFromStrings(words ...string) Filter {
+func LoadFromStrings(words ...string) WordFilter {
 	filter := NewDFA()
 	filter.AddWords(words...)
 	return filter

@@ -15,6 +15,10 @@ type ServerGroupResp struct {
 // LoginServerItem 区服项（API 返回，camelCase）
 type LoginServerItem struct {
 	Id             int64  `json:"id"`
+	LogicServerId  int64  `json:"logicServerId"`
+	MergeState     int    `json:"mergeState"`
+	MergeStateText string `json:"mergeStateText"`
+	MergeTime      int64  `json:"mergeTime"`
 	Ip             string `json:"ip"`
 	Port           int    `json:"port"`
 	Channel        int    `json:"channel"`

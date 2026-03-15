@@ -35,8 +35,44 @@ func GmGetOrderList(c *gin.Context) {
 		Uid = ""
 	}
 
+	serverId := 0
+	if sid, ok := result["ServerId"].(float64); ok {
+		serverId = int(sid)
+	}
+	if serverId > 0 {
+		serverId = resolveLogicServerID(serverId)
+	}
+
 	var orderItem []model.RechargeOrder
-	if len(OrderId) > 0 && len(Uid) > 0 {
+	if serverId > 0 && len(OrderId) > 0 && len(Uid) > 0 {
+		err := db.AccountDb.Table(define.PayOrderTable).Where("server_id = ? AND order_id = ? AND game_user_id =?", serverId, OrderId, Uid).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 && len(OrderId) > 0 {
+		err := db.AccountDb.Table(define.PayOrderTable).Where("server_id = ? AND order_id = ?", serverId, OrderId).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 && len(Uid) > 0 {
+		err := db.AccountDb.Table(define.PayOrderTable).Where("server_id = ? AND game_user_id = ?", serverId, Uid).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 {
+		err := db.AccountDb.Table(define.PayOrderTable).Where("server_id = ?", serverId).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if len(OrderId) > 0 && len(Uid) > 0 {
 		err := db.AccountDb.Table(define.PayOrderTable).Where("order_id = ? AND game_user_id =?", OrderId, Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())
@@ -112,8 +148,44 @@ func GmGetCacheOrderList(c *gin.Context) {
 		Uid = ""
 	}
 
+	serverId := 0
+	if sid, ok := result["ServerId"].(float64); ok {
+		serverId = int(sid)
+	}
+	if serverId > 0 {
+		serverId = resolveLogicServerID(serverId)
+	}
+
 	var orderItem []model.RechargeOrder
-	if len(OrderId) > 0 && len(Uid) > 0 {
+	if serverId > 0 && len(OrderId) > 0 && len(Uid) > 0 {
+		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("server_id = ? AND order_id = ? AND game_user_id =?", serverId, OrderId, Uid).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 && len(OrderId) > 0 {
+		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("server_id = ? AND order_id = ?", serverId, OrderId).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 && len(Uid) > 0 {
+		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("server_id = ? AND game_user_id = ?", serverId, Uid).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if serverId > 0 {
+		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("server_id = ?", serverId).Find(&orderItem)
+		if err != nil {
+			log.Error("getserverlist2 find err :%v", err.Error())
+			HTTPRetGame(c, ERR_DB, err.Error())
+			return
+		}
+	} else if len(OrderId) > 0 && len(Uid) > 0 {
 		err := db.AccountDb.Table(define.PayCacheOrderTable).Where("order_id = ? AND game_user_id =?", OrderId, Uid).Find(&orderItem)
 		if err != nil {
 			log.Error("getserverlist2 find err :%v", err.Error())

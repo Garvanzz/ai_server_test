@@ -15,5 +15,8 @@ DROP TABLE IF EXISTS guild_log;
 DROP TABLE IF EXISTS hot_update;
 DROP TABLE IF EXISTS notice;
 DROP TABLE IF EXISTS game_server;
+DROP TABLE IF EXISTS merge_plan;
+DROP TABLE IF EXISTS merge_server_map;
+DROP TABLE IF EXISTS merge_conflict_log;
 
 SET FOREIGN_KEY_CHECKS = 1;

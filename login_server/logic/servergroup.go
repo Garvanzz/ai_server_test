@@ -14,6 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func mergeStateToText(state int) string {
+	switch state {
+	case 1:
+		return "待合服"
+	case 2:
+		return "已合服"
+	case 3:
+		return "回滚中"
+	default:
+		return "正常"
+	}
+}
+
 // GetServerList 获取区服列表
 func GetServerList(c *gin.Context) {
 	var req dto.ReqServerList
@@ -33,7 +46,7 @@ func GetServerList(c *gin.Context) {
 	}
 
 	items := make([]model.ServerItem, 0)
-	err := AccountEngine.Table(define.GameServerTable).Asc("group_id", "id").Find(&items)
+	err := AccountEngine.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
 	if err != nil {
 		log.Error("get server list find err :%v", err.Error())
 		middleware.RetGame(c, dto.ERR_DB, err.Error())
@@ -51,6 +64,10 @@ func GetServerList(c *gin.Context) {
 		}
 		groups[gid] = append(groups[gid], dto.LoginServerItem{
 			Id:             v.Id,
+			LogicServerId:  v.LogicServerId,
+			MergeState:     v.MergeState,
+			MergeStateText: mergeStateToText(v.MergeState),
+			MergeTime:      v.MergeTime,
 			Ip:             v.Ip,
 			Port:           v.Port,
 			Channel:        v.Channel,

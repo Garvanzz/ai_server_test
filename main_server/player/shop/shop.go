@@ -90,7 +90,7 @@ func refreshShopData(ctx global.IPlayer, pl *model.Player) {
 		case define.ShopLimitTypeWeek:
 			if !utils.IsSameWeekBySec(utils.Now().Unix(), v.LastTime) {
 				pl.Shop.Shops[shopType].ShopItems = make(map[int]*model.ShopItem)
-				pl.Shop.Shops[shopType].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
+				pl.Shop.Shops[shopType].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Monday)) //周一的
 			}
 		case define.ShopLimitTypeMonth:
 			if utils.DaysBetweenTwoTimeUnix(utils.Now().Unix(), v.LastTime) > 30 {
@@ -161,7 +161,7 @@ func ReqShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SBuy
 		if conf.LimitType == define.ShopLimitTypeDay {
 			pl.Shop.Shops[req.Type].LastTime = utils.TimestampToday()
 		} else if conf.LimitType == define.ShopLimitTypeWeek { //每周限购
-			pl.Shop.Shops[req.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
+			pl.Shop.Shops[req.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Monday)) //周一的
 		} else if conf.LimitType == define.ShopLimitTypeMonth {
 			pl.Shop.Shops[req.Type].LastTime = utils.Now().Unix()
 		} else if conf.LimitType == define.ShopLimitTypeSeason {
@@ -246,7 +246,7 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 		if shopConf.LimitType == define.ShopLimitTypeDay {
 			pl.Shop.Shops[shopConf.Type].LastTime = utils.TimestampToday()
 		} else if shopConf.LimitType == define.ShopLimitTypeWeek { //每周限购
-			pl.Shop.Shops[shopConf.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(utils.Now(), time.Monday)) //周一的
+			pl.Shop.Shops[shopConf.Type].LastTime = utils.GetTargetDayStartUnix(utils.GetWeekday(time.Monday)) //周一的
 		} else if shopConf.LimitType == define.ShopLimitTypeMonth {
 			pl.Shop.Shops[shopConf.Type].LastTime = utils.Now().Unix()
 		} else if shopConf.LimitType == define.ShopLimitTypeSeason {
@@ -262,13 +262,13 @@ func ReqGMShopBuyData(ctx global.IPlayer, pl *model.Player, req *proto_shop.C2SG
 	ProductName := fmt.Sprintf("%d", rechargeConf.ItemId)
 	ProductId := fmt.Sprintf("%d", rechargeConf.Id)
 	order := &model.RechargeOrder{
-		Amount:      float32(rechargeConf.Price),
-		ProductId:   ProductId,
-		ProductName: ProductName,
-		UserId:      strconv.FormatInt(pl.Id, 10),
-		OrderId:     oid,
-		GameUserId:  pl.Uid,
-		//ServerId:      strconv.Itoa(pl.ServerId), TODO:
+		Amount:        float32(rechargeConf.Price),
+		ProductId:     ProductId,
+		ProductName:   ProductName,
+		UserId:        strconv.FormatInt(pl.Id, 10),
+		OrderId:       oid,
+		GameUserId:    pl.Uid,
+		ServerId:      int(pl.GetProp(define.PlayerPropServerId)),
 		PaymentTime:   utils.GetTimeNowFormat(),
 		ChannelNumber: "hgm",
 	}

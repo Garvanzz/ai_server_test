@@ -2,6 +2,7 @@ package dto
 
 // GMItem
 type GMGuidOption struct {
+	ServerId        int32
 	GuidId          int32
 	GuidName        string
 	GuidGrowth      int32

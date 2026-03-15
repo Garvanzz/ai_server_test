@@ -12,6 +12,21 @@ import (
 	"xfx/gm_server/db"
 )
 
+func resolveLogicServerID(serverId int) int {
+	if serverId <= 0 {
+		return 0
+	}
+	var item model.ServerItem
+	ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+	if err != nil || !ok {
+		return serverId
+	}
+	if item.LogicServerId > 0 {
+		return int(item.LogicServerId)
+	}
+	return serverId
+}
+
 // getMainServerURL 根据区服 id 从 game_server 表取 main_server HTTP 地址；未配置或 serverId<=0 时用 conf 默认
 func getMainServerURL(serverId int) string {
 	var baseURL string
@@ -22,6 +37,16 @@ func getMainServerURL(serverId int) string {
 		ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
 		if err != nil || !ok {
 			baseURL = defaultMainServerBaseURL()
+		} else if item.LogicServerId > 0 {
+			var logicItem model.ServerItem
+			logicOk, logicErr := db.AccountDb.Table(define.GameServerTable).Where("id = ?", item.LogicServerId).Get(&logicItem)
+			if logicErr == nil && logicOk && strings.TrimSpace(logicItem.MainServerHttpUrl) != "" {
+				baseURL = strings.TrimRight(strings.TrimSpace(logicItem.MainServerHttpUrl), "/")
+			} else if strings.TrimSpace(item.MainServerHttpUrl) == "" {
+				baseURL = defaultMainServerBaseURL()
+			} else {
+				baseURL = strings.TrimRight(strings.TrimSpace(item.MainServerHttpUrl), "/")
+			}
 		} else if strings.TrimSpace(item.MainServerHttpUrl) == "" {
 			baseURL = defaultMainServerBaseURL()
 		} else {
@@ -54,8 +79,9 @@ func getPlayerIdByServerAndUid(serverId int, uid string) (int64, error) {
 	if serverId <= 0 || strings.TrimSpace(uid) == "" {
 		return 0, nil
 	}
+	logicServerId := resolveLogicServerID(serverId)
 	pl := new(model.Account)
-	has, err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", serverId, uid).Get(pl)
+	has, err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, uid).Get(pl)
 	if err != nil {
 		return 0, err
 	}

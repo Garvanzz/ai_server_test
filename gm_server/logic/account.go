@@ -27,18 +27,19 @@ func GmGetPlayerInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
 		return
 	}
+	logicServerId := resolveLogicServerID(req.ServerId)
 
-	log.Debug("请求玩家数据 : %d, %s", req.ServerId, req.Uid)
+	log.Debug("请求玩家数据 : %d(logic:%d), %s", req.ServerId, logicServerId, req.Uid)
 	pl := make([]model.Account, 0)
 	if strings.TrimSpace(req.Uid) == "" {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Limit(maxPlayerListLimit).Find(&pl)
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", logicServerId).Limit(maxPlayerListLimit).Find(&pl)
 		if err != nil {
 			log.Error("GmGetPlayerInfo find err :%v", err)
 			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", req.ServerId, req.Uid).Find(&pl)
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, req.Uid).Find(&pl)
 		if err != nil {
 			log.Error("GmGetPlayerInfo find err :%v", err)
 			HTTPRetGame(c, ERR_DB, err.Error())
@@ -64,18 +65,19 @@ func GmGetPlayerGameInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
 		return
 	}
+	logicServerId := resolveLogicServerID(req.ServerId)
 
-	log.Debug("请求玩家游戏数据 : %d, %s", req.ServerId, req.Uid)
+	log.Debug("请求玩家游戏数据 : %d(logic:%d), %s", req.ServerId, logicServerId, req.Uid)
 	pl := make([]model.Account, 0)
 	if strings.TrimSpace(req.Uid) == "" {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", req.ServerId).Limit(maxPlayerListLimit).Find(&pl)
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", logicServerId).Limit(maxPlayerListLimit).Find(&pl)
 		if err != nil {
 			log.Error("GmGetPlayerGameInfo find err :%v", err)
 			HTTPRetGame(c, ERR_DB, err.Error())
 			return
 		}
 	} else {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", req.ServerId, req.Uid).Find(&pl)
+		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, req.Uid).Find(&pl)
 		if err != nil {
 			log.Error("GmGetPlayerGameInfo find err :%v", err)
 			HTTPRetGame(c, ERR_DB, err.Error())

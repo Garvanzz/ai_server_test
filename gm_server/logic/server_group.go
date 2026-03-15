@@ -46,6 +46,19 @@ func serverStateToText(state int) string {
 	}
 }
 
+func mergeStateToText(state int) string {
+	switch state {
+	case 1:
+		return "待合服"
+	case 2:
+		return "已合服"
+	case 3:
+		return "回滚中"
+	default:
+		return "正常"
+	}
+}
+
 // GmGetServerList 获取区服列表（与 login 一致：区服来自 game_server，group_id>0；区服组来自 server_group）
 func GmGetServerList(c *gin.Context) {
 	metaList := make([]model.ServerGroup, 0)
@@ -106,7 +119,7 @@ func GmStartServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("GmStartServer get err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -170,7 +183,7 @@ func GmStopServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -227,7 +240,7 @@ func GmReStartServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -309,6 +322,10 @@ func GmGetGameServerList(c *gin.Context) {
 
 		items = append(items, &dto.GMRespServerItem{
 			Id:                serverItem[i].Id,
+			LogicServerId:     serverItem[i].LogicServerId,
+			MergeState:        serverItem[i].MergeState,
+			MergeStateText:    mergeStateToText(serverItem[i].MergeState),
+			MergeTime:         serverItem[i].MergeTime,
 			ServerName:        serverItem[i].ServerName,
 			GroupId:           serverItem[i].GroupId,
 			GroupName:         groupName,
@@ -718,7 +735,7 @@ func GmStartGameServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("getserverlist2 find err :%v", err.Error())
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -781,7 +798,7 @@ func GmStopGameServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("GmStopGameServer get err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -836,7 +853,7 @@ func GmReStartGameServer(c *gin.Context) {
 
 	serverItem := new(model.ServerItem)
 	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Get(serverItem)
+	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
 	if err != nil {
 		log.Error("GmReStartGameServer get err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())

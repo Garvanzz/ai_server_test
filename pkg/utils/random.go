@@ -111,6 +111,11 @@ func WeightedChoice[T ~int | ~int32 | ~int64](weights []T) int {
 	return weightedIndex(weights)
 }
 
+// WeightIndex 兼容旧调用：按权重随机索引
+func WeightIndex(weights []int32) int {
+	return weightedIndex(weights)
+}
+
 // weightedIndex 内部实现：按权重选择索引
 func weightedIndex[T ~int | ~int32 | ~int64](weights []T) int {
 	if len(weights) == 0 {
@@ -163,11 +168,11 @@ func HitPercent(percent int32) bool {
 type RandStringKind int
 
 const (
-	RandNumeric     RandStringKind = iota // 纯数字
-	RandLowerCase                         // 小写字母
-	RandUpperCase                         // 大写字母
-	RandAlphabetic                        // 字母（大小写）
-	RandAlphanumeric                      // 字母数字混合
+	RandNumeric      RandStringKind = iota // 纯数字
+	RandLowerCase                          // 小写字母
+	RandUpperCase                          // 大写字母
+	RandAlphabetic                         // 字母（大小写）
+	RandAlphanumeric                       // 字母数字混合
 )
 
 // RandomString 生成指定长度的随机字符串
@@ -177,10 +182,10 @@ func RandomString(length int, kind RandStringKind) string {
 	}
 
 	const (
-		numeric     = "0123456789"
-		lowerCase   = "abcdefghijklmnopqrstuvwxyz"
-		upperCase   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		alphabetic  = lowerCase + upperCase
+		numeric      = "0123456789"
+		lowerCase    = "abcdefghijklmnopqrstuvwxyz"
+		upperCase    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		alphabetic   = lowerCase + upperCase
 		alphanumeric = numeric + alphabetic
 	)
 

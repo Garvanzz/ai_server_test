@@ -37,6 +37,8 @@ func GmCreateAdminMail(c *gin.Context) {
 	}
 
 	mail := new(model.GMMailInfo)
+	mail.ServerId = resolveLogicServerID(int(Info.Server))
+	mail.OriginServerId = int(Info.Server)
 	mail.CreatorName = c.ClientIP()
 	mail.CnContent = Info.Content
 	mail.CnTitle = Info.Title
@@ -49,7 +51,7 @@ func GmCreateAdminMail(c *gin.Context) {
 	// 类型：system=系统邮件，person=个人邮件
 	if Info.Type == "system" {
 		mail.Type = 1
-	} else if Info.Type == "person" {
+	} else if Info.Type == "person" || Info.Type == "persion" {
 		mail.Type = 2
 	}
 

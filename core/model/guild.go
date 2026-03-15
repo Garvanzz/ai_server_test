@@ -76,6 +76,7 @@ type GuildApply struct {
 // GuildLog 帮会日志
 type GuildLog struct {
 	Id         int64    // 自增id
+	ServerId   int      // 逻辑服ID
 	GuildId    int64    // 帮会id
 	CreateTime int64    // 发生时间
 	Action     int32    // 事件类型
@@ -134,6 +135,8 @@ func GuildToProto(guild *Guild) *proto_guild.Guild {
 // GuildDB 帮会信息DB结构(落库使用)
 type GuildDB struct {
 	Id                int64             // 帮会唯一id
+	ServerId          int               // 逻辑服ID
+	OriginServerId    int               // 来源服ID
 	NoticeBoard       string            // 公告栏信息
 	GuildName         string            // 帮会名
 	Banner            int32             // 旗帜

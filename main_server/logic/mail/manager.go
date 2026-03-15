@@ -31,20 +31,22 @@ type delayMailInfo struct {
 
 // DbMailRecord db用
 type DbMailRecord struct {
-	Id          int64
-	Type        int
-	PlayerIds   []string
-	DbIds       []int64
-	CnTitle     string
-	CnContent   string
-	EnTitle     string
-	EnContent   string
-	Items       []mailItem
-	EffectTime  time.Time
-	CreateTime  time.Time
-	CreatorName string
-	Status      int
-	SenderName  string
+	Id             int64
+	ServerId       int
+	OriginServerId int
+	Type           int
+	PlayerIds      []string
+	DbIds          []int64
+	CnTitle        string
+	CnContent      string
+	EnTitle        string
+	EnContent      string
+	Items          []mailItem
+	EffectTime     int64
+	CreateTime     int64
+	CreatorName    string
+	Status         int
+	SenderName     string
 }
 
 type mailItem struct {
@@ -84,8 +86,10 @@ func (m *Manager) OnInit(app module.App) {
 		log.Error("mail manager OnInit GetEngine err:%v", err)
 		return
 	}
+	serverId := m.App.GetEnv().ID
+
 	sysMails := make([]*model.SysMailInfo, 0)
-	err = rdb.Mysql.Find(&sysMails)
+	err = rdb.Mysql.Table(define.SysMailInfoTable).Where("server_id IN (?, ?)", 0, serverId).Find(&sysMails)
 	if err != nil {
 		log.Error("load sysMails from redis err:", err)
 		return
@@ -131,7 +135,7 @@ func (m *Manager) OnInit(app module.App) {
 	}
 
 	records := make([]*DbMailRecord, 0)
-	if err := rdb.Mysql.Table(define.AdminMailTable).Where("status = ?", 1).Find(&records); err != nil {
+	if err := rdb.Mysql.Table(define.AdminMailTable).Where("server_id IN (?, ?) AND status = ?", 0, serverId, 1).Find(&records); err != nil {
 		log.Error("mail manager load delay mail form db err:%v", err)
 		return
 	}
@@ -139,7 +143,7 @@ func (m *Manager) OnInit(app module.App) {
 	for _, record := range records {
 
 		info := &delayMailInfo{
-			startTime: record.EffectTime.Unix(),
+			startTime: record.EffectTime,
 			mType:     record.Type,
 			CnTitle:   record.CnTitle,
 			CnContent: record.CnContent,
@@ -180,18 +184,20 @@ func (m *Manager) OnTick(delta time.Duration) {
 		return
 	}
 
+	serverId := m.App.GetEnv().ID
+
 	for id, info := range m.DelayMails {
 		if info.startTime <= now.Unix() {
 
 			record := new(DbMailRecord)
-			_, err := rdb.Mysql.Table(define.AdminMailTable).Where("id = ?", id).Get(record)
+			_, err := rdb.Mysql.Table(define.AdminMailTable).Where("id = ? AND server_id IN (?, ?)", id, 0, serverId).Get(record)
 			if err != nil {
 				log.Error("get mail record form DB error:%v", err)
 			} else {
 				if record.Status == 1 {
 
 					record.Status = 2 // 修改为已发送状态
-					if _, err := rdb.Mysql.Table(define.AdminMailTable).Where("id = ?", id).Cols("status").Update(record); err != nil {
+					if _, err := rdb.Mysql.Table(define.AdminMailTable).Where("id = ? AND server_id IN (?, ?)", id, 0, serverId).Cols("status").Update(record); err != nil {
 						log.Error("mail manager update mail record err:%v", err)
 					} else {
 
@@ -283,6 +289,7 @@ func (m *Manager) SendMail(mailType int, CnTitle, CnContent, EnTitle, EnContent,
 
 // 发送个人邮件
 func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderName string, items []conf.ItemE, expireTime int64, cfgId int32, params []string, receiverIds []int64) bool {
+	serverId := m.App.GetEnv().ID
 	gotItem := true
 	if len(items) > 0 {
 		gotItem = false
@@ -303,7 +310,9 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 	for _, receiverId := range receiverIds {
 		log.Info("Ids:%v", receiverId)
 		newMail := &model.PlayerMailInfo{
-			SysId: 0, //个人邮件的话系统id为0
+			ServerId:       serverId,
+			OriginServerId: serverId,
+			SysId:          0, //个人邮件的话系统id为0
 			MailInfos: map[string]model.MailInfo{
 				define.LanguageChinese:            {CnTitle, CnContent},
 				define.LanguageEnglish:            {EnTitle, EnContent},
@@ -342,8 +351,11 @@ func (m *Manager) sendPlayerMail(CnTitle, CnContent, EnTitle, EnContent, senderN
 
 // 发送系统邮件
 func (m *Manager) sendSysMail(items []conf.ItemE, CnTitle, CnContent, EnTitle, EnContent, sendName string, expireTime int64, cfgId int32, params []string) bool {
+	serverId := m.App.GetEnv().ID
 	newSysMail := &model.SysMailInfo{
-		Items: items,
+		ServerId:       serverId,
+		OriginServerId: serverId,
+		Items:          items,
 		MailInfos: map[string]model.MailInfo{
 			define.LanguageChinese:            {CnTitle, CnContent},
 			define.LanguageChineseTraditional: {CnTitle, CnContent},
@@ -415,7 +427,8 @@ func (m *Manager) deleteDBMail(id int64) bool {
 		return false
 	}
 
-	num, err := rdb.Mysql.Where("id = ?", id).Delete(&model.PlayerMailInfo{})
+	serverId := m.App.GetEnv().ID
+	num, err := rdb.Mysql.Where("id = ? AND server_id = ?", id, serverId).Delete(&model.PlayerMailInfo{})
 	if err != nil {
 		log.Error("delete DB mail error:%v", err)
 		return false

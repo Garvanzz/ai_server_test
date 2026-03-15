@@ -22,5 +22,6 @@ type Account struct {
 	SystemMailId   int64     `json:"systemMailId"`
 	ChatBan        int64     `json:"chatBan"`       //聊天封禁 是否被ban 0没有 其他是具体时间戳
 	ChatBanReason  string    `json:"chatBanReason"` //聊天封禁原因
-	ServerId       int       `json:"serverId"`      //服务器ID
+	ServerId       int       `json:"serverId"`      //逻辑服务器ID
+	OriginServerId int       `json:"originServerId"`
 }

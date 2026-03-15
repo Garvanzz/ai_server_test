@@ -7,7 +7,7 @@ type RechargeOrder struct {
 	UserId        string  `json:"user_id"`
 	OrderId       string  `json:"order_id"`
 	GameUserId    string  `json:"game_user_id"`
-	ServerId      string  `json:"server_id"`
+	ServerId      int     `json:"server_id"`
 	PaymentTime   string  `json:"payment_time"`
 	ChannelNumber string  `json:"channel_number"`
 }

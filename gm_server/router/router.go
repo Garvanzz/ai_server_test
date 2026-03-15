@@ -74,6 +74,17 @@ func Register(r *gin.Engine) {
 	gm.POST("/orders/cache-list", logic.GmGetCacheOrderList)
 	gm.POST("/guild/list", logic.GmGetGuildList)
 
+	// ========== 合服管理 ==========
+	merge := gm.Group("/merge")
+	{
+		merge.POST("/plan/create", logic.GmCreateMergePlan)
+		merge.POST("/plan/list", logic.GmListMergePlans)
+		merge.POST("/precheck", logic.GmPrecheckMerge)
+		merge.POST("/execute", logic.GmExecuteMergePlan)
+		merge.POST("/rollback", logic.GmRollbackMergePlan)
+		merge.POST("/conflicts", logic.GmListMergeConflicts)
+	}
+
 	// ========== 热更 ==========
 	hotfix := gm.Group("/hotfix")
 	{

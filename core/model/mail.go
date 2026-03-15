@@ -11,28 +11,34 @@ import (
 
 // SysMailInfo 系统邮件信息
 type SysMailInfo struct {
-	Id         int64               `json:"id"`
-	MailInfos  map[string]MailInfo `json:"mail_infos"` // 邮件内容
-	Items      []conf.ItemE        `json:"items"`      //道具
-	CreateTime int64               `json:"createTime"` //创建时间
-	ExpireTime int64               `json:"expireTime"` //过期时间
-	CfgId      int32               `json:"cfgId"`      //配置id 默认0
-	Params     []string            `json:"params"`     //参数 为空就是无
-	SenderName string              `json:"senderName"` //发送者名字
+	Id             int64               `json:"id"`
+	ServerId       int                 `json:"serverId"`
+	OriginServerId int                 `json:"originServerId"`
+	MailInfos      map[string]MailInfo `json:"mail_infos"` // 邮件内容
+	Items          []conf.ItemE        `json:"items"`      //道具
+	CreateTime     int64               `json:"createTime"` //创建时间
+	ExpireTime     int64               `json:"expireTime"` //过期时间
+	CfgId          int32               `json:"cfgId"`      //配置id 默认0
+	Params         []string            `json:"params"`     //参数 为空就是无
+	SenderName     string              `json:"senderName"` //发送者名字
 }
 
 // GM消息结构体
 type GMMailInfo struct {
-	CreatorName string
-	CreateTime  time.Time
-	EffectTime  time.Time
-	CnContent   string
-	CnTitle     string
-	PlayerIds   []int64
-	Status      int
-	Type        int
-	SenderName  string
-	Items       []MailItem
+	ServerId       int
+	OriginServerId int
+	CreatorName    string
+	CreateTime     time.Time
+	EffectTime     time.Time
+	EnContent      string
+	EnTitle        string
+	CnContent      string
+	CnTitle        string
+	PlayerIds      []int64
+	Status         int
+	Type           int
+	SenderName     string
+	Items          []MailItem
 }
 
 type MailItem struct {
@@ -44,6 +50,8 @@ type MailItem struct {
 // PlayerMailInfo 玩家邮件信息
 type PlayerMailInfo struct {
 	Id              int64               // mysql自增id
+	ServerId        int                 // 逻辑服ID
+	OriginServerId  int                 // 来源服ID
 	MailInfos       map[string]MailInfo `json:"mail_infos"` // 邮件内容
 	OpenTime        int64               // 开启时间
 	CreateTime      int64               // 创建时间

@@ -21,11 +21,24 @@ func GetNotices(c *gin.Context) {
 		return
 	}
 	log.Debug(" 获取公告： %v", req)
+	logicServerId := req.ServerId
+	if req.ServerId > 0 {
+		serverItem := new(model.ServerItem)
+		has, getErr := AccountEngine.Table(define.GameServerTable).Where("id = ?", req.ServerId).Get(serverItem)
+		if getErr != nil {
+			log.Error("获取区服映射错误: %s", getErr)
+			middleware.RetGame(c, dto2.ERR_DB, "server map err")
+			return
+		}
+		if has && serverItem.LogicServerId > 0 {
+			logicServerId = int(serverItem.LogicServerId)
+		}
+	}
 
 	var items []model.NoticeItem
 	err := AccountEngine.Table(define.NoticeTable).
 		Where("(channel = ? OR channel = 0) AND (server_id = ? OR server_id = 0)",
-			req.Channel, req.ServerId).
+			req.Channel, logicServerId).
 		Find(&items)
 	if err != nil {
 		log.Error("获取公告错误: %s", err)

@@ -16,6 +16,11 @@ func Contains[T comparable](arr []T, value T) bool {
 	return false
 }
 
+// ContainsInt32 兼容旧调用：判断 int32 切片包含关系
+func ContainsInt32(arr []int32, value int32) bool {
+	return Contains(arr, value)
+}
+
 // ContainsAll 判断 arr 是否包含 values 中的所有元素
 func ContainsAll[T comparable](arr, values []T) bool {
 	for _, v := range values {

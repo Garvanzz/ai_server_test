@@ -337,14 +337,9 @@ func ReqHeroUpStage(ctx global.IPlayer, pl *model.Player, req *proto_hero.C2SHer
 		var finish bool = true
 		//检查任务是否完成
 		for _, v := range tasks {
-			if _, ok := pl.Task.MainTask[v.Id]; !ok {
+			if !task.IsMainTaskRewarded(pl, v.Id) {
 				finish = false
 				break
-			} else {
-				if pl.Task.MainTask[v.Id].ReceiveAward == false {
-					finish = false
-					break
-				}
 			}
 		}
 

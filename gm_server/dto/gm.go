@@ -22,7 +22,7 @@ type GMGetServerList struct {
 	Id        int64  `json:"id"`
 	Time      string `json:"time"`
 	GroupId   int    `json:"groupId,omitempty"`   // 区服组 ID
-	GroupName string `json:"groupName,omitempty"`  // 区服组名称
+	GroupName string `json:"groupName,omitempty"` // 区服组名称
 }
 
 type GmAccount struct {
@@ -200,9 +200,13 @@ type GMResServerCenter struct {
 // GMRespServerItem 区服详情（含进程状态），数据来自 game_server 区服行
 type GMRespServerItem struct {
 	Id                int64  `json:"id"`
+	LogicServerId     int64  `json:"logicServerId"`
+	MergeState        int    `json:"mergeState"`
+	MergeStateText    string `json:"mergeStateText"`
+	MergeTime         int64  `json:"mergeTime"`
 	ServerName        string `json:"serverName"`
-	GroupId           int    `json:"groupId"`           // 区服组 ID
-	GroupName         string `json:"groupName"`         // 区服组名称
+	GroupId           int    `json:"groupId"`   // 区服组 ID
+	GroupName         string `json:"groupName"` // 区服组名称
 	Channel           int    `json:"channel"`
 	Ip                string `json:"ip"`
 	Port              int    `json:"port"`
@@ -230,7 +234,7 @@ type RechargeOrder struct {
 	UserId        string  `json:"user_id"`
 	OrderId       string  `json:"order_id"`
 	GameUserId    string  `json:"game_user_id"`
-	ServerId      string  `json:"server_id"`
+	ServerId      int     `json:"server_id"`
 	PaymentTime   string  `json:"payment_time"`
 	ChannelNumber string  `json:"channel_number"`
 }
@@ -242,7 +246,7 @@ type GMRespRechargeOrder struct {
 	UserId        string
 	OrderId       string
 	GameUserId    string
-	ServerId      string
+	ServerId      int
 	PaymentTime   string
 	ChannelNumber string
 	Award         string

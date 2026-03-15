@@ -1,28 +1,13 @@
 package model
 
 type PlayerTask struct {
-	Status                 map[int32]map[int32]int32 // 任务信息map
-	TaskLimit              map[int32]int32           // 每日完成任务限制
-	ActivePointRecord      map[int32]bool            // 每日活跃点领奖记录
-	ActivePointWeekRecord  map[int32]bool            // 每周活跃点领奖记录
-	ActivePointGuildRecord map[int32]bool            // 帮派活跃点领奖记录
-	DailyTask              map[int32]*Task
-	WeekTask               map[int32]*Task
-	MonthTask              map[int32]*Task
-	MainTask               map[int32]*Task //主线
-	AchieveTask            map[int32]*Task //成就
-	GuildTask              map[int32]*Task //帮会
-	DrawHeroTask           map[int32]*Task //招募英雄
-	TheCompetitionTask     map[int32]*Task //巅峰决斗
-	PassportDailyTask      map[int32]*Task //通行证每日任务
-	PassportWeekTask       map[int32]*Task //通行证每周任务
-	PassportSeasonTask     map[int32]*Task //通行证赛季任务
-	DailyResetTime         int64
-	WeekResetTime          int64
-	MonthResetTime         int64
-	GuildResetTime         int64
-	DailyPoint             int32 //每日活跃点
-	GuildPoint             int32 //帮派活跃点
+	Version     int32                     // 数据版本
+	Progress    map[int32]map[int32]int32 // 指标进度: taskType -> extraCondition -> value
+	TaskLimit   map[int32]int32           // 指标限制计数
+	Buckets     map[int32]map[int32]*Task // 任务桶: bucketType -> taskId -> state
+	Points      map[int32]int32           // 活跃点: activityType -> point
+	ClaimRecord map[int32]map[int32]bool  // 奖励领取记录: claimType -> rewardId -> claimed
+	ResetAt     map[int32]int64           // 重置游标: domain -> unix
 }
 
 type Task struct {
