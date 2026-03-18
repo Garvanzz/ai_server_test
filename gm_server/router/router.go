@@ -35,6 +35,10 @@ func Register(r *gin.Engine) {
 	servers := gm.Group("/servers")
 	{
 		servers.POST("/list", logic.GmGetServerList)
+		servers.POST("/create", logic.GmCreateManagedServer)
+		servers.POST("/update", logic.GmUpdateManagedServer)
+		servers.POST("/delete", logic.GmDeleteManagedServer)
+		servers.POST("/batch-update", logic.GmBatchUpdateManagedServer)
 		servers.POST("/start", logic.GmStartServer)
 		servers.POST("/stop", logic.GmStopServer)
 		servers.POST("/restart", logic.GmReStartServer)
@@ -43,6 +47,16 @@ func Register(r *gin.Engine) {
 		servers.POST("/game-stop", logic.GmStopGameServer)
 		servers.POST("/game-restart", logic.GmReStartGameServer)
 		servers.POST("/game-list-all", logic.GmGetGameServerProcessList)
+		servers.GET("/time", logic.GmGetServerTime)
+		servers.POST("/time", logic.GmSetServerTime)
+	}
+
+	serverGroups := gm.Group("/server-groups")
+	{
+		serverGroups.POST("/list", logic.GmGetServerGroupManageList)
+		serverGroups.POST("/create", logic.GmCreateServerGroup)
+		serverGroups.POST("/update", logic.GmUpdateServerGroup)
+		serverGroups.POST("/delete", logic.GmDeleteServerGroup)
 	}
 
 	// ========== 玩家数据查询 ==========
@@ -80,6 +94,8 @@ func Register(r *gin.Engine) {
 		merge.POST("/plan/create", logic.GmCreateMergePlan)
 		merge.POST("/plan/list", logic.GmListMergePlans)
 		merge.POST("/precheck", logic.GmPrecheckMerge)
+		merge.POST("/redis-check", logic.GmRedisMergeCheck)
+		merge.POST("/redis-script", logic.GmExportRedisMergeScript)
 		merge.POST("/execute", logic.GmExecuteMergePlan)
 		merge.POST("/rollback", logic.GmRollbackMergePlan)
 		merge.POST("/conflicts", logic.GmListMergeConflicts)
@@ -95,9 +111,7 @@ func Register(r *gin.Engine) {
 		hotfix.POST("/path-create", logic.GmCreateHotUpdatePath)
 	}
 
-	// ========== 上传、服务器时间、配置、编译 ==========
-	gm.GET("/server/time", logic.GmGetServerTime)
-	gm.POST("/server/time", logic.GmSetServerTime)
+	// ========== 上传、配置、编译 ==========
 	gm.POST("/upload", logic.GmUpload)
 	gm.POST("/config/update", logic.GmUpdateConfig)
 	gm.POST("/config/game-update", logic.GmGameUpdateConfig)

@@ -66,16 +66,6 @@ func (m *HttpModule) register() {
 		gm.POST("/activity/close_by_cfg_id", m.GMActivityCloseByCfgId)
 		gm.POST("/activity/stop_by_type", m.GMActivityStopByType)
 	}
-
-	// TODO:兼容旧路径，后续可删
-	api := m.router.Group("api")
-	api.Use(m.gmAuth())
-	{
-		api.POST("/GMSendMail", m.GMSendMail)
-		api.POST("/GMSendNotice", m.GMSendNotice)
-		api.POST("/GMSendHorse", m.GMSendHorse)
-		api.POST("/GMGrantItem", m.GMGrantItem)
-	}
 }
 
 // gmAuth GM 鉴权中间件，目前仅占位，生产环境应校验 token/白名单等

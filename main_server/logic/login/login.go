@@ -6,6 +6,7 @@ import (
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/core/multiserver"
 	"xfx/main_server/messages"
 	"xfx/main_server/player"
 	"xfx/pkg/agent"
@@ -26,6 +27,27 @@ var Module = func() module.Module {
 type Login struct {
 	modules.BaseModule
 	players map[int64]agent.PID
+}
+
+func loadAccountRoleByPayload(payload multiserver.LoginTokenPayload, logicServerId int) (*model.AccountRole, error) {
+	role := new(model.AccountRole)
+	var has bool
+	var err error
+	switch {
+	case payload.RoleID > 0:
+		has, err = db.Engine.Mysql.Table(define.AccountRoleTable).Where("id = ?", payload.RoleID).Get(role)
+	case payload.UID != "" && payload.EntryServerID > 0:
+		has, err = db.Engine.Mysql.Table(define.AccountRoleTable).Where("uid = ? AND entry_server_id = ?", payload.UID, payload.EntryServerID).Get(role)
+	default:
+		return nil, nil
+	}
+	if err != nil || !has {
+		return nil, err
+	}
+	if logicServerId > 0 {
+		role.LogicServerId = logicServerId
+	}
+	return role, nil
 }
 
 func (l *Login) OnInit(app module.App) {
@@ -61,58 +83,78 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 	resp.Result = int(proto_public.CommonState_Faild)
 
 	// 从登录服 Redis 取 uid（与 login_server 共用，token 由登录服写入）
-	uid, err := redis.String(db.RedisLoginExec("get", fmt.Sprintf("%s:%s", define.LoginToken, msg.Request.Token)))
+	rawTokenValue, err := redis.String(db.RedisLoginExec("get", fmt.Sprintf("%s:%s", define.LoginToken, msg.Request.Token)))
 	if err != nil {
 		log.Error("login token lookup error:%v", err)
 		return resp, err
 	}
-
-	// 本服 Redis：uid -> 本服 playerId（首次进服时创建并写入）
-	reply, err := db.RedisExec("get", fmt.Sprintf("%s:%s", define.Account, uid))
+	payload := multiserver.DecodeLoginTokenPayload(rawTokenValue)
+	uid := payload.UID
+	if uid == "" {
+		log.Error("login token payload missing uid")
+		return resp, nil
+	}
+	role, err := loadAccountRoleByPayload(payload, l.App.GetEnv().ID)
 	if err != nil {
-		log.Error("login db error:%v", err)
+		log.Error("load account role error:%v", err)
 		return resp, err
 	}
 
 	var pid agent.PID
 	var dbId int64
-	if reply == nil { // 本服 Redis 无 uid -> playerId 映射
-		// 合服校验：若 MySQL 中该 uid 在本服已有角色（redis_id>0）但 Redis 无映射，说明数据未同步或异常，不允许建新号
-		acc := new(model.Account)
-		has, err := db.Engine.Mysql.Table(define.AccountTable).Where("uid = ? AND server_id = ?", uid, l.App.GetEnv().ID).Get(acc)
+	entryServerId := l.App.GetEnv().ID
+	if payload.EntryServerID > 0 {
+		entryServerId = payload.EntryServerID
+	}
+	roleRedisKey := multiserver.AccountRoleRedisKey(uid, entryServerId)
+	reply, err := db.RedisExec("get", roleRedisKey)
+	if err != nil {
+		log.Error("login db error:%v", err)
+		return resp, err
+	}
+	if reply == nil && payload.EntryServerID == 0 {
+		reply, err = db.RedisExec("get", fmt.Sprintf("%s:%s", define.Account, uid))
 		if err != nil {
-			log.Error("login check account error:%v, uid:%s", err, uid)
+			log.Error("login legacy db error:%v", err)
 			return resp, err
 		}
-		if has && acc.RedisId > 0 {
-			log.Warn("login reject: uid %s has player on this server (redis_id=%d) but no redis mapping, merge data not synced or abnormal", uid, acc.RedisId)
-			return resp, nil
+	}
+	if role != nil && role.RedisId > 0 {
+		dbId = role.RedisId
+		if reply == nil {
+			_, _ = db.RedisExec("set", roleRedisKey, dbId)
 		}
+	} else if reply != nil {
+		dbId, err = redis.Int64(reply, nil)
+		if err != nil {
+			log.Error("login convert player id error:%v", err)
+			return resp, err
+		}
+	}
 
+	if dbId == 0 {
 		log.Debug("无账号玩家=====")
-		playerData, err := player.Born(uid, l.App.GetEnv().ID)
+		playerData, err := player.Born(uid, l.App.GetEnv().ID, entryServerId)
 		if err != nil {
 			log.Error("born db error:%v", err)
 			return resp, err
 		}
 
-		// 修改对应account表对应数据
-		account := new(model.Account)
-		account.NickName = playerData.Base.Name
-		account.RedisId = playerData.Id
-
-		_, err = db.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), playerData.Id)
+		_, err = db.RedisExec("set", roleRedisKey, playerData.Id)
 		if err != nil {
 			return resp, err
 		}
 
-		// 同步到account表（按本服更新，避免共享 MySQL 串服）
-		conn := db.Engine.Mysql
-		currentServerId := l.App.GetEnv().ID
-		n, err := conn.Table(define.AccountTable).Where("uid = ? AND server_id = ?", uid, currentServerId).Cols("nick_name", "redis_id").Update(account)
-		if err != nil || n == 0 {
-			log.Error(" player born update mysql error:%v,n:%v,uid:%v", err, n, uid)
-			return resp, err
+		if role != nil {
+			role.NickName = playerData.Base.Name
+			role.RedisId = playerData.Id
+			role.LogicServerId = l.App.GetEnv().ID
+			role.LastLoginTime = time.Now()
+			if _, err = db.Engine.Mysql.Table(define.AccountRoleTable).Where("id = ?", role.Id).
+				Cols("nick_name", "redis_id", "logic_server_id", "last_login_time").Update(role); err != nil {
+				log.Error("player born update mysql error:%v,uid:%v", err, uid)
+				return resp, err
+			}
 		}
 
 		pl := player.New(playerData, msg.Session, l.App)
@@ -133,13 +175,7 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 		pl.OnInit(l.App)
 		l.players[playerData.Id] = pid
 	} else { // 加载玩家数据
-		dbId, err = redis.Int64(reply, nil)
 		log.Info("dbId:%v, %v", dbId, uid)
-		if err != nil {
-			log.Error("login convert player id error:%v", err)
-			return resp, err
-		}
-
 		log.Debug("有账号玩家:%v", dbId)
 
 		var ok = false
@@ -157,6 +193,17 @@ func (l *Login) login(msg *messages.Login) (*messages.LoginResult, error) {
 			if err != nil {
 				log.Error("login load player data error:%v, playerId:%d, uid:%s (possible merge data not synced or redis key missing)", err, dbId, uid)
 				return resp, err
+			}
+			playerData.SetProp(define.PlayerPropServerId, int64(l.App.GetEnv().ID), false)
+			playerData.SetProp(define.PlayerPropEntryServerId, int64(entryServerId), false)
+			if role != nil {
+				role.LogicServerId = l.App.GetEnv().ID
+				role.LastLoginTime = time.Now()
+				if playerData.Base != nil {
+					role.NickName = playerData.Base.Name
+				}
+				_, _ = db.Engine.Mysql.Table(define.AccountRoleTable).Where("id = ?", role.Id).
+					Cols("logic_server_id", "last_login_time", "nick_name").Update(role)
 			}
 
 			pl := player.New(playerData, msg.Session, l.App)

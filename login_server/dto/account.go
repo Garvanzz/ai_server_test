@@ -26,6 +26,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	ServerID          int    `json:"serverId"`
 	EntryServerID     int64  `json:"entryServerId"`
+	RoleID            int64  `json:"roleId"`
 	Token             string `json:"token"`
 	UID               string `json:"uid"`
 	LastLoginServerID int64  `json:"lastLoginServerId"`

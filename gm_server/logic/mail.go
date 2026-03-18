@@ -2,15 +2,54 @@ package logic
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/gm_server/db"
 	"xfx/gm_server/dto"
 	"xfx/pkg/log"
 
 	"github.com/gin-gonic/gin"
 )
+
+func resolveMailReceiverPlayerIDs(entryServerId int, raw string) ([]int64, []string, error) {
+	ids := make([]int64, 0)
+	resolvedUIDs := make([]string, 0)
+	if strings.TrimSpace(raw) == "" {
+		return ids, resolvedUIDs, nil
+	}
+	parts := strings.Split(raw, "|")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		role := new(model.AccountRole)
+		has, err := db.AccountDb.Table(define.AccountRoleTable).Where("entry_server_id = ? AND uid = ?", entryServerId, part).Get(role)
+		if err != nil {
+			return nil, nil, err
+		}
+		if has {
+			if role.RedisId <= 0 {
+				return nil, nil, fmt.Errorf("uid %s has no player id on entry server %d", part, entryServerId)
+			}
+			ids = append(ids, role.RedisId)
+			resolvedUIDs = append(resolvedUIDs, part)
+			continue
+		}
+
+		id, parseErr := strconv.ParseInt(part, 10, 64)
+		if parseErr != nil || id <= 0 {
+			return nil, nil, fmt.Errorf("uid %s not found on entry server %d", part, entryServerId)
+		}
+		ids = append(ids, id)
+	}
+	return ids, resolvedUIDs, nil
+}
 
 // 后台邮件创建
 func GmCreateAdminMail(c *gin.Context) {
@@ -55,19 +94,14 @@ func GmCreateAdminMail(c *gin.Context) {
 		mail.Type = 2
 	}
 
-	// Uid 格式为 player_id 列表，用 | 分隔（如 "123|456"），与 main_server 发件接口一致
+	// Uid 优先按入口服上的 uid 列表解析；若找不到则兼容按 player_id 解析
 	if len(Info.Uid) > 0 {
-		uids := strings.Split(Info.Uid, "|")
-		for i := 0; i < len(uids); i++ {
-			if len(uids[i]) > 0 {
-				id, err := strconv.ParseInt(uids[i], 10, 64)
-				if err != nil {
-					continue
-				}
-
-				mail.PlayerIds = append(mail.PlayerIds, id)
-			}
+		resolvedIDs, _, err := resolveMailReceiverPlayerIDs(int(Info.Server), Info.Uid)
+		if err != nil {
+			HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+			return
 		}
+		mail.PlayerIds = append(mail.PlayerIds, resolvedIDs...)
 	}
 
 	//立即发送

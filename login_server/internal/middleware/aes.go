@@ -6,7 +6,7 @@ import (
 	"io"
 	"xfx/login_server/dto"
 	"xfx/pkg/log"
-	"xfx/pkg/utils/crypto"
+	"xfx/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +25,7 @@ func AesDecryptGame(key []byte) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		data, err := crypto.AesPkcs7Decrypt(payload, key)
+		data, err := utils.AESDecryptECB(payload, key)
 		if err != nil {
 			log.Error("login server aes decrypt error: %v", err)
 			RetGame(c, dto.ERR_ACCOUNT_PARAMS_ERROR, "params error")
@@ -57,7 +57,7 @@ func AesDecryptHomeWeb(key []byte) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		data, err := crypto.AesPkcs7Decrypt(raw, key)
+		data, err := utils.AESDecryptECB(raw, key)
 		if err != nil {
 			log.Debug("AesDecryptHomeWeb aes error: %v", err)
 			Ret(c, 400, "params error")

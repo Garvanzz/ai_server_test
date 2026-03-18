@@ -9,7 +9,7 @@ type Cache struct {
 	App        module.App
 	Session    agent.PID // 网关session pid
 	Self       agent.PID
-	Disconnect bool    // 是否被动断开 TODO:目前没有用到
+	Disconnect bool
 	GameRun    GameRun // 游戏相关缓存数据
 	SaveTick   int
 	RoomId     int32 //房间Id,标记是否有房间

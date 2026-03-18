@@ -8,7 +8,6 @@ import (
 	"xfx/login_server/logic"
 )
 
-// Register 注册 login_server 路由。
 func Register(r *gin.Engine) {
 	r.Use(gin.Recovery())
 	r.NoRoute(func(c *gin.Context) {

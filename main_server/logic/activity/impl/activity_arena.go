@@ -178,7 +178,7 @@ func (a *ActivityArena) RefreshBattlePlayer(ctx *proto_player.Context, params Ev
 func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 	pd := LoadPd[*model.ArenaOptionPd](a, ctx.Id)
 	//获取自己的排名
-	serverId := ctx.Id / define.PlayerIdBase
+	serverId := int64(ctx.ServerId)
 	rankKey := fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId())
 	rankItem := getSelfRank(int(serverId), rankKey, ctx.Id)
 	myIdStr := strconv.FormatInt(ctx.Id, 10)

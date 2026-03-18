@@ -7,13 +7,52 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/name5566/leaf/log"
 
-	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/gm_server/db"
 	"xfx/gm_server/dto"
 )
 
 const maxPlayerListLimit = 500 // 无 uid 时单次最多返回账号数，防止全表扫
+
+func queryAccountRoleProfiles(entryServerId int, uid string) ([]model.AccountRoleProfile, error) {
+	rows := make([]model.AccountRoleProfile, 0)
+	sql := `
+SELECT
+	a.id AS account_id,
+	r.id AS role_id,
+	a.uid AS uid,
+	a.account AS account,
+	r.nick_name AS nick_name,
+	a.platform AS platform,
+	a.is_white_acc AS is_white_acc,
+	a.login_ban AS login_ban,
+	a.login_ban_reason AS login_ban_reason,
+	a.chat_ban AS chat_ban,
+	a.chat_ban_reason AS chat_ban_reason,
+	r.entry_server_id AS entry_server_id,
+	r.logic_server_id AS logic_server_id,
+	r.origin_server_id AS origin_server_id,
+	r.redis_id AS redis_id,
+	r.system_mail_id AS system_mail_id,
+	r.create_time AS role_create_time,
+	r.online_time AS role_online_time,
+	r.offline_time AS role_offline_time,
+	r.last_login_time AS role_last_login_time,
+	a.create_time AS account_create_time,
+	a.last_login_entry_server_id AS last_login_entry_server_id,
+	a.last_login_logic_server_id AS last_login_logic_server_id
+FROM account_role r
+INNER JOIN account a ON a.id = r.account_id
+WHERE r.entry_server_id = ?`
+	args := []interface{}{entryServerId}
+	if strings.TrimSpace(uid) != "" {
+		sql += ` AND r.uid = ?`
+		args = append(args, uid)
+	}
+	sql += ` ORDER BY r.id DESC LIMIT ?`
+	args = append(args, maxPlayerListLimit)
+	return rows, db.AccountDb.SQL(sql, args...).Find(&rows)
+}
 
 // 获取玩家信息（仅 MySQL account 表）
 func GmGetPlayerInfo(c *gin.Context) {
@@ -28,23 +67,12 @@ func GmGetPlayerInfo(c *gin.Context) {
 		return
 	}
 	logicServerId := resolveLogicServerID(req.ServerId)
-
 	log.Debug("请求玩家数据 : %d(logic:%d), %s", req.ServerId, logicServerId, req.Uid)
-	pl := make([]model.Account, 0)
-	if strings.TrimSpace(req.Uid) == "" {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", logicServerId).Limit(maxPlayerListLimit).Find(&pl)
-		if err != nil {
-			log.Error("GmGetPlayerInfo find err :%v", err)
-			HTTPRetGame(c, ERR_DB, err.Error())
-			return
-		}
-	} else {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, req.Uid).Find(&pl)
-		if err != nil {
-			log.Error("GmGetPlayerInfo find err :%v", err)
-			HTTPRetGame(c, ERR_DB, err.Error())
-			return
-		}
+	pl, err := queryAccountRoleProfiles(req.ServerId, req.Uid)
+	if err != nil {
+		log.Error("GmGetPlayerInfo find err :%v", err)
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
 	}
 	HTTPRetGameData(c, SUCCESS, "success", pl, map[string]any{"totalCount": len(pl)})
 }
@@ -62,26 +90,15 @@ func GmGetPlayerGameInfo(c *gin.Context) {
 		return
 	}
 	logicServerId := resolveLogicServerID(req.ServerId)
-
 	log.Debug("请求玩家游戏数据 : %d(logic:%d), %s", req.ServerId, logicServerId, req.Uid)
-	pl := make([]model.Account, 0)
-	if strings.TrimSpace(req.Uid) == "" {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ?", logicServerId).Limit(maxPlayerListLimit).Find(&pl)
-		if err != nil {
-			log.Error("GmGetPlayerGameInfo find err :%v", err)
-			HTTPRetGame(c, ERR_DB, err.Error())
-			return
-		}
-	} else {
-		err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, req.Uid).Find(&pl)
-		if err != nil {
-			log.Error("GmGetPlayerGameInfo find err :%v", err)
-			HTTPRetGame(c, ERR_DB, err.Error())
-			return
-		}
+	pl, err := queryAccountRoleProfiles(req.ServerId, req.Uid)
+	if err != nil {
+		log.Error("GmGetPlayerGameInfo find err :%v", err)
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
 	}
 	if len(pl) == 0 {
-		HTTPRetGameData(c, SUCCESS, "success", []model.Account{}, map[string]any{"totalCount": 0})
+		HTTPRetGameData(c, SUCCESS, "success", []model.AccountRoleProfile{}, map[string]any{"totalCount": 0})
 		return
 	}
 

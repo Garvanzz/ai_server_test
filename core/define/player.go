@@ -1,22 +1,23 @@
 package define
 
 const (
-	PlayerPropLevel       = 1  // 等级
-	PlayerPropExp         = 2  // 经验
-	PlayerPropFaceId      = 5  // 头像id
-	PlayerPropFaceSlotId  = 6  // 头像框id
-	PlayerPropOfflineTime = 7  // 玩家上次登录时间
-	PlayerPropRank        = 8  //玩家段位
-	PlayerPropTitle       = 9  //称号
-	PlayerPropJob         = 10 //职业
-	PlayerPropSex         = 11 //性别
-	PlayerPropClan        = 12 //帮会
-	PlayerPropClanId      = 13 // 帮会ID
-	PlayerPropHeroId      = 14 // 主角ID
-	PlayerPropBubbleId    = 15 // 泡泡ID
-	PlayerPropPower       = 16 // 战力
-	PlayerPropServerId    = 17 //服务器ID
-	PlayerPropMax         = 20 // 最大Limit
+	PlayerPropLevel         = 1  // 等级
+	PlayerPropExp           = 2  // 经验
+	PlayerPropFaceId        = 5  // 头像id
+	PlayerPropFaceSlotId    = 6  // 头像框id
+	PlayerPropOfflineTime   = 7  // 玩家上次登录时间
+	PlayerPropRank          = 8  //玩家段位
+	PlayerPropTitle         = 9  //称号
+	PlayerPropJob           = 10 //职业
+	PlayerPropSex           = 11 //性别
+	PlayerPropClan          = 12 //帮会
+	PlayerPropClanId        = 13 // 帮会ID
+	PlayerPropHeroId        = 14 // 主角ID
+	PlayerPropBubbleId      = 15 // 泡泡ID
+	PlayerPropPower         = 16 // 战力
+	PlayerPropServerId      = 17 //服务器ID
+	PlayerPropEntryServerId = 18 // 入口服ID
+	PlayerPropMax           = 24 // 最大Limit
 )
 
 // 玩家职业

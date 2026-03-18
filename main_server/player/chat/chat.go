@@ -86,10 +86,9 @@ func ReqPrivateChatData(ctx global.IPlayer, pl *model.Player, req *proto_chat.C2
 	resp.List = make([]*proto_public.ChatInfo, 0)
 
 	//判断有没有这个人
-	account := new(model.Account)
-	account.RedisId = req.Id
-	//account.ServerId = pl.ServerId TODO：玩家id 已经加了服务器id
-	has, err := db.Engine.Mysql.Table(define.AccountTable).Get(&account)
+	accountRole := new(model.AccountRole)
+	accountRole.RedisId = req.Id
+	has, err := db.Engine.Mysql.Table(define.AccountRoleTable).Get(accountRole)
 	if err != nil {
 		log.Error("chat db error:%v", err)
 		ctx.Send(resp)
@@ -141,10 +140,9 @@ func ReqSendPrivateChatData(ctx global.IPlayer, pl *model.Player, req *proto_cha
 	resp := new(proto_chat.S2CSendPrivateChat)
 
 	//判断有没有这个人
-	account := new(model.Account)
-	account.RedisId = req.Id
-	//account.ServerId = pl.ServerId
-	has, err := db.Engine.Mysql.Table(define.AccountTable).Get(&account)
+	accountRole := new(model.AccountRole)
+	accountRole.RedisId = req.Id
+	has, err := db.Engine.Mysql.Table(define.AccountRoleTable).Get(accountRole)
 	if err != nil {
 		log.Error("chat db error:%v", err)
 		ctx.Send(resp)

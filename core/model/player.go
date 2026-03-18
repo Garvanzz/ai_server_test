@@ -44,7 +44,7 @@ type Player struct {
 	Mission       *Mission       //副本
 	Transaction   *Transaction   //交易所
 	Paradise      *Paradise      //乐园
-	Cdkey         *PlayerCdkey    //兑换码
+	Cdkey         *PlayerCdkey   //兑换码
 }
 
 func (pl *Player) InGame() bool {
@@ -52,24 +52,25 @@ func (pl *Player) InGame() bool {
 }
 
 type PlayerInfo struct {
-	Id          int64  `redis:"id"`
-	Uid         string `redis:"uid"`
-	Name        string `redis:"name"`         // 名字
-	Level       int32  `redis:"level"`        // 等级
-	Exp         int32  `redis:"exp"`          // 经验
-	FaceId      int32  `redis:"face_id"`      // 头像ID
-	FaceSlotId  int32  `redis:"face_slot_id"` // 头像框id
-	OfflineTime int64  `redis:"offline_time"` // 上次登录时间
-	Rank        int32  `redis:"rank"`         // 段位0：无
-	Title       int32  `redis:"title"`        // 称号
-	Job         int32  `redis:"job"`          // 职业
-	Sex         int32  `redis:"sex"`          // 性别
-	Clan        string `redis:"clan"`         // 帮会
-	ClanId      int32  `redis:"clanid"`       // 帮会ID
-	HeroId      int32  `redis:"heroId"`       // 主角ID
-	BubbleId    int32  `redis:"bubbleId"`     // 泡泡ID
-	Power       int64  `redis:"power"`        // 战力
-	ServerId    int32  `redis:"serverId"`     // 服务器ID
+	Id            int64  `redis:"id"`
+	Uid           string `redis:"uid"`
+	Name          string `redis:"name"`          // 名字
+	Level         int32  `redis:"level"`         // 等级
+	Exp           int32  `redis:"exp"`           // 经验
+	FaceId        int32  `redis:"face_id"`       // 头像ID
+	FaceSlotId    int32  `redis:"face_slot_id"`  // 头像框id
+	OfflineTime   int64  `redis:"offline_time"`  // 上次登录时间
+	Rank          int32  `redis:"rank"`          // 段位0：无
+	Title         int32  `redis:"title"`         // 称号
+	Job           int32  `redis:"job"`           // 职业
+	Sex           int32  `redis:"sex"`           // 性别
+	Clan          string `redis:"clan"`          // 帮会
+	ClanId        int32  `redis:"clanid"`        // 帮会ID
+	HeroId        int32  `redis:"heroId"`        // 主角ID
+	BubbleId      int32  `redis:"bubbleId"`      // 泡泡ID
+	Power         int64  `redis:"power"`         // 战力
+	ServerId      int32  `redis:"serverId"`      // 服务器ID
+	EntryServerId int32  `redis:"entryServerId"` // 入口服ID
 }
 
 // GetProp 获取prop

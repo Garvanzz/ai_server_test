@@ -17,7 +17,14 @@ func resolveLogicServerID(serverId int) int {
 		return 0
 	}
 	var item model.ServerItem
-	ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+	ok, err := retryLegacyGameServerGet(
+		func() (bool, error) {
+			return db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+		},
+		func() (bool, error) {
+			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", serverId).Get(&item)
+		},
+	)
 	if err != nil || !ok {
 		return serverId
 	}
@@ -34,12 +41,26 @@ func getMainServerURL(serverId int) string {
 		baseURL = defaultMainServerBaseURL()
 	} else {
 		var item model.ServerItem
-		ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+		ok, err := retryLegacyGameServerGet(
+			func() (bool, error) {
+				return db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
+			},
+			func() (bool, error) {
+				return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", serverId).Get(&item)
+			},
+		)
 		if err != nil || !ok {
 			baseURL = defaultMainServerBaseURL()
 		} else if item.LogicServerId > 0 {
 			var logicItem model.ServerItem
-			logicOk, logicErr := db.AccountDb.Table(define.GameServerTable).Where("id = ?", item.LogicServerId).Get(&logicItem)
+			logicOk, logicErr := retryLegacyGameServerGet(
+				func() (bool, error) {
+					return db.AccountDb.Table(define.GameServerTable).Where("id = ?", item.LogicServerId).Get(&logicItem)
+				},
+				func() (bool, error) {
+					return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", item.LogicServerId).Get(&logicItem)
+				},
+			)
 			if logicErr == nil && logicOk && strings.TrimSpace(logicItem.MainServerHttpUrl) != "" {
 				baseURL = strings.TrimRight(strings.TrimSpace(logicItem.MainServerHttpUrl), "/")
 			} else if strings.TrimSpace(item.MainServerHttpUrl) == "" {
@@ -73,15 +94,14 @@ func defaultMainServerBaseURL() string {
 	return u
 }
 
-// getPlayerIdByServerAndUid 根据 server_id、uid 查 Account 得到 RedisId（player_id），供转发 main_server 用
+// getPlayerIdByServerAndUid 根据入口服 server_id、uid 查角色映射得到 RedisId（player_id），供转发 main_server 用
 // serverId 须 >0，uid 须非空，否则返回 0,nil
 func getPlayerIdByServerAndUid(serverId int, uid string) (int64, error) {
 	if serverId <= 0 || strings.TrimSpace(uid) == "" {
 		return 0, nil
 	}
-	logicServerId := resolveLogicServerID(serverId)
-	pl := new(model.Account)
-	has, err := db.AccountDb.Table(define.AccountTable).Where("server_id = ? AND uid = ?", logicServerId, uid).Get(pl)
+	pl := new(model.AccountRole)
+	has, err := db.AccountDb.Table(define.AccountRoleTable).Where("entry_server_id = ? AND uid = ?", serverId, uid).Get(pl)
 	if err != nil {
 		return 0, err
 	}

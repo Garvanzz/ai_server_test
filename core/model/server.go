@@ -22,6 +22,10 @@ type ServerItem struct {
 	OpenServerTime    int64  `json:"openServerTime" xorm:"open_server_time"`
 	StopServerTime    int64  `json:"stopServerTime" xorm:"stop_server_time"`
 	ServerName        string `json:"serverName" xorm:"server_name varchar(64)"`
+	ManageMode        string `json:"manageMode" xorm:"manage_mode varchar(32)"`
+	ProcessName       string `json:"processName" xorm:"process_name varchar(128)"`
+	StartCommand      string `json:"startCommand" xorm:"start_command varchar(512)"`
+	WorkDir           string `json:"workDir" xorm:"work_dir varchar(512)"`
 	ExeName           string `json:"exeName" xorm:"exe_name"`
 	ExePath           string `json:"exePath" xorm:"exe_path"`
 }

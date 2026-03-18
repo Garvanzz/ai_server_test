@@ -24,7 +24,7 @@ func GetNotices(c *gin.Context) {
 	logicServerId := req.ServerID
 	if req.ServerID > 0 {
 		serverItem := new(model.ServerItem)
-		has, getErr := AccountEngine.Table(define.GameServerTable).Where("id = ?", req.ServerID).Get(serverItem)
+		has, getErr := AccountEngine.Table(define.GameServerTable).Cols("logic_server_id").Where("id = ?", req.ServerID).Get(serverItem)
 		if getErr != nil {
 			log.Error("获取区服映射错误: %s", getErr)
 			middleware.RetGame(c, dto2.ERR_DB, "server map err")

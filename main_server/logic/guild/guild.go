@@ -132,7 +132,7 @@ func (ent *entity) checkPermission(dbId int64, action int) bool {
 
 // 加载帮会数据
 func (mgr *Manager) loadGuildData() {
-	reply, err := db.RedisExec("GET", define.GuildRedisKey)
+	reply, err := db.RedisExec("GET", mgr.guildStateRedisKey())
 	if err != nil {
 		log.Error("guild mgr load data err", err)
 		return

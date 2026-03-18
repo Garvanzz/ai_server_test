@@ -22,6 +22,7 @@
 - `tools/scripts/mysql/reset_truncate_all_tables.sql`：清空数据脚本（TRUNCATE，保留表结构）
 - `tools/scripts/mysql/migrations/*.sql`：增量迁移脚本（按编号执行）
 - `tools/scripts/mysql/migration_conventions.sql`：迁移规范说明入口（不放可执行 SQL）
+- `tools/docs/merge_activity_redis_sop.md`：活动/排行榜/Redis 合服补充 SOP
 
 初始化建议流程：
 
@@ -38,6 +39,7 @@
 - `logic_server_id`（逻辑服）：业务真实归属服，对应 `game_server.logic_server_id`
 - `server_id`（业务服字段）：业务数据所属逻辑服 ID
 - `origin_server_id`（来源服）：首次来源服，便于审计与补偿
+- `account_role`：账号下的角色映射，一条记录代表“某账号在某入口服的那个角色”
 
 关键原则：
 
@@ -51,7 +53,8 @@
 
 ### 4.1 登录/区服路由（account 库）
 
-- `account`：账号与角色映射（含 `server_id`, `origin_server_id`）
+- `account`：全局账号主表（认证、封禁、平台信息）
+- `account_role`：角色映射（含 `entry_server_id`, `logic_server_id`, `origin_server_id`, `redis_id`）
 - `server_group`：区服分组展示元数据
 - `game_server`：区服入口、逻辑路由、合服状态（核心）
 - `hot_update`：热更版本配置
@@ -82,8 +85,8 @@
 
 1. 客户端调用 `login_server /servers/list` 获取入口服列表（返回含 `logicServerId`）
 2. 客户端选择入口服后调用 `login_server /auth/login`
-3. 登录服根据 `game_server.id` 解析目标 `logic_server_id`，并将账号 `server_id` 更新为逻辑服
-4. 返回 `token + uid + serverId(逻辑服) + entryServerId(入口服)`
+3. 登录服根据 `game_server.id` 解析目标 `logic_server_id`，并按 `(uid, entry_server_id)` 定位或创建 `account_role`
+4. 返回 `token + uid + roleId + serverId(逻辑服) + entryServerId(入口服)`
 5. 客户端携带 token 连接 `main_server`，由 main_server 校验登录服 Redis token 后加载角色
 
 补充约定：login_server 新接口字段统一使用 camelCase，例如区服列表返回 `serverList`、热更检查返回 `status/url/version`；当前仍保留 `ServerList`、`Status/Url/Version` 兼容旧客户端。
@@ -94,6 +97,7 @@
   - 区服/进程：`/gm/servers/*`
   - 合服：`/gm/merge/*`
   - 邮件/公告等转发：由 `gm_server` 按 `game_server -> logic_server_id -> main_server_http_url` 路由
+- `admin` 前端项目（同级目录 `../admin`）通过 `/api/merge/*`、`/api/players/*` 等接口对接 `gm_server`
 
 ### 5.3 main_server 数据访问约定
 
@@ -118,11 +122,13 @@
 3. 执行动作（当前实现）：
    - 重名公会改名（追加 `_S{source}`）
    - 将来源逻辑服业务表 `server_id` 更新为目标逻辑服
+   - 将来源入口服的 `account_role.logic_server_id` 更新为目标逻辑服
    - 将来源入口服 `game_server.logic_server_id` 指向目标服，`merge_state=2`
 4. 验证：
    - `game_server` 路由与状态
    - 业务表按目标 `server_id` 可查询
    - 登录、发邮件、好友、公会等核心链路抽检
+   - `admin` 合服页预检查统计、玩家查询页入口服/逻辑服展示正确
 
 ### 6.3 回滚策略（当前）
 
@@ -160,9 +166,13 @@
    - 现状：当前迁移列表未覆盖 `sys_mail_info`、`admin_mail`
    - 风险：来源服定向系统邮件/延迟邮件在合服后可能无法被目标服加载（main_server 仅加载 `server_id in (0, 当前服)`）
 
-4. 账号多服模型与唯一键语义需再次确认
-   - 现状：表注释描述“uid 可在多逻辑服拥有角色”，但 `account` 仍有 `uk_account(account)` 全局唯一，`login_server` 按 `account` 单行登录
-   - 风险：如果业务目标是真正“一账号多服并存角色”，当前模型与流程需要补充角色维度或放宽约束
+4. 历史数据迁移窗口需重点验证
+   - 现状：旧环境需把 account 中的角色态字段迁入 `account_role`
+   - 风险：若迁移脚本未完整执行，可能出现能鉴权但无法正确定位角色的情况
+
+5. Redis 侧状态需按逻辑服隔离
+   - 现状：邮件游标、guild manager 状态已改为按逻辑服独立 key
+   - 风险：若线上仍保留旧 key 数据，建议在切换窗口统一清理或重建缓存
 
 ---
 
@@ -179,6 +189,6 @@
 3. 补齐邮件迁移策略
    - 明确 `sys_mail_info/admin_mail` 的合服行为（迁移或保留规则）并代码实现一致
 
-4. 明确账号多服产品规则
-   - 若要一账号多服并存角色，需补角色映射模型和登录流程
-   - 若保持一账号单角色，需更新表注释与文档，避免歧义
+4. 统一后台与运营视角
+   - 玩家检索、GM 操作默认按 `entry_server_id` 定位角色
+   - main_server 业务读写统一按 `logic_server_id/server_id` 落库

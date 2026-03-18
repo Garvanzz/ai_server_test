@@ -3,6 +3,7 @@ package define
 const (
 	LoginToken            = "LoginToken"
 	Account               = "Account"
+	AccountRole           = "AccountRole"
 	PlayerGuildKey        = "player_guild"
 	PlayerLastLoginServer = "LastLoginServer"
 )
@@ -38,7 +39,7 @@ const (
 	BRDanaotiangong    = "BRDanaotiangong"
 	PlayerMission      = "Mission"
 	PlayerFashion      = "Fashion"
-	PlayerParadise   = "Paradise"
+	PlayerParadise     = "Paradise"
 	PlayerCdkey        = "Cdkey"
 )
 

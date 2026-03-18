@@ -49,7 +49,7 @@ func updateActivityRank(a BaseInfo, ctx *proto_player.Context, Id int32, score i
 		return
 	}
 
-	serverId := ctx.Id / define.PlayerIdBase
+	serverId := int64(ctx.ServerId)
 	//通知
 	rankItem := new(proto_rank.RankItem)
 	switch rankType {

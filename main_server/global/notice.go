@@ -2,12 +2,12 @@ package global
 
 import (
 	"xfx/core/config"
-	"xfx/pkg/utils"
 	conf2 "xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_player"
 	"xfx/proto/proto_public"
 )
@@ -29,7 +29,7 @@ func SyncHorse(ctx IPlayer, pl *model.Player, conf conf2.BroadCast, param []int3
 
 // SyncHorse 同步跑马灯通过id
 func SyncHorseById(m invoke.Invoker, pid int64, conf conf2.BroadCast, param []int32) {
-	serverId := pid / define.PlayerIdBase
+	serverId := int64(GetPlayerInfo(pid).ServerId)
 	res := &proto_public.S2CHorseOption{
 		Id:         conf.Id,
 		Channel:    int32(0),

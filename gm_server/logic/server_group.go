@@ -69,7 +69,14 @@ func GmGetServerList(c *gin.Context) {
 	}
 
 	items := make([]model.ServerItem, 0)
-	err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
+	err := retryLegacyGameServerFind(
+		func() error {
+			return db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
+		},
+		func() error {
+			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
+		},
+	)
 	if err != nil {
 		log.Error("GmGetServerList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -98,7 +105,128 @@ func GmGetServerList(c *gin.Context) {
 }
 
 // GmStartServer 启动大厅服（区服进程，数据来自 game_server，group_id>0）
+type managedServerActionReq struct {
+	ServerID int64 `json:"serverId"`
+}
+
+func parseManagedServerActionReq(c *gin.Context) (int64, error) {
+	rawData, _ := c.GetRawData()
+	var req managedServerActionReq
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		return 0, err
+	}
+	if req.ServerID <= 0 {
+		return 0, simpleError("serverId required")
+	}
+	return req.ServerID, nil
+}
+
+func loadManagedServerForAction(serverID int64, entryServer bool) (*model.ServerItem, bool, error) {
+	serverItem := new(model.ServerItem)
+	serverItem.Id = serverID
+	query := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverID)
+	if entryServer {
+		query = query.And("group_id > ?", 0)
+	} else {
+		query = query.And("group_id = ?", 0)
+	}
+	has, err := retryLegacyGameServerGet(
+		func() (bool, error) {
+			return query.Get(serverItem)
+		},
+		func() (bool, error) {
+			fallbackQuery := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverID)
+			if entryServer {
+				fallbackQuery = fallbackQuery.And("group_id > ?", 0)
+			} else {
+				fallbackQuery = fallbackQuery.And("group_id = ?", 0)
+			}
+			return applyLegacyGameServerCols(fallbackQuery).Get(serverItem)
+		},
+	)
+	return serverItem, has, err
+}
+
+func managedServerNotFoundMessage(entryServer bool) string {
+	if entryServer {
+		return "鍖烘湇涓嶅瓨鍦?"
+	}
+	return "娓告垙鏈嶄笉瀛樺湪"
+}
+
+func isManagedServerUserError(err error) bool {
+	switch err {
+	case errManagedServerManualStart,
+		errManagedServerManualStop,
+		errManagedServerProcessNameRequired,
+		errManagedServerStartCommandRequired,
+		errManagedServerAlreadyRunning,
+		errManagedServerNotRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+func writeManagedServerActionErr(c *gin.Context, err error) {
+	if isManagedServerUserError(err) {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		return
+	}
+	HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
+}
+
+func handleManagedServerLifecycle(c *gin.Context, entryServer bool, action string) {
+	serverID, err := parseManagedServerActionReq(c)
+	if err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		return
+	}
+
+	serverItem, has, err := loadManagedServerForAction(serverID, entryServer)
+	if err != nil {
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
+	}
+	if !has {
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, managedServerNotFoundMessage(entryServer))
+		return
+	}
+
+	switch action {
+	case "start":
+		err = startManagedServer(*serverItem)
+	case "stop":
+		err = stopManagedServer(*serverItem)
+	case "restart":
+		if effectiveManageMode(*serverItem) != manageModeLocalCommand {
+			err = errManagedServerManualStart
+			break
+		}
+		if managedServerProcessRunning(*serverItem) {
+			if stopErr := stopManagedServer(*serverItem); stopErr != nil && stopErr != errManagedServerNotRunning {
+				err = stopErr
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		err = startManagedServer(*serverItem)
+	default:
+		err = simpleError("unsupported action")
+	}
+
+	if err != nil {
+		writeManagedServerActionErr(c, err)
+		return
+	}
+	HTTPRetGame(c, SUCCESS, "success")
+}
+
 func GmStartServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, true, "start")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -164,6 +292,10 @@ func GmStartServer(c *gin.Context) {
 
 // GmStopServer 停止大厅服（区服进程，数据来自 game_server，group_id>0）
 func GmStopServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, true, "stop")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -221,6 +353,10 @@ func GmStopServer(c *gin.Context) {
 
 // GmReStartServer 重启大厅服（区服进程，数据来自 game_server，group_id>0）
 func GmReStartServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, true, "restart")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -298,7 +434,14 @@ func GmGetGameServerList(c *gin.Context) {
 	}
 
 	var serverItem []model.ServerItem
-	err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
+	err := retryLegacyGameServerFind(
+		func() error {
+			return db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
+		},
+		func() error {
+			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
+		},
+	)
 	if err != nil {
 		log.Error("GmGetGameServerList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -307,36 +450,8 @@ func GmGetGameServerList(c *gin.Context) {
 
 	items := make([]*dto.GMRespServerItem, 0, len(serverItem))
 	for i := range serverItem {
-		groupName := ""
-		if g, ok := metaMap[int64(serverItem[i].GroupId)]; ok {
-			groupName = g.Name
-		}
-		openTime := time.Unix(serverItem[i].OpenServerTime, 0).Format("2006-01-02 15:04:05")
-		closeTime := time.Unix(serverItem[i].StopServerTime, 0).Format("2006-01-02 15:04:05")
-
-		runState := "离线"
-		if cmd := exec.Command("pgrep", "-x", serverItem[i].ExeName); cmd.Run() == nil {
-			runState = "运行中"
-		}
-
-		items = append(items, &dto.GMRespServerItem{
-			Id:                serverItem[i].Id,
-			LogicServerId:     serverItem[i].LogicServerId,
-			MergeState:        serverItem[i].MergeState,
-			MergeStateText:    mergeStateToText(serverItem[i].MergeState),
-			MergeTime:         serverItem[i].MergeTime,
-			ServerName:        serverItem[i].ServerName,
-			GroupId:           serverItem[i].GroupId,
-			GroupName:         groupName,
-			Channel:           serverItem[i].Channel,
-			Ip:                serverItem[i].Ip,
-			Port:              serverItem[i].Port,
-			MainServerHttpUrl: serverItem[i].MainServerHttpUrl,
-			ServerState:       serverStateToText(serverItem[i].ServerState),
-			OpenServerTime:    openTime,
-			StopServerTime:    closeTime,
-			RunState:          runState,
-		})
+		managed := buildManagedServerItem(serverItem[i], metaMap)
+		items = append(items, &managed)
 	}
 
 	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
@@ -612,8 +727,26 @@ func unzip(src, dest string) error {
 
 // GmSetServerTime 设置游戏服务器时间偏移（转发到 main_server 的 /gm/time/set_offset 接口）
 func GmSetServerTime(c *gin.Context) {
+	rawData, _ := c.GetRawData()
 	var Info dto.GmSetServerTime
-	if err := c.ShouldBindJSON(&Info); err != nil {
+	if len(bytes.TrimSpace(rawData)) > 0 {
+		if err := json.Unmarshal(rawData, &Info); err != nil {
+			HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+			return
+		}
+	}
+	if Info.Server == 0 && Info.ServerID > 0 {
+		Info.Server = Info.ServerID
+	}
+	if strings.TrimSpace(Info.SetTime) == "" {
+		Info.SetTime = strings.TrimSpace(Info.SetTimeCamel)
+	}
+	if strings.TrimSpace(Info.SetTime) == "" {
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawData))
+		GmGetServerTime(c)
+		return
+	}
+	if Info.Server <= 0 {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
@@ -644,22 +777,40 @@ func GmSetServerTime(c *gin.Context) {
 		return
 	}
 
-	// 将 main_server 的响应原样返回
-	forwardMainServerResponse(c, respStr)
+	code, message, payload, normalizeErr := normalizeMainServerTimeResponse(int64(Info.Server), []byte(respStr))
+	if normalizeErr != nil {
+		log.Error("GmSetServerTime normalize main_server response err: %v, resp: %s", normalizeErr, respStr)
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "main_server response invalid")
+		return
+	}
+	if code != SUCCESS {
+		HTTPRetGame(c, code, message)
+		return
+	}
+	HTTPRetGameData(c, SUCCESS, message, payload, buildServerTimeLegacy(payload))
 }
 
 // GmGetServerTime 获取游戏服务器当前时间（转发到 main_server 的 /gm/time 接口）
 func GmGetServerTime(c *gin.Context) {
+	log.Debug("GmGetServerTime=============")
 	// 从查询参数或 POST body 中获取 serverId
 	serverIdStr := c.Query("server")
 	if serverIdStr == "" {
+		serverIdStr = c.Query("serverId")
+	}
+	if serverIdStr == "" {
 		// 尝试从 POST body 获取
 		var req struct {
-			Server int32 `json:"server"`
+			Server   int32 `json:"server"`
+			ServerID int32 `json:"serverId"`
 		}
 		if c.Request.Method == "POST" {
 			if err := c.ShouldBindJSON(&req); err == nil {
-				serverIdStr = fmt.Sprintf("%d", req.Server)
+				if req.Server > 0 {
+					serverIdStr = fmt.Sprintf("%d", req.Server)
+				} else if req.ServerID > 0 {
+					serverIdStr = fmt.Sprintf("%d", req.ServerID)
+				}
 			}
 		}
 	}
@@ -704,12 +855,25 @@ func GmGetServerTime(c *gin.Context) {
 		return
 	}
 
-	// 将 main_server 的响应原样返回
-	c.Data(http.StatusOK, "application/json", body)
+	code, message, payload, normalizeErr := normalizeMainServerTimeResponse(int64(serverId), body)
+	if normalizeErr != nil {
+		log.Error("GmGetServerTime normalize main_server response err: %v, body: %s", normalizeErr, string(body))
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "main_server response invalid")
+		return
+	}
+	if code != SUCCESS {
+		HTTPRetGame(c, code, message)
+		return
+	}
+	HTTPRetGameData(c, SUCCESS, message, payload, buildServerTimeLegacy(payload))
 }
 
 // GmStartGameServer 启动游戏服进程（仅 game_server 表中 group_id=0 的记录）
 func GmStartGameServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, false, "start")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -770,6 +934,10 @@ func GmStartGameServer(c *gin.Context) {
 
 // GmStopGameServer 停止游戏服进程（仅 group_id=0）
 func GmStopGameServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, false, "stop")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -825,6 +993,10 @@ func GmStopGameServer(c *gin.Context) {
 
 // GmReStartGameServer 重启游戏服进程（仅 group_id=0）
 func GmReStartGameServer(c *gin.Context) {
+	if c != nil {
+		handleManagedServerLifecycle(c, false, "restart")
+		return
+	}
 	rawData, _ := c.GetRawData()
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawData, &result); err != nil {
@@ -890,24 +1062,49 @@ func GmGetGameServerProcessList(c *gin.Context) {
 	log.Debug("请求游戏服进程列表")
 
 	var serverItem []model.ServerItem
-	err := db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Find(&serverItem)
+	err := retryLegacyGameServerFind(
+		func() error {
+			return db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Find(&serverItem)
+		},
+		func() error {
+			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id = ?", 0).Find(&serverItem)
+		},
+	)
 	if err != nil {
 		log.Error("GmGetGameServerProcessList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
 	items := make([]*dto.GMGameRespServerItem, 0, len(serverItem))
+	metaMap := buildServerGroupMap()
 	for i := range serverItem {
-		runState := "离线"
-		if exec.Command("pgrep", "-x", serverItem[i].ExeName).Run() == nil {
-			runState = "运行中"
-		}
+		managed := buildManagedServerItem(serverItem[i], metaMap)
 		items = append(items, &dto.GMGameRespServerItem{
-			Id:         serverItem[i].Id,
-			ServerName: serverItem[i].ServerName,
-			ExeName:    serverItem[i].ExeName,
-			ExePath:    serverItem[i].ExePath,
-			RunState:   runState,
+			Id:                managed.Id,
+			LogicServerId:     managed.LogicServerId,
+			MergeState:        managed.MergeState,
+			MergeStateText:    managed.MergeStateText,
+			MergeTime:         managed.MergeTime,
+			ServerName:        managed.ServerName,
+			GroupId:           managed.GroupId,
+			GroupName:         managed.GroupName,
+			Channel:           managed.Channel,
+			Ip:                managed.Ip,
+			Port:              managed.Port,
+			MainServerHttpUrl: managed.MainServerHttpUrl,
+			ServerState:       managed.ServerState,
+			ServerStateCode:   managed.ServerStateCode,
+			OpenServerTime:    managed.OpenServerTime,
+			StopServerTime:    managed.StopServerTime,
+			RunState:          managed.RunState,
+			ManageMode:        managed.ManageMode,
+			ProcessName:       managed.ProcessName,
+			StartCommand:      managed.StartCommand,
+			WorkDir:           managed.WorkDir,
+			ExeName:           managed.ExeName,
+			ExePath:           managed.ExePath,
+			ServerKind:        managed.ServerKind,
+			ServerKindText:    managed.ServerKindText,
 		})
 	}
 	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})

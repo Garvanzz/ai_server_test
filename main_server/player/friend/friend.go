@@ -9,6 +9,7 @@ import (
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/core/multiserver"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
 	"xfx/main_server/player/bag"
@@ -163,21 +164,32 @@ func ReqFindFriend(ctx global.IPlayer, pl *model.Player, req *proto_friend.C2SFi
 		return
 	}
 
-	//目前只判断uid,后面改uid+昵称
-	reply, err := db.RedisExec("get", fmt.Sprintf("%s:%s", define.Account, req.IdOrName))
-	if reply == nil || err != nil {
-		log.Error("reply null")
-		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
-		ctx.Send(res)
-		return
+	logicServerId := int(pl.GetProp(define.PlayerPropServerId))
+	entryServerId := int(pl.GetProp(define.PlayerPropEntryServerId))
+	dbId := int64(0)
+	if reply, replyErr := db.RedisExec("get", multiserver.AccountRoleRedisKey(req.IdOrName, entryServerId)); replyErr == nil && reply != nil {
+		dbId, err = redis.Int64(reply, nil)
+		if err != nil {
+			dbId = 0
+		}
 	}
-
-	dbId, err := redis.Int64(reply, nil)
-	if err != nil {
-		log.Error("dbId player id error:%v", err)
-		res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
-		ctx.Send(res)
-		return
+	if dbId == 0 {
+		role := new(model.AccountRole)
+		has, findErr := db.Engine.Mysql.Table(define.AccountRoleTable).
+			Where("logic_server_id = ? AND (uid = ? OR nick_name = ?)", logicServerId, req.IdOrName, req.IdOrName).
+			Asc("id").Get(role)
+		if findErr != nil {
+			log.Error("find friend role error:%v", findErr)
+			res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
+			ctx.Send(res)
+			return
+		}
+		if !has || role.RedisId == 0 {
+			res.Code = proto_friend.CommonErrorCode_ERR_NOPlayer
+			ctx.Send(res)
+			return
+		}
+		dbId = role.RedisId
 	}
 
 	if dbId == pl.Id {
@@ -1266,9 +1278,9 @@ func RefreshFriendTuijian(pl *model.Player) ([]int64, error) {
 	}
 
 	//排除好友
-	account := make([]*model.Account, 0)
-	query := db.Engine.Mysql.Table("account")
-	query = query.Where("server_id = ?", int(pl.GetProp(define.PlayerPropServerId)))
+	account := make([]*model.AccountRole, 0)
+	query := db.Engine.Mysql.Table(define.AccountRoleTable)
+	query = query.Where("logic_server_id = ?", int(pl.GetProp(define.PlayerPropServerId)))
 
 	if len(idInterfaces) > 0 {
 		query = query.NotIn("redis_id", idInterfaces) // 使用 xorm 的 NotIn 方法

@@ -179,7 +179,7 @@ func ReqActivityLadderRaceBattle(ctx global.IPlayer, pl *model.Player, req *prot
 
 		batData.PlayerInfo = global.ToCommonPlayerByRobot(res.Id)
 		batData.PlayerInfo.Score = otherRankItem.Rank
-		batData.PlayerInfo.ServerId = int32(pl.Id / define.PlayerIdBase)
+		batData.PlayerInfo.ServerId = int32(pl.GetProp(define.PlayerPropServerId))
 
 		res.Data[res.Id] = batData
 		_stagelineup = internal.GetRobotLineUp(res.GetId())
@@ -193,7 +193,7 @@ func ReqActivityLadderRaceBattle(ctx global.IPlayer, pl *model.Player, req *prot
 
 		batData.PlayerInfo = otherData.ToCommonPlayer()
 		batData.PlayerInfo.Score = otherRankItem.Rank
-		batData.PlayerInfo.ServerId = int32(pl.Id / define.PlayerIdBase)
+		batData.PlayerInfo.ServerId = otherData.ServerId
 
 		res.Data[res.Id] = batData
 	}
@@ -207,7 +207,7 @@ func ReqActivityLadderRaceBattle(ctx global.IPlayer, pl *model.Player, req *prot
 	selfRankItem := rank.GetSelfRank(pl.Cache.App.GetEnv().ID, rankKey, pl.Id)
 	selfBattleData.PlayerInfo = global.GetPlayerInfo(pl.Id).ToCommonPlayer()
 	selfBattleData.PlayerInfo.Score = selfRankItem.Score
-	selfBattleData.PlayerInfo.ServerId = int32(pl.Id / define.PlayerIdBase)
+	selfBattleData.PlayerInfo.ServerId = int32(pl.GetProp(define.PlayerPropServerId))
 
 	res.Data[pl.Id] = selfBattleData
 	res.Code = proto_public.CommonErrorCode_ERR_OK

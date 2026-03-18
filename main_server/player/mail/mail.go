@@ -260,24 +260,29 @@ func ReqCollectAllMailItems(ctx global.IPlayer, pl *model.Player, req *proto_mai
 // 检查新系统邮件 返回拉取到的新系统邮件
 func checkNewSysMail(ctx global.IPlayer, pl *model.Player) {
 	serverId := int(pl.GetProp(define.PlayerPropServerId))
-	account := new(model.Account)
-	_, err := db.Engine.Mysql.Table("account").Where("uid = ? AND server_id = ?", pl.Uid, serverId).ForUpdate().Get(account)
+	accountRole := new(model.AccountRole)
+	entryServerId := int(pl.GetProp(define.PlayerPropEntryServerId))
+	has, err := db.Engine.Mysql.Table(define.AccountRoleTable).Where("uid = ? AND entry_server_id = ?", pl.Uid, entryServerId).ForUpdate().Get(accountRole)
 	if err != nil {
 		log.Error("check new mail error:%v", err)
+		return
+	}
+	if !has {
+		log.Error("check new mail role not found, uid:%s entry:%d", pl.Uid, entryServerId)
 		return
 	}
 
 	id := invoke.MailClient(ctx).GetMaxSystemMailId()
 
 	maxSystemMailId, _ := utils.Int64(id)
-	curSysId := account.SystemMailId
+	curSysId := accountRole.SystemMailId
 
 	if curSysId >= maxSystemMailId {
 		return
 	}
 
-	account.SystemMailId = maxSystemMailId
-	_, err = db.Engine.Mysql.Table("account").Where("id = ? AND server_id = ?", account.Id, serverId).MustCols("sys_mail_id").Update(account)
+	accountRole.SystemMailId = maxSystemMailId
+	_, err = db.Engine.Mysql.Table(define.AccountRoleTable).Where("id = ?", accountRole.Id).MustCols("system_mail_id").Update(accountRole)
 	if err != nil {
 		log.Error("check new system mail error:%v", err)
 		return

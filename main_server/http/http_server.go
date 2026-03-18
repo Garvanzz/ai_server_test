@@ -1,11 +1,12 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
 	"xfx/core/define"
 	"xfx/pkg/log"
 	"xfx/pkg/module"
 	"xfx/pkg/module/modules"
+
+	"github.com/gin-gonic/gin"
 )
 
 var Module = func() module.Module {
@@ -36,6 +37,7 @@ func (m *HttpModule) startHttpServer(app module.App) {
 	m.register()
 
 	go func() {
+		log.Debug("http server start:%v", app.GetEnv().HttpUrl)
 		err := m.router.Run(app.GetEnv().HttpUrl)
 		if err != nil {
 			log.Error("gin server run error:%v", err)

@@ -2,6 +2,7 @@ package mail
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -72,6 +73,14 @@ type Manager struct {
 	DelayMails     map[int64]*delayMailInfo     // 延迟发送邮件
 }
 
+func (m *Manager) dailyMailRedisKey() string {
+	return fmt.Sprintf("dailyMail:%d", m.App.GetEnv().ID)
+}
+
+func (m *Manager) systemMailIDRedisKey() string {
+	return fmt.Sprintf("systemMailId:%d", m.App.GetEnv().ID)
+}
+
 func (m *Manager) OnInit(app module.App) {
 	m.BaseModule.OnInit(app)
 
@@ -103,7 +112,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	reply, err := db.RedisExec("get", "dailyMail")
+	reply, err := db.RedisExec("get", m.dailyMailRedisKey())
 	if err != nil {
 		log.Error("mail manager load daily mail err:%v", err)
 		return
@@ -118,7 +127,7 @@ func (m *Manager) OnInit(app module.App) {
 		}
 	}
 
-	reply, err = db.RedisExec("get", "systemMailId")
+	reply, err = db.RedisExec("get", m.systemMailIDRedisKey())
 	if err != nil {
 		log.Error("mail manager load system mail Id err:%v", err)
 		return
@@ -239,7 +248,7 @@ func (m *Manager) OnSave() {
 		return
 	}
 
-	_, err = db.RedisExec("set", "systemMailId", data)
+	_, err = db.RedisExec("set", m.systemMailIDRedisKey(), data)
 	if err != nil {
 		log.Error("mailManager stop set systemMailid error: %v", err)
 		return

@@ -2,6 +2,7 @@ package define
 
 const (
 	AccountTable        = "account"            // 玩家账号表
+	AccountRoleTable    = "account_role"       // 玩家角色映射表
 	AdminTable          = "admin"              // GM 后台管理员表
 	AdminMailTable      = "admin_mail"         // 后台邮件表
 	PlayerMailInfoTable = "player_mail_info"   // 个人邮件表

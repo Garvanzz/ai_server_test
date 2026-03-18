@@ -51,6 +51,10 @@ type Manager struct {
 	cache              *cache.WriteBackCache[int64, *model.PlayerGuild]
 }
 
+func (mgr *Manager) guildStateRedisKey() string {
+	return fmt.Sprintf("%s:%d", define.GuildRedisKey, mgr.App.GetEnv().ID)
+}
+
 func (mgr *Manager) OnInit(app module.App) {
 	mgr.BaseModule.OnInit(app)
 
@@ -193,7 +197,7 @@ func (mgr *Manager) OnSave() {
 		return
 	}
 
-	_, err = db.RedisExec("SET", define.GuildRedisKey, string(mgrData))
+	_, err = db.RedisExec("SET", mgr.guildStateRedisKey(), string(mgrData))
 	if err != nil {
 		log.Error("guild mgr OnSave db err", err)
 		return

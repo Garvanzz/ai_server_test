@@ -12,18 +12,18 @@ import (
 )
 
 type entity struct {
-	Id           int64
-	CfgId        int64
-	Type         string
-	State        string
-	StartTime    int64
-	EndTime      int64
-	CloseTime    int64
-	TimeType     int32
-	TimeValue    int32
-	handler      impl.IActivity
-	mod          module.Module
-	checked      bool
+	Id            int64
+	CfgId         int64
+	Type          string
+	State         string
+	StartTime     int64
+	EndTime       int64
+	CloseTime     int64
+	TimeType      int32
+	TimeValue     int32
+	handler       impl.IActivity
+	mod           module.Module
+	checked       bool
 	lastUpdateDay int32 // 上次更新的日期，用于跨天检测 (格式：YYYYMMDD)
 }
 
@@ -130,7 +130,7 @@ func (e *entity) determineStateFromConfig(Sid int) (event string) {
 		}
 	case define.ActTimeServerConfigured: //按照服务器开启时间
 		serverItem := new(model.ServerItem)
-		ok, err := db.Engine.Mysql.Table(define.GameServerTable).Where("id = ?", Sid).Get(serverItem)
+		ok, err := db.Engine.Mysql.Table(define.GameServerTable).Cols("open_server_time").Where("id = ?", Sid).Get(serverItem)
 		if !ok || err != nil {
 			log.Error("activity determineStateFromConfig mysql error, cfgId:%v, err:%v", e.CfgId, err)
 			return

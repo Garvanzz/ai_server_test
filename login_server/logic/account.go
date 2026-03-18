@@ -5,17 +5,50 @@ import (
 	"time"
 	dto2 "xfx/login_server/dto"
 
+	"github.com/gin-gonic/gin"
+	"xorm.io/xorm"
+
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/core/multiserver"
 	"xfx/login_server/internal/middleware"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
-
-	"github.com/gin-gonic/gin"
 )
 
 const TokenExpire = 60 * 60 * 2  // token 失效(秒) 2 小时
 const VerifyCodeExpire = 60 * 10 // 验证码失效(秒)
+
+func getLogicServerID(serverItem *model.ServerItem) int {
+	logicServerId := int(serverItem.LogicServerId)
+	if logicServerId <= 0 {
+		logicServerId = int(serverItem.Id)
+	}
+	return logicServerId
+}
+
+func ensureAccountRole(session *xorm.Session, account *model.Account, entryServerId int, logicServerId int, now time.Time) (*model.AccountRole, error) {
+	role := new(model.AccountRole)
+	has, err := session.Table(define.AccountRoleTable).Where("uid = ? AND entry_server_id = ?", account.Uid, entryServerId).Get(role)
+	if err != nil {
+		return nil, err
+	}
+	if has {
+		return role, nil
+	}
+
+	role.AccountId = account.Id
+	role.Uid = account.Uid
+	role.EntryServerId = entryServerId
+	role.LogicServerId = logicServerId
+	role.OriginServerId = entryServerId
+	role.CreateTime = now
+	role.LastLoginTime = now
+	if _, err = session.Table(define.AccountRoleTable).Insert(role); err != nil {
+		return nil, err
+	}
+	return role, nil
+}
 
 func Register(c *gin.Context) {
 	var registerUser dto2.RegisterRequest
@@ -28,39 +61,13 @@ func Register(c *gin.Context) {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
-
-	//密码加密hash
-	//passwordHash, err := bcrypt.GenerateFromPassword([]byte(registerUser.Password), bcrypt.DefaultCost)
-	//if err != nil {
-	//	httpRetGame(c, ErrDb, "db err")
-	//	return
-	//}
-
-	//玩家注册的话 账号不能为空
 	if len(registerUser.Account) == 0 {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "register account error")
 		return
 	}
 
-	p := new(model.Account)
-	p.Account = registerUser.Account
-	p.Platform = registerUser.Platform
-	uid := ""
-
-	has, err := AccountEngine.Table(define.AccountTable).Where("account = ?", p.Account).Exist()
-	if err != nil {
-		log.Error("register find err :%v", err.Error())
-		middleware.RetGame(c, dto2.ERR_DB, err.Error())
-		return
-	}
-	if has {
-		middleware.RetGame(c, dto2.ERR_ACCOUNT_EXISTS, "account exists")
-		return
-	}
-
-	now := time.Now()
 	serverItem := new(model.ServerItem)
-	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", registerUser.ServerID).Get(serverItem)
+	has, err := AccountEngine.Table(define.GameServerTable).Cols("logic_server_id").Where("id = ?", registerUser.ServerID).Get(serverItem)
 	if err != nil {
 		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
@@ -69,42 +76,72 @@ func Register(c *gin.Context) {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "server not found")
 		return
 	}
-	logicServerId := int(serverItem.LogicServerId)
-	if logicServerId <= 0 {
-		logicServerId = int(serverItem.Id)
+	logicServerId := getLogicServerID(serverItem)
+	now := time.Now()
+
+	session := AccountEngine.NewSession()
+	defer session.Close()
+	if err = session.Begin(); err != nil {
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
 	}
 
-	uid = utils.RandomNumeric(10)
-	has, err = AccountEngine.Table(define.AccountTable).Where("uid = ? AND server_id = ?", uid, logicServerId).Exist()
+	has, err = session.Table(define.AccountTable).Where("account = ?", registerUser.Account).Exist()
 	if err != nil {
-		log.Error("register find uid err :%v", err.Error())
+		_ = session.Rollback()
+		log.Error("register find err :%v", err.Error())
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+	if has {
+		_ = session.Rollback()
+		middleware.RetGame(c, dto2.ERR_ACCOUNT_EXISTS, "account exists")
+		return
+	}
+
+	uid := utils.RandomNumeric(10)
+	has, err = session.Table(define.AccountTable).Where("uid = ?", uid).Exist()
+	if err != nil {
+		_ = session.Rollback()
 		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 	for has {
 		uid = utils.RandomNumeric(10)
-		has, err = AccountEngine.Table(define.AccountTable).Where("uid = ? AND server_id = ?", uid, logicServerId).Exist()
+		has, err = session.Table(define.AccountTable).Where("uid = ?", uid).Exist()
 		if err != nil {
-			log.Error("register find uid err :%v", err.Error())
+			_ = session.Rollback()
 			middleware.RetGame(c, dto2.ERR_DB, err.Error())
 			return
 		}
 	}
 
-	p.Uid = uid
-	p.Password = registerUser.Password
-	p.CreateTime = now
-	p.ServerId = logicServerId
-	p.OriginServerId = registerUser.ServerID
-
-	_, err = AccountEngine.Table(define.AccountTable).Insert(p)
-	if err != nil {
+	account := &model.Account{
+		Uid:        uid,
+		Account:    registerUser.Account,
+		Password:   registerUser.Password,
+		Platform:   registerUser.Platform,
+		CreateTime: now,
+	}
+	if _, err = session.Table(define.AccountTable).Insert(account); err != nil {
+		_ = session.Rollback()
 		log.Error("register player account db err : %v", err)
 		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 
-	middleware.RetGameData(c, dto2.SUCCESS, "success", dto2.RegisterResponse{Account: p.Account}, map[string]interface{}{"account": p.Account})
+	if _, err = ensureAccountRole(session, account, registerUser.ServerID, logicServerId, now); err != nil {
+		_ = session.Rollback()
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	if err = session.Commit(); err != nil {
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	middleware.RetGameData(c, dto2.SUCCESS, "success", dto2.RegisterResponse{Account: account.Account}, map[string]interface{}{"account": account.Account})
 }
 
 // Login 登录
@@ -117,26 +154,17 @@ func Login(c *gin.Context) {
 
 	log.Debug(" account %v, version %v", loginUser.Account, loginUser.Version)
 
-	// 检查版本号
-	//if loginUser.Version != conf.Server.ClientVersion {
-	//	httpRetGame(c, ErrAccountClientVersionUnmatched, "client version unmatched")
-	//	return
-	//}
-
-	// 判断平台 id 是否正确
 	if loginUser.Platform < 1 || loginUser.Platform > 100 {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "platform type error")
 		return
 	}
-
-	//账号不能为空
 	if len(loginUser.Account) <= 0 {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "account not found")
 		return
 	}
 
-	player := new(model.Account)
-	has, err := AccountEngine.Table(define.AccountTable).Where("account = ?", loginUser.Account).Get(player)
+	account := new(model.Account)
+	has, err := AccountEngine.Table(define.AccountTable).Where("account = ?", loginUser.Account).Get(account)
 	if err != nil {
 		log.Error("account failed, err : %v", err)
 		middleware.RetGame(c, dto2.ERR_DB, "db err")
@@ -146,110 +174,104 @@ func Login(c *gin.Context) {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_NOT_FOUND, "account not found")
 		return
 	}
-
-	if player.LoginBan != 0 && player.LoginBan > time.Now().Unix() {
+	if account.LoginBan != 0 && account.LoginBan > time.Now().Unix() {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_BANNED, "account banned")
 		return
 	}
-
-	//-------开始密码效验--------
-	//拿密码 先dehex一手
-	//passByte, err := hex.DecodeString(loginUser.Password)
-	//if err != nil {
-	//	log.Error("login decrypt password hex err : %v", err)
-	//	httpRetGame(c, ErrAccountParamsError, "params error2")
-	//	return
-	//}
-	//
-	////密码需要再decrypt一次
-	//passwordRaw, err := crypto.AesPkcs7Decrypt(passByte, []byte(Key))
-	//if err != nil {
-	//	log.Error("login decrypt password failed, err : %v", err)
-	//	httpRetGame(c, ErrAccountParamsError, "params error3")
-	//	return
-	//}
-
-	// TODO:跳过密码校验
-
-	//需要对比密码是否正确
-	//err = bcrypt.CompareHashAndPassword([]byte(player.Password), passwordRaw)
-	//if err != nil {
-	//	httpRetGame(c, ErrAccountPasswordFailed, "password failed")
-	//	return
-	//}
-
-	//验证密码
-	if player.Password != loginUser.Password {
+	if account.Password != loginUser.Password {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
 		return
 	}
 
-	var serverItem model.ServerItem
-	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", loginUser.ServerID).Get(&serverItem)
+	serverItem := new(model.ServerItem)
+	has, err = AccountEngine.Table(define.GameServerTable).Cols("logic_server_id").Where("id = ?", loginUser.ServerID).Get(serverItem)
 	if err != nil {
 		log.Error("get server list find db err :%v", err.Error())
 		middleware.RetGame(c, dto2.ERR_DB, "get server list find db err")
 		return
 	}
-
 	if !has {
 		log.Error("get server list id error")
 		middleware.RetGame(c, dto2.ERR_DB, "get server list id error")
 		return
 	}
 
-	//删除老的token
-	if len(player.LastToken) > 0 {
-		_, err = RedisExec("del", fmt.Sprintf("%s:%v", define.LoginToken, player.LastToken))
-		if err != nil {
+	logicServerId := getLogicServerID(serverItem)
+	now := time.Now()
+	lastLoginServerId := int64(account.LastLoginEntryServerId)
+
+	session := AccountEngine.NewSession()
+	defer session.Close()
+	if err = session.Begin(); err != nil {
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	role, err := ensureAccountRole(session, account, loginUser.ServerID, logicServerId, now)
+	if err != nil {
+		_ = session.Rollback()
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	if len(role.LastToken) > 0 {
+		if _, err = RedisExec("del", fmt.Sprintf("%s:%v", define.LoginToken, role.LastToken)); err != nil {
+			_ = session.Rollback()
 			log.Error("del last token failed, err : %v", err)
 			middleware.RetGame(c, dto2.ERR_DB, err.Error())
 			return
 		}
 	}
 
-	logicServerId := int(serverItem.LogicServerId)
-	if logicServerId <= 0 {
-		logicServerId = int(serverItem.Id)
-	}
-
-	// 上次登录服（更新前）供客户端选服展示
-	lastLoginServerId := int64(player.ServerId)
-
-	// 生成登录 token，并更新账号 last_token、online_time、server_id（本次所选服）
 	loginToken := fmt.Sprintf("%x", []byte(utils.RandomNumeric(15)))
-	player.LastToken = loginToken
-	player.OnlineTime = time.Now()
-	player.ServerId = logicServerId
-	if player.OriginServerId == 0 {
-		player.OriginServerId = loginUser.ServerID
+	role.LastToken = loginToken
+	role.OnlineTime = now
+	role.LastLoginTime = now
+	role.LogicServerId = logicServerId
+	if role.OriginServerId == 0 {
+		role.OriginServerId = loginUser.ServerID
 	}
-
-	n, err := AccountEngine.Table(define.AccountTable).Where("id = ?", player.Id).
-		Cols("last_token", "online_time", "server_id", "origin_server_id").Update(player)
-	if err != nil {
-		middleware.RetGame(c, dto2.ERR_DB, err.Error())
-		log.Error("login save last token failed, err :%v", err)
-		return
-	}
-	if n == 0 {
-		log.Error("login save last token failed")
-		middleware.RetGame(c, dto2.ERR_DB, "login failed")
-		return
-	}
-
-	// token 存入 redis
-	_, err = RedisExec("set", fmt.Sprintf("%s:%v", define.LoginToken, loginToken), player.Uid, "ex", fmt.Sprintf("%v", TokenExpire))
-	if err != nil {
+	if _, err = session.Table(define.AccountRoleTable).Where("id = ?", role.Id).
+		Cols("last_token", "online_time", "last_login_time", "logic_server_id", "origin_server_id").Update(role); err != nil {
+		_ = session.Rollback()
 		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
 	}
 
-	// 按 uid 记录上次登录服（渠道与服解耦：不依赖 RedisId，login_server 即可维护）
-	_, err = RedisExec("set", fmt.Sprintf("%s:uid:%s", define.PlayerLastLoginServer, player.Uid), logicServerId, "ex", fmt.Sprintf("%v", TokenExpire*2))
+	account.OnlineTime = now
+	account.LastLoginEntryServerId = loginUser.ServerID
+	account.LastLoginLogicServerId = logicServerId
+	if _, err = session.Table(define.AccountTable).Where("id = ?", account.Id).
+		Cols("online_time", "last_login_entry_server_id", "last_login_logic_server_id").Update(account); err != nil {
+		_ = session.Rollback()
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		log.Error("login save account state failed, err :%v", err)
+		return
+	}
+
+	if err = session.Commit(); err != nil {
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	payload := multiserver.LoginTokenPayload{
+		UID:           account.Uid,
+		AccountID:     account.Id,
+		RoleID:        role.Id,
+		EntryServerID: loginUser.ServerID,
+		LogicServerID: logicServerId,
+		PlayerID:      role.RedisId,
+		IssuedAt:      now.Unix(),
+	}
+	_, err = RedisExec("set", fmt.Sprintf("%s:%v", define.LoginToken, loginToken), multiserver.EncodeLoginTokenPayload(payload), "ex", fmt.Sprintf("%v", TokenExpire))
+	if err != nil {
+		middleware.RetGame(c, dto2.ERR_DB, err.Error())
+		return
+	}
+
+	_, err = RedisExec("set", fmt.Sprintf("%s:uid:%s", define.PlayerLastLoginServer, account.Uid), loginUser.ServerID, "ex", fmt.Sprintf("%v", TokenExpire*2))
 	if err != nil {
 		log.Error("login save last server by uid failed, err :%v", err)
-		// 不阻断登录
 	}
 
 	log.Debug("login success")
@@ -257,15 +279,17 @@ func Login(c *gin.Context) {
 	resp := dto2.LoginResponse{
 		ServerID:          logicServerId,
 		EntryServerID:     serverItem.Id,
+		RoleID:            role.Id,
 		Token:             loginToken,
-		UID:               player.Uid,
+		UID:               account.Uid,
 		LastLoginServerID: lastLoginServerId,
 	}
 	middleware.RetGameData(c, dto2.SUCCESS, "success", resp, map[string]any{
 		"serverId":          logicServerId,
 		"entryServerId":     serverItem.Id,
+		"roleId":            role.Id,
 		"token":             loginToken,
-		"uid":               player.Uid,
+		"uid":               account.Uid,
 		"lastLoginServerId": lastLoginServerId,
 	})
 }

@@ -6,7 +6,7 @@ type GmMailInfo struct {
 	Immediatelysend bool   `json:"immediatelysend"`
 	Content         string `json:"content"`
 	Title           string `json:"title"`
-	Uid             string `json:"uid"` // player_id 列表，用 | 分隔，如 "123|456"
+	Uid             string `json:"uid"` // 入口服 uid 列表，用 | 分隔；兼容旧 player_id 列表
 	Server          int32  `json:"server"`
 	Fullserversend  bool   `json:"fullserversend"`
 	Name            string `json:"name"`

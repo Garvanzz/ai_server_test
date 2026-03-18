@@ -23,6 +23,75 @@ const (
 	mergePlanRolled    = 4
 )
 
+const redisScriptTemplatePath = "tools/scripts/redis/merge_redis_migration_template.ps1"
+
+func normalizeRedisMode(mode string) string {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "shared", "independent":
+		return mode
+	default:
+		return "independent"
+	}
+}
+
+func joinIntList(values []int) string {
+	return strings.Trim(strings.Replace(fmt.Sprint(values), " ", ",", -1), "[]")
+}
+
+func buildRedisKeyPatterns() []map[string]interface{} {
+	return []map[string]interface{}{
+		{"group": "role_route", "pattern": fmt.Sprintf("%s:<uid>:<entryServerId>", define.AccountRole), "action": "must_copy", "note": "入口服角色到 playerId 映射"},
+		{"group": "player_core", "pattern": fmt.Sprintf("%s:<playerId>", define.Player), "action": "must_copy", "note": "玩家主数据 Hash"},
+		{"group": "player_modules", "pattern": "Base/Bag/Shop/...:<playerId>", "action": "must_copy", "note": "玩家各模块 Redis 数据"},
+		{"group": "activity", "pattern": fmt.Sprintf("%s:<actId>", define.ActivityRedisKey), "action": "copy_or_reset", "note": "活动主数据"},
+		{"group": "activity_player", "pattern": fmt.Sprintf("%s:<actId>", define.ActivityPlayerRedisKey), "action": "copy_or_reset", "note": "活动玩家参与明细 Hash"},
+		{"group": "rank", "pattern": "rank_*", "action": "copy_or_reset", "note": "排行榜 ZSET 与竞技/天梯记录"},
+		{"group": "guild_state", "pattern": fmt.Sprintf("%s:<logicServerId>", define.GuildRedisKey), "action": "should_copy", "note": "公会运行态缓存"},
+		{"group": "guild_player", "pattern": fmt.Sprintf("%s:<playerId>", define.PlayerGuildKey), "action": "must_copy", "note": "玩家公会关系缓存"},
+		{"group": "mail_state", "pattern": "systemMailId:<logicServerId>, dailyMail:<logicServerId>", "action": "check_target", "note": "邮件游标与日常状态，目标服为主"},
+		{"group": "chat_optional", "pattern": "guild_chat_history:<guildId>", "action": "optional", "note": "公会聊天历史，可不迁移"},
+	}
+}
+
+func buildRedisMergeChecklist(targetServerId int, sourceServerIds []int, redisMode string) map[string]interface{} {
+	logicIds := make([]int, 0, len(sourceServerIds))
+	steps := make([]string, 0)
+	for _, sid := range sourceServerIds {
+		logicIds = append(logicIds, resolveLogicServerID(sid))
+	}
+	if redisMode == "shared" {
+		steps = append(steps,
+			"确认来源服与目标服 main_server 使用同一套 Redis。",
+			"停服后校验来源入口服角色在目标逻辑服可读到玩家主数据、活动数据与排行榜数据。",
+			"无需迁移 Redis，仅执行 MySQL 合服、角色路由切换和开服验证。",
+		)
+	} else {
+		steps = append(steps,
+			"停服并冻结登录。",
+			"备份来源服与目标服 Redis。",
+			"先迁移玩家主数据、角色映射、公会缓存，再迁移活动与排行榜 Key。",
+			"完成 Redis 迁移后，再执行 GM 合服工单。",
+			"开服前抽检登录、活动、排行、邮件、公会、好友链路。",
+		)
+	}
+	commands := map[string]string{
+		"exportTemplate": fmt.Sprintf("powershell -ExecutionPolicy Bypass -File %s -Mode export -SourceRedis <host:port> -TargetRedis <host:port> -SourceEntryServers %s -TargetLogicServer %d", redisScriptTemplatePath, joinIntList(sourceServerIds), targetServerId),
+		"importTemplate": fmt.Sprintf("powershell -ExecutionPolicy Bypass -File %s -Mode import -SourceRedis <host:port> -TargetRedis <host:port> -SourceEntryServers %s -TargetLogicServer %d", redisScriptTemplatePath, joinIntList(sourceServerIds), targetServerId),
+	}
+	return map[string]interface{}{
+		"redisMode":            redisMode,
+		"targetServerId":       targetServerId,
+		"sourceServerIds":      sourceServerIds,
+		"sourceLogicServerIds": logicIds,
+		"keyPatterns":          buildRedisKeyPatterns(),
+		"steps":                steps,
+		"scriptPath":           redisScriptTemplatePath,
+		"commands":             commands,
+		"docPath":              "tools/docs/merge_activity_redis_sop.md",
+	}
+}
+
 func mergePlanStatusText(status int) string {
 	switch status {
 	case mergePlanRunning:
@@ -141,6 +210,90 @@ func listGuildNameConflicts(targetServerId, sourceServerId int) ([]model.GuildDB
 	return ret, nil
 }
 
+func countTableRows(table string, serverId int) int64 {
+	if serverId <= 0 {
+		return 0
+	}
+	n, err := db.AccountDb.Table(table).Where("server_id = ?", serverId).Count()
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+func countAccountRolesByEntryServer(entryServerId int) int64 {
+	n, err := db.AccountDb.Table(define.AccountRoleTable).Where("entry_server_id = ?", entryServerId).Count()
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+func buildMergePrecheck(targetServerId int, sourceServerIds []int) (map[string]interface{}, []map[string]interface{}, error) {
+	conflicts := make([]map[string]interface{}, 0)
+	serverStats := make([]map[string]interface{}, 0, len(sourceServerIds))
+	warnings := make([]string, 0)
+
+	for _, sid := range sourceServerIds {
+		logicSid := resolveLogicServerID(sid)
+		guildConflicts, err := listGuildNameConflicts(targetServerId, logicSid)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, g := range guildConflicts {
+			conflicts = append(conflicts, map[string]interface{}{
+				"serverId":      sid,
+				"logicServerId": logicSid,
+				"type":          "guild_name",
+				"key":           g.GuildName,
+				"suggestName":   fmt.Sprintf("%s_S%d", g.GuildName, sid),
+			})
+		}
+
+		stats := map[string]interface{}{
+			"entryServerId":      sid,
+			"logicServerId":      logicSid,
+			"accountRoleCount":   countAccountRolesByEntryServer(sid),
+			"guildCount":         countTableRows(define.GuildTable, logicSid),
+			"guildApplyCount":    countTableRows(define.GuildApplyTable, logicSid),
+			"guildLogCount":      countTableRows(define.GuildLogTable, logicSid),
+			"sysMailCount":       countTableRows(define.SysMailInfoTable, logicSid),
+			"adminMailCount":     countTableRows(define.AdminMailTable, logicSid),
+			"playerMailCount":    countTableRows(define.PlayerMailInfoTable, logicSid),
+			"friendApplyCount":   countTableRows(define.FriendApplyTable, logicSid),
+			"friendBlockCount":   countTableRows(define.FriendBlockTable, logicSid),
+			"payOrderCount":      countTableRows(define.PayOrderTable, logicSid),
+			"payCacheOrderCount": countTableRows(define.PayCacheOrderTable, logicSid),
+			"guildConflictCount": len(guildConflicts),
+		}
+		serverStats = append(serverStats, stats)
+
+		if logicSid == targetServerId {
+			warnings = append(warnings, fmt.Sprintf("入口服 %d 当前已路由到目标逻辑服 %d，本次只会补齐入口映射与状态。", sid, targetServerId))
+		}
+		if stats["guildApplyCount"].(int64) > 0 {
+			warnings = append(warnings, fmt.Sprintf("入口服 %d 存在 %d 条公会申请缓存/记录，建议停服窗口执行并重点抽检公会申请列表。", sid, stats["guildApplyCount"].(int64)))
+		}
+		if stats["adminMailCount"].(int64) > 0 || stats["sysMailCount"].(int64) > 0 {
+			warnings = append(warnings, fmt.Sprintf("入口服 %d 存在系统/延迟邮件数据，合服后将统一迁到逻辑服 %d。", sid, targetServerId))
+		}
+	}
+	warnings = append(warnings,
+		"请确认来源服与目标服的 main_server 是否共享同一套 Redis；若 Redis 独立，需额外迁移玩家主数据、活动数据、排行榜和公会缓存。",
+		"活动/排行榜 Redis Key 的处理建议见 tools/docs/merge_activity_redis_sop.md。",
+	)
+
+	summary := map[string]interface{}{
+		"targetServerId":  targetServerId,
+		"sourceServerIds": sourceServerIds,
+		"conflictCount":   len(conflicts),
+		"conflicts":       conflicts,
+		"serverStats":     serverStats,
+		"warnings":        warnings,
+	}
+	return summary, conflicts, nil
+}
+
 func listMergePlans(c *gin.Context) {
 	plans := make([]model.MergePlan, 0)
 	err := db.AccountDb.Table(define.MergePlanTable).Desc("id").Limit(200).Find(&plans)
@@ -241,34 +394,61 @@ func GmPrecheckMerge(c *gin.Context) {
 		return
 	}
 
-	conflicts := make([]map[string]interface{}, 0)
-	for _, sid := range req.SourceServerIds {
-		rows, err := listGuildNameConflicts(req.TargetServerId, sid)
-		if err != nil {
-			HTTPRetGame(c, ERR_DB, err.Error())
-			return
-		}
-		for _, g := range rows {
-			conflicts = append(conflicts, map[string]interface{}{
-				"serverId":    sid,
-				"type":        "guild_name",
-				"key":         g.GuildName,
-				"suggestName": fmt.Sprintf("%s_S%d", g.GuildName, sid),
-			})
-		}
+	summary, _, err := buildMergePrecheck(req.TargetServerId, req.SourceServerIds)
+	if err != nil {
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
 	}
+	HTTPRetGameData(c, SUCCESS, "success", summary, summary)
+}
 
-	HTTPRetGameData(c, SUCCESS, "success", map[string]interface{}{
-		"targetServerId":  req.TargetServerId,
-		"sourceServerIds": req.SourceServerIds,
-		"conflictCount":   len(conflicts),
-		"conflicts":       conflicts,
-	}, map[string]interface{}{
-		"targetServerId":  req.TargetServerId,
-		"sourceServerIds": req.SourceServerIds,
-		"conflictCount":   len(conflicts),
-		"conflicts":       conflicts,
-	})
+func GmRedisMergeCheck(c *gin.Context) {
+	rawData, _ := c.GetRawData()
+	var req dto.GmRedisMergeCheckReq
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	req.TargetServerId = resolveLogicServerID(req.TargetServerId)
+	req.SourceServerIds = normalizeServerIDs(req.SourceServerIds)
+	ok, msg, _ := validateServers(req.TargetServerId, req.SourceServerIds)
+	if !ok {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, msg)
+		return
+	}
+	result := buildRedisMergeChecklist(req.TargetServerId, req.SourceServerIds, normalizeRedisMode(req.RedisMode))
+	HTTPRetGameData(c, SUCCESS, "success", result, result)
+}
+
+func GmExportRedisMergeScript(c *gin.Context) {
+	rawData, _ := c.GetRawData()
+	var req dto.GmRedisMergeCheckReq
+	if err := json.Unmarshal(rawData, &req); err != nil {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err")
+		return
+	}
+	req.TargetServerId = resolveLogicServerID(req.TargetServerId)
+	req.SourceServerIds = normalizeServerIDs(req.SourceServerIds)
+	ok, msg, _ := validateServers(req.TargetServerId, req.SourceServerIds)
+	if !ok {
+		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, msg)
+		return
+	}
+	redisMode := normalizeRedisMode(req.RedisMode)
+	checklist := buildRedisMergeChecklist(req.TargetServerId, req.SourceServerIds, redisMode)
+	script := fmt.Sprintf(`# Redis merge script template
+# File: %s
+# Redis mode: %s
+
+powershell -ExecutionPolicy Bypass -File %s -Mode export -SourceRedis <host:port> -TargetRedis <host:port> -SourceEntryServers %s -TargetLogicServer %d
+powershell -ExecutionPolicy Bypass -File %s -Mode import -SourceRedis <host:port> -TargetRedis <host:port> -SourceEntryServers %s -TargetLogicServer %d
+`, redisScriptTemplatePath, redisMode, redisScriptTemplatePath, joinIntList(req.SourceServerIds), req.TargetServerId, redisScriptTemplatePath, joinIntList(req.SourceServerIds), req.TargetServerId)
+	result := map[string]interface{}{
+		"scriptPath": redisScriptTemplatePath,
+		"script":     script,
+		"checklist":  checklist,
+	}
+	HTTPRetGameData(c, SUCCESS, "success", result, result)
 }
 
 func GmExecuteMergePlan(c *gin.Context) {
@@ -346,13 +526,17 @@ func GmExecuteMergePlan(c *gin.Context) {
 			}
 		}
 
-		tables := []string{define.GuildTable, define.GuildApplyTable, define.GuildLogTable, define.PlayerMailInfoTable, define.FriendApplyTable, define.FriendBlockTable, define.AccountTable, define.PayOrderTable, define.PayCacheOrderTable}
+		tables := []string{define.GuildTable, define.GuildApplyTable, define.GuildLogTable, define.SysMailInfoTable, define.AdminMailTable, define.PlayerMailInfoTable, define.FriendApplyTable, define.FriendBlockTable, define.PayOrderTable, define.PayCacheOrderTable}
 		for _, tb := range tables {
 			q := fmt.Sprintf("UPDATE %s SET server_id = ? WHERE server_id = ?", tb)
 			if _, err = db.AccountDb.Exec(q, plan.TargetServerId, logicSid); err != nil {
 				success = false
 				serverOK = false
 			}
+		}
+		if _, err = db.AccountDb.Table(define.AccountRoleTable).Where("entry_server_id = ?", sid).Cols("logic_server_id").Update(&model.AccountRole{LogicServerId: plan.TargetServerId}); err != nil {
+			success = false
+			serverOK = false
 		}
 
 		if _, err = db.AccountDb.Table(define.GameServerTable).Where("id = ?", sid).
@@ -379,7 +563,17 @@ func GmExecuteMergePlan(c *gin.Context) {
 	_, _ = db.AccountDb.Table(define.MergePlanTable).Where("id = ?", plan.Id).Cols("status", "end_time").Update(plan)
 
 	if success {
-		HTTPRetGame(c, SUCCESS, "success")
+		HTTPRetGameData(c, SUCCESS, "success", map[string]interface{}{
+			"planId":          plan.Id,
+			"status":          plan.Status,
+			"statusText":      mergePlanStatusText(plan.Status),
+			"rollbackWarning": "当前回滚仅恢复入口路由，不自动回滚已迁移业务数据；真实回滚请使用备份恢复。",
+		}, map[string]interface{}{
+			"planId":          plan.Id,
+			"status":          plan.Status,
+			"statusText":      mergePlanStatusText(plan.Status),
+			"rollbackWarning": "当前回滚仅恢复入口路由，不自动回滚已迁移业务数据；真实回滚请使用备份恢复。",
+		})
 		return
 	}
 	HTTPRetGame(c, ERR_SERVER_INTERNAL, "merge executed with errors")
@@ -419,7 +613,17 @@ func GmRollbackMergePlan(c *gin.Context) {
 	plan.RollbackTime = now
 	_, _ = db.AccountDb.Table(define.MergePlanTable).Where("id = ?", plan.Id).Cols("status", "rollback_time").Update(plan)
 
-	HTTPRetGame(c, SUCCESS, "success")
+	HTTPRetGameData(c, SUCCESS, "success", map[string]interface{}{
+		"planId":          plan.Id,
+		"status":          plan.Status,
+		"statusText":      mergePlanStatusText(plan.Status),
+		"rollbackWarning": "仅恢复入口路由与 merge_state，已迁移业务数据不会自动回滚。",
+	}, map[string]interface{}{
+		"planId":          plan.Id,
+		"status":          plan.Status,
+		"statusText":      mergePlanStatusText(plan.Status),
+		"rollbackWarning": "仅恢复入口路由与 merge_state，已迁移业务数据不会自动回滚。",
+	})
 }
 
 func GmListMergePlans(c *gin.Context) {

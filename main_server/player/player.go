@@ -6,6 +6,7 @@ import (
 	"xfx/core/db"
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/core/multiserver"
 	"xfx/main_server/global"
 	"xfx/main_server/player/bag"
 	"xfx/main_server/player/base"
@@ -20,13 +21,13 @@ import (
 	"xfx/main_server/player/gemappraisal"
 	"xfx/main_server/player/handbook"
 	"xfx/main_server/player/hero"
-	paradise "xfx/main_server/player/paradise"
 	"xfx/main_server/player/idle_box"
 	"xfx/main_server/player/internal"
 	"xfx/main_server/player/lineup"
 	"xfx/main_server/player/magic"
 	"xfx/main_server/player/mission"
 	"xfx/main_server/player/openbox"
+	paradise "xfx/main_server/player/paradise"
 	"xfx/main_server/player/pet"
 	"xfx/main_server/player/playerprop"
 	"xfx/main_server/player/rank"
@@ -131,7 +132,7 @@ func LoadPlayerData(id int64) (*model.Player, error) {
 	return pl, nil
 }
 
-func Born(uid string, serverId int) (*model.Player, error) {
+func Born(uid string, logicServerId int, entryServerId int) (*model.Player, error) {
 	pl := new(model.Player)
 
 	// 获取唯一id
@@ -143,7 +144,7 @@ func Born(uid string, serverId int) (*model.Player, error) {
 	pl.Id = id
 	pl.Uid = uid
 
-	initPlayerProp(pl)
+	initPlayerProp(pl, logicServerId, entryServerId)
 	base.Init(pl, uid)
 	playerprop.Init(pl)
 	bag.Init(pl)
@@ -173,7 +174,7 @@ func Born(uid string, serverId int) (*model.Player, error) {
 	paradise.Init(pl)
 	cdkey.Init(pl)
 
-	_, err = db.RedisExec("set", fmt.Sprintf("%s:%s", define.Account, uid), id)
+	_, err = db.RedisExec("set", multiserver.AccountRoleRedisKey(uid, entryServerId), id)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +203,10 @@ func loadProps(pl *model.Player, info *model.PlayerInfo) {
 	pl.Props[define.PlayerPropBubbleId] = int64(info.BubbleId)
 	pl.Props[define.PlayerPropPower] = info.Power
 	pl.Props[define.PlayerPropServerId] = int64(info.ServerId)
+	if info.EntryServerId == 0 {
+		info.EntryServerId = info.ServerId
+	}
+	pl.Props[define.PlayerPropEntryServerId] = int64(info.EntryServerId)
 }
 
 func fromProps(pl *model.Player) *model.PlayerInfo {
@@ -225,10 +230,11 @@ func fromProps(pl *model.Player) *model.PlayerInfo {
 	info.BubbleId = int32(pl.GetProp(define.PlayerPropBubbleId))
 	info.Power = pl.GetProp(define.PlayerPropPower)
 	info.ServerId = int32(pl.GetProp(define.PlayerPropServerId))
+	info.EntryServerId = int32(pl.GetProp(define.PlayerPropEntryServerId))
 	return info
 }
 
-func initPlayerProp(pl *model.Player) {
+func initPlayerProp(pl *model.Player, logicServerId int, entryServerId int) {
 	pl.Props[define.PlayerPropLevel] = 1
 	pl.Props[define.PlayerPropExp] = 0
 	pl.Props[define.PlayerPropFaceId] = define.PlayerHeadIcon
@@ -236,7 +242,8 @@ func initPlayerProp(pl *model.Player) {
 	pl.Props[define.PlayerPropHeroId] = define.PlayerHeroID
 	pl.Props[define.PlayerPropOfflineTime] = utils.Now().Unix()
 	pl.Props[define.PlayerPropBubbleId] = define.PlayerBubbleID
-	pl.Props[define.PlayerPropServerId] = pl.Id / define.PlayerIdBase
+	pl.Props[define.PlayerPropServerId] = int64(logicServerId)
+	pl.Props[define.PlayerPropEntryServerId] = int64(entryServerId)
 }
 
 //============================Prop END==============================

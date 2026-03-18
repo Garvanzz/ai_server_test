@@ -16,7 +16,7 @@ import (
 // SyncChatSend 同步聊天
 func SyncChatSend(ctx global.IPlayer, pl *model.Player, typ, id int32, content string, value []int32, cid int32, msgType int32, attachment *proto_public.AttachmentOption) (bool, proto_public.CommonErrorCode) {
 	account := new(model.Account)
-	_, err := db.Engine.Mysql.Where("uid = ?", pl.Uid).Get(account)
+	_, err := db.Engine.Mysql.Table(define.AccountTable).Where("uid = ?", pl.Uid).Get(account)
 	if err != nil {
 		log.Error("check new mail error:%v", err)
 		return false, proto_public.CommonErrorCode_ERR_MYSQLERROR

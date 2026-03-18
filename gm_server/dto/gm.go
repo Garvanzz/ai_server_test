@@ -16,19 +16,18 @@ type GMRespUserInfo struct {
 	Avatar      []string
 }
 
-// GMGetServerList 区服列表项（与 login 区服设计一致，数据来自 game_server）
 type GMGetServerList struct {
 	Name      string `json:"name"`
 	Id        int64  `json:"id"`
 	Time      string `json:"time"`
-	GroupId   int    `json:"groupId,omitempty"`   // 区服组 ID
-	GroupName string `json:"groupName,omitempty"` // 区服组名称
+	GroupId   int    `json:"groupId,omitempty"`
+	GroupName string `json:"groupName,omitempty"`
 }
 
 type GmAccount struct {
 	Id         int64  `json:"id"`
-	UserName   string `json:"username"` //账号
-	Password   string `json:"password"` //密码
+	UserName   string `json:"username"`
+	Password   string `json:"password"`
 	Token      string
 	Permission int
 	Name       string
@@ -42,22 +41,21 @@ type GmReqPlayerInfo struct {
 type GMPlayerInfo struct {
 	Id          int64  `redis:"id"`
 	Uid         string `redis:"uid"`
-	Name        string `redis:"name"`         // 名字
-	Level       int32  `redis:"level"`        // 等级
-	Exp         int32  `redis:"exp"`          // 经验
-	FaceId      int32  `redis:"face_id"`      // 头像ID
-	FaceSlotId  int32  `redis:"face_slot_id"` // 头像框id
-	OfflineTime int64  `redis:"offline_time"` // 上次登录时间
-	Rank        int32  `redis:"rank"`         // 段位0：无
-	Title       int32  `redis:"title"`        // 称号
-	Job         int32  `redis:"job"`          // 职业
-	Sex         int32  `redis:"sex"`          // 性别
-	Clan        string `redis:"clan"`         // 帮会
-	ClanId      int32  `redis:"clanid"`       // 帮会ID
-	HeroId      int32  `redis:"heroId"`       // 主角ID
+	Name        string `redis:"name"`
+	Level       int32  `redis:"level"`
+	Exp         int32  `redis:"exp"`
+	FaceId      int32  `redis:"face_id"`
+	FaceSlotId  int32  `redis:"face_slot_id"`
+	OfflineTime int64  `redis:"offline_time"`
+	Rank        int32  `redis:"rank"`
+	Title       int32  `redis:"title"`
+	Job         int32  `redis:"job"`
+	Sex         int32  `redis:"sex"`
+	Clan        string `redis:"clan"`
+	ClanId      int32  `redis:"clanid"`
+	HeroId      int32  `redis:"heroId"`
 }
 
-// 背包
 type GmReqPlayerBag struct {
 	Uid      string
 	ServerId int
@@ -72,7 +70,6 @@ type GmRespPlayerBag struct {
 	ItemNum  int32
 }
 
-// 装备
 type GmReqPlayerEquip struct {
 	Uid      string
 	ServerId int
@@ -91,9 +88,9 @@ type GmRespPlayerEquip struct {
 }
 
 type EnchantOption struct {
-	Id    int32 //符咒ID
-	Level int32 //等级
-	Exp   int32 //经验
+	Id    int32
+	Level int32
+	Exp   int32
 }
 
 type MountOption struct {
@@ -101,8 +98,8 @@ type MountOption struct {
 	Star        int32
 	Exp         int32
 	UseId       int32
-	Mount       []*MountItemOption //坐骑
-	MountEnergy map[int32]int32    //坐骑赋能
+	Mount       []*MountItemOption
+	MountEnergy map[int32]int32
 }
 
 type MountItemOption struct {
@@ -125,15 +122,14 @@ type WeaponryItem struct {
 }
 
 type EquipOption struct {
-	CId   int32 //配置ID
-	Id    int32 //唯一ID
+	CId   int32
+	Id    int32
 	Level int32
 	Num   int32
-	Index int32 //1：主武器 2:头盔 3：项链 4：外衣 5：腰带 6：鞋子
-	IsUse bool  //是否使用
+	Index int32
+	IsUse bool
 }
 
-// 角色
 type GmReqPlayerHero struct {
 	Uid      string
 	ServerId int
@@ -161,7 +157,7 @@ type GMModHeroOption struct {
 	Stage       int32
 	Exp         int32
 	Skin        string
-	Cultivation map[int32]int32 //修为
+	Cultivation map[int32]int32
 }
 
 type GMModSkinOption struct {
@@ -180,7 +176,6 @@ type GMRespHero struct {
 	HeroIsMainHero string
 }
 
-// 布阵
 type GMLineUp struct {
 	LineUps map[int32]*GMLineUpOption
 }
@@ -190,14 +185,12 @@ type GMLineUpOption struct {
 	HeroId []int32
 }
 
-// 服务器中心
 type GMResServerCenter struct {
 	ServerType  string
 	ServerName  string
 	ServerState string
 }
 
-// GMRespServerItem 区服详情（含进程状态），数据来自 game_server 区服行
 type GMRespServerItem struct {
 	Id                int64  `json:"id"`
 	LogicServerId     int64  `json:"logicServerId"`
@@ -205,28 +198,55 @@ type GMRespServerItem struct {
 	MergeStateText    string `json:"mergeStateText"`
 	MergeTime         int64  `json:"mergeTime"`
 	ServerName        string `json:"serverName"`
-	GroupId           int    `json:"groupId"`   // 区服组 ID
-	GroupName         string `json:"groupName"` // 区服组名称
+	GroupId           int    `json:"groupId"`
+	GroupName         string `json:"groupName"`
 	Channel           int    `json:"channel"`
 	Ip                string `json:"ip"`
 	Port              int    `json:"port"`
-	MainServerHttpUrl string `json:"mainServerHttpUrl"` // 大厅服 HTTP 地址，GM 转发用
-	ServerState       string `json:"serverState"`       // 正常/拥挤/爆满/维护/未开服/停服
+	MainServerHttpUrl string `json:"mainServerHttpUrl"`
+	ServerState       string `json:"serverState"`
+	ServerStateCode   int    `json:"serverStateCode"`
 	OpenServerTime    string `json:"openServerTime"`
 	StopServerTime    string `json:"stopServerTime"`
-	RunState          string `json:"runState"` // 运行中/离线（大厅服进程）
+	RunState          string `json:"runState"`
+	ManageMode        string `json:"manageMode"`
+	ProcessName       string `json:"processName"`
+	StartCommand      string `json:"startCommand"`
+	WorkDir           string `json:"workDir"`
+	ExeName           string `json:"exeName"`
+	ExePath           string `json:"exePath"`
+	ServerKind        string `json:"serverKind"`
+	ServerKindText    string `json:"serverKindText"`
 }
 
-// GMGameRespServerItem 游戏服进程简要信息（game_server 表 group_id=0）
 type GMGameRespServerItem struct {
-	Id         int64  `json:"id"`
-	ServerName string `json:"serverName"`
-	ExeName    string `json:"exeName"`
-	ExePath    string `json:"exePath"`
-	RunState   string `json:"runState"`
+	Id                int64  `json:"id"`
+	LogicServerId     int64  `json:"logicServerId"`
+	MergeState        int    `json:"mergeState"`
+	MergeStateText    string `json:"mergeStateText"`
+	MergeTime         int64  `json:"mergeTime"`
+	ServerName        string `json:"serverName"`
+	GroupId           int    `json:"groupId"`
+	GroupName         string `json:"groupName"`
+	Channel           int    `json:"channel"`
+	Ip                string `json:"ip"`
+	Port              int    `json:"port"`
+	MainServerHttpUrl string `json:"mainServerHttpUrl"`
+	ServerState       string `json:"serverState"`
+	ServerStateCode   int    `json:"serverStateCode"`
+	OpenServerTime    string `json:"openServerTime"`
+	StopServerTime    string `json:"stopServerTime"`
+	RunState          string `json:"runState"`
+	ManageMode        string `json:"manageMode"`
+	ProcessName       string `json:"processName"`
+	StartCommand      string `json:"startCommand"`
+	WorkDir           string `json:"workDir"`
+	ExeName           string `json:"exeName"`
+	ExePath           string `json:"exePath"`
+	ServerKind        string `json:"serverKind"`
+	ServerKindText    string `json:"serverKindText"`
 }
 
-// 订单信息
 type RechargeOrder struct {
 	Amount        float32 `json:"amount"`
 	ProductId     string  `json:"product_id"`
