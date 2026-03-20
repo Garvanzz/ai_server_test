@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/db"
@@ -508,6 +509,16 @@ func (a *ActivityArena) Router(ctx *proto_player.Context, req proto.Message) (an
 		return a.BattleReport(ctx, req)
 	}
 	return nil, nil
+}
+
+func (a *ActivityArena) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置：重置所有玩家的挑战次数和刷新次数
+func (a *ActivityArena) OnDayReset(now time.Time) {
+	// TODO: 遍历所有参与过该活动的玩家，重置 pd.ChallengeTime 和 pd.RefreshTime
+	log.Debug("ActivityArena OnDayReset: actId=%v", a.GetId())
 }
 
 func (a *ActivityArena) OnStop() {

@@ -1,8 +1,10 @@
 package impl
 
 import (
+	"time"
 	"xfx/core/config/conf"
 	"xfx/core/define"
+	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
@@ -35,6 +37,15 @@ func (a *ActivityRechargeRank) OnClose() {
 	//删除排行榜
 	deleteActivityRank(a, define.RankTypeRecharge)
 	//活动结束，发放奖励
+}
+
+func (a *ActivityRechargeRank) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置
+func (a *ActivityRechargeRank) OnDayReset(now time.Time) {
+	log.Debug("ActivityRechargeRank OnDayReset: actId=%v", a.GetId())
 }
 
 func init() {

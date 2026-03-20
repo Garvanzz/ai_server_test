@@ -1,7 +1,9 @@
 package impl
 
 import (
+	"time"
 	"xfx/core/define"
+	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
@@ -32,6 +34,15 @@ func (a *ActivityDrawHeroRank) OnClose() {
 
 	//删除排行榜
 	deleteActivityRank(a, define.RankTypeDrawHero)
+}
+
+func (a *ActivityDrawHeroRank) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置
+func (a *ActivityDrawHeroRank) OnDayReset(now time.Time) {
+	log.Debug("ActivityDrawHeroRank OnDayReset: actId=%v", a.GetId())
 }
 
 func init() {

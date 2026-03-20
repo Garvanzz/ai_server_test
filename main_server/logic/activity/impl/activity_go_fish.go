@@ -159,6 +159,13 @@ func (a *ActivityGoFish) OnStop() {
 	deleteActivityRank(a, define.RankTypeGoFish)
 }
 
+// OnDayReset 跨天重置：重置签到天数（如果已连续签到7天）
+func (a *ActivityGoFish) OnDayReset(now time.Time) {
+	// 跨天重置所有玩家的签到天数（如果已连续签到7天且昨天未签到）
+	// 逻辑在 Format 中已经处理，这里可以遍历缓存进行清理
+	log.Debug("ActivityGoFish OnDayReset: actId=%v", a.GetId())
+}
+
 func (a *ActivityGoFish) OnClose() {
 }
 

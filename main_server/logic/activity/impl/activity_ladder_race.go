@@ -521,6 +521,16 @@ func (a *ActivityLadderRace) Router(ctx *proto_player.Context, req proto.Message
 	return nil, nil
 }
 
+func (a *ActivityLadderRace) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置：重置所有玩家的挑战次数
+func (a *ActivityLadderRace) OnDayReset(now time.Time) {
+	// TODO: 遍历所有参与过该活动的玩家，重置 pd.ChallengeTime
+	log.Debug("ActivityLadderRace OnDayReset: actId=%v", a.GetId())
+}
+
 func (a *ActivityLadderRace) OnStop() {
 	//活动结束补发奖励
 	sendRankReward(a, define.RankTypeTianti, nil)

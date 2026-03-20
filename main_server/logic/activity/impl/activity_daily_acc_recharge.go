@@ -100,7 +100,15 @@ func (a *ActivityDailyAccRecharge) GetAward(ctx *proto_player.Context, req *prot
 }
 
 func (a *ActivityDailyAccRecharge) Update(now time.Time) {
-	// 检查跨天 按照排行榜发奖励
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置：清空每日累充金额和已领取列表
+func (a *ActivityDailyAccRecharge) OnDayReset(now time.Time) {
+	// 跨天重置所有玩家的每日累充数据
+	// TODO: 遍历所有参与过该活动的玩家，重置 pd.Money 和 pd.GetList
+	// 可以通过 data.Cache.Range 遍历玩家数据
+	log.Debug("ActivityDailyAccRecharge OnDayReset: actId=%v", a.GetId())
 }
 
 func (a *ActivityDailyAccRecharge) OnClose() {

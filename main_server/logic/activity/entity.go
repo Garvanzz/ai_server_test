@@ -12,18 +12,19 @@ import (
 )
 
 type entity struct {
-	Id        int64
-	CfgId     int64
-	Type      string
-	State     string
-	StartTime int64
-	EndTime   int64
-	CloseTime int64
-	TimeType  int32
-	TimeValue int32
-	handler   impl.IActivity
-	mod       module.Module
-	checked   bool
+	Id           int64
+	CfgId        int64
+	Type         string
+	State        string
+	StartTime    int64
+	EndTime      int64
+	CloseTime    int64
+	TimeType     int32
+	TimeValue    int32
+	handler      impl.IActivity
+	mod          module.Module
+	checked      bool
+	lastUpdateDay int32 // 上次更新的日期，用于跨天检测 (格式：YYYYMMDD)
 }
 
 func (e *entity) GetId() int64          { return e.Id }

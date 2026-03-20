@@ -32,6 +32,9 @@ func (a *ActivitySeason) OnEvent(key string, ctx *proto_player.Context, params E
 // Update 定时更新（空实现）
 func (a *ActivitySeason) Update(now time.Time) {}
 
+// OnDayReset 跨天重置（空实现）
+func (a *ActivitySeason) OnDayReset(now time.Time) {}
+
 // Format 格式化玩家数据（空实现，无玩家维度数据）
 func (a *ActivitySeason) Format(ctx *proto_player.Context) proto.Message {
 	return nil

@@ -175,6 +175,17 @@ func (m *Manager) OnTick(delta time.Duration) {
 
 		// 活动业务更新
 		if ent.State == StateRunning {
+			// 跨天检测
+			currentDay := int32(now.Year()*10000 + int(now.Month())*100 + now.Day())
+			if ent.lastUpdateDay == 0 {
+				ent.lastUpdateDay = currentDay
+			}
+			if ent.lastUpdateDay != currentDay {
+				// 跨天了，触发跨天重置
+				ent.handler.OnDayReset(now)
+				ent.lastUpdateDay = currentDay
+				log.Debug("activity day reset triggered: actId=%v, cfgId=%v", ent.Id, ent.CfgId)
+			}
 			ent.handler.Update(now)
 		}
 

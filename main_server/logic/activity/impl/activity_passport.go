@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -129,13 +130,17 @@ func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activi
 		}
 
 		// 检查普通奖励是否已领取
-		if a.hasReceived(pd.NormalIds, id) && pd.IsBuy && a.hasReceived(pd.AdvanceIds, id) {
+		normalReceived := a.hasReceived(pd.NormalIds, id)
+		// 检查高级奖励是否已领取（或未购买高级通行证则视为已处理）
+		advanceReceived := !pd.IsBuy || a.hasReceived(pd.AdvanceIds, id)
+
+		if normalReceived && advanceReceived {
 			log.Warn("奖励已领取: 玩家=%d, id=%d", ctx.Id, id)
 			return nil, nil
 		}
 
 		//普通奖励
-		if !a.hasReceived(pd.NormalIds, id) {
+		if !normalReceived {
 			// 领取普通奖励
 			if len(conf.NormalAward) > 0 {
 				awards = append(awards, conf.NormalAward...)
@@ -187,6 +192,16 @@ func (a *ActivityPassport) hasReceived(ids []int32, id int32) bool {
 
 func (a *ActivityPassport) OnClose() {
 	// 活动结束处理
+}
+
+func (a *ActivityPassport) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置：重置通行证每日任务
+func (a *ActivityPassport) OnDayReset(now time.Time) {
+	// TODO: 重置每日任务相关数据
+	log.Debug("ActivityPassport OnDayReset: actId=%v", a.GetId())
 }
 
 func init() {

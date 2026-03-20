@@ -1,12 +1,13 @@
 package impl
 
 import (
+	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
-	"xfx/pkg/utils"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
@@ -69,6 +70,19 @@ func (a *ActivityNormalMonthCard) OnEvent(key string, ctx *proto_player.Context,
 
 func (a *ActivityNormalMonthCard) Router(ctx *proto_player.Context, req proto.Message) (any, error) {
 	return nil, nil
+}
+
+func (a *ActivityNormalMonthCard) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天处理：发放月卡每日奖励
+func (a *ActivityNormalMonthCard) OnDayReset(now time.Time) {
+	// TODO: 遍历所有购买了月卡的玩家，发放每日奖励
+	// 1. 检查 pd.Day > 0
+	// 2. 发放邮件奖励
+	// 3. pd.Day--
+	log.Debug("ActivityNormalMonthCard OnDayReset: actId=%v", a.GetId())
 }
 
 func (a *ActivityNormalMonthCard) OnClose() {

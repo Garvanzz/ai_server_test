@@ -244,6 +244,15 @@ func (a *ActivityTheCompetition) OnClose() {
 	deleteActivityRank(a, define.RankTypeTheCompetition)
 }
 
+func (a *ActivityTheCompetition) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置
+func (a *ActivityTheCompetition) OnDayReset(now time.Time) {
+	log.Debug("ActivityTheCompetition OnDayReset: actId=%v", a.GetId())
+}
+
 func init() {
 	RegisterActivity(define.ActivityTypeTheCompetition, &ActivityDesc{
 		NewHandler:      func() IActivity { return new(ActivityTheCompetition) },

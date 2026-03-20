@@ -28,13 +28,14 @@ func Key[T any](params EventParams, key string) (T, bool) {
 }
 
 type IActivity interface {
-	OnInit()  // 每次加载完成都会调用一次
-	OnStart() // 只会调用一次
-	OnClose() // 活动结束调用
-	OnStop()  // 活动结束 可以请求数据调用
+	OnInit()  // 初始化：每次加载完成都会调用一次
+	OnStart() // 开始：活动从 Waiting 转为 Running 时调用一次
+	OnClose() // 关闭：活动结束时调用
+	OnStop()  // 暂停：活动暂停时调用
 	OnEvent(key string, obj *proto_player.Context, params EventParams)
 	Router(ctx *proto_player.Context, req proto.Message) (interface{}, error)
-	Update(time.Time)
+	Update(now time.Time) // 更新：每帧调用，用于定时检查
+	OnDayReset(now time.Time) // 跨天重置：每天首次调用时触发
 	Format(ctx *proto_player.Context) proto.Message
 	SetBaseInfo(baseInfo BaseInfo)
 }
@@ -66,7 +67,7 @@ func (base *BaseActivity) Update(now time.Time) {}
 
 func (base *BaseActivity) Format(ctx *proto_player.Context) proto.Message { return nil }
 
-func (base *BaseActivity) OnDayReset() {}
+func (base *BaseActivity) OnDayReset(now time.Time) {}
 
 func (base *BaseActivity) Router(ctx *proto_player.Context, req proto.Message) (any, error) {
 	return nil, nil

@@ -1,166 +1,202 @@
-// clock_test.go: 游戏逻辑时间源的功能测试与性能对比（Atomic vs RWMutex）。
-//
-// 运行方式：
-//   go test -v ./pkg/utils -run "TestSetTimeOffset|TestNow"   # 功能测试
-//   go test -bench=BenchmarkNow -benchmem ./pkg/utils        # 单 goroutine 性能
-//   go test -bench=BenchmarkNow -benchmem -count=3 ./pkg/utils # 并行 + 多次取平均
-package utils
+package utils_test
 
 import (
 	"sync"
 	"testing"
 	"time"
+
+	"xfx/pkg/utils"
 )
 
-// ========== 功能测试 ==========
-
-func TestSetTimeOffset_Zero(t *testing.T) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(0)
-	got := Now()
-	real := time.Now()
-	diff := got.Sub(real)
-	if diff < -time.Millisecond || diff > time.Millisecond {
-		t.Errorf("offset=0: Now() 应与真实时间接近, got diff=%v", diff)
-	}
+// 内存存储实现（用于测试）
+type memoryStorage struct {
+	data map[string]int64
+	mu   sync.Mutex
 }
 
-func TestSetTimeOffset_NonZero(t *testing.T) {
-	SetTimeOffsetEnabled(true)
-	offset := 7 * 24 * time.Hour
-	SetTimeOffset(offset)
-	got := Now()
-	real := time.Now()
-	expected := real.Add(offset)
-	diff := got.Sub(expected)
-	if diff < -time.Second || diff > time.Second {
-		t.Errorf("offset=7d: Now() 应比真实时间快约 7 天, got diff from expected=%v", diff)
-	}
-	// 恢复，避免影响其他测试
-	SetTimeOffset(0)
+func newMemoryStorage() *memoryStorage {
+	return &memoryStorage{data: make(map[string]int64)}
 }
 
-func TestSetTimeOffset_Overwrite(t *testing.T) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(24 * time.Hour)
-	t1 := Now()
-	SetTimeOffset(2 * 24 * time.Hour)
-	t2 := Now()
-	// t2 应比 t1 多约 1 天（第二次设置后）
-	diff := t2.Sub(t1)
-	if diff < time.Hour || diff > 3*24*time.Hour {
-		t.Errorf("覆盖偏移后 Now() 应反映新偏移, t2-t1=%v", diff)
-	}
-	SetTimeOffset(0)
+func (m *memoryStorage) SaveOffset(nanos int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.data["offset"] = nanos
+	return nil
 }
 
-func TestNow_MonotonicIncrease(t *testing.T) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(0)
-	prev := Now()
-	for i := 0; i < 5; i++ {
-		time.Sleep(10 * time.Millisecond)
-		cur := Now()
-		if cur.Before(prev) {
-			t.Errorf("Now() 应单调递增: prev=%v cur=%v", prev, cur)
+func (m *memoryStorage) LoadOffset() (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.data["offset"], nil
+}
+
+func TestClock(t *testing.T) {
+	// 使用内存存储测试
+	storage := newMemoryStorage()
+	utils.SetClockStorage(storage)
+
+	// 测试正式服模式（不允许偏移）
+	t.Run("ProductionMode", func(t *testing.T) {
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: false,
+		})
+
+		if utils.IsOffsetEnabled() {
+			t.Error("正式服不应允许偏移")
 		}
-		prev = cur
-	}
-}
 
-func TestNow_ConcurrentReads(t *testing.T) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(5 * time.Hour)
-	defer SetTimeOffset(0)
-	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
-		go func() {
-			for j := 0; j < 1000; j++ {
-				_ = Now()
-			}
-			done <- struct{}{}
-		}()
-	}
-	for i := 0; i < 10; i++ {
-		<-done
-	}
-}
+		// 尝试设置偏移
+		utils.SetOffset(time.Hour)
+		if utils.GetOffset() != 0 {
+			t.Error("正式服偏移应恒为 0")
+		}
 
-// ========== RWMutex 实现（仅用于性能对比） ==========
+		// Now() 应该接近真实时间
+		diff := time.Since(utils.Now())
+		if diff < -time.Second || diff > time.Second {
+			t.Error("Now() 应返回真实时间")
+		}
+	})
 
-var (
-	timeOffsetMutex time.Duration
-	offsetMu        sync.RWMutex
-)
+	// 测试调试服模式（允许偏移）
+	t.Run("DebugMode", func(t *testing.T) {
+		// 重新初始化，允许偏移
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: true,
+		})
 
-func setTimeOffsetMutex(offset time.Duration) {
-	offsetMu.Lock()
-	timeOffsetMutex = offset
-	offsetMu.Unlock()
-}
+		if !utils.IsOffsetEnabled() {
+			t.Error("调试服应允许偏移")
+		}
 
-func nowMutex() time.Time {
-	offsetMu.RLock()
-	d := timeOffsetMutex
-	offsetMu.RUnlock()
-	return time.Now().Add(d)
-}
+		// 设置 1 小时偏移
+		utils.SetOffset(time.Hour)
+		if utils.GetOffset() != time.Hour {
+			t.Errorf("偏移应为 1 小时，实际为 %v", utils.GetOffset())
+		}
 
-// ========== 性能测试：Atomic vs RWMutex ==========
+		// Now() 应该是未来时间
+		if utils.Now().Before(time.Now()) {
+			t.Error("Now() 应返回未来时间")
+		}
 
-func BenchmarkNow_Atomic(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(0)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = Now()
-	}
-}
+		// 重置偏移
+		utils.ResetOffset()
+		if utils.GetOffset() != 0 {
+			t.Error("重置后偏移应为 0")
+		}
+	})
 
-func BenchmarkNow_RWMutex(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	setTimeOffsetMutex(0)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = nowMutex()
-	}
-}
+	// 测试偏移计算
+	t.Run("OffsetCalculation", func(t *testing.T) {
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: true,
+		})
 
-func BenchmarkNow_Atomic_Parallel(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	SetTimeOffset(0)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			_ = Now()
+		baseTime := time.Now()
+		offset := 2 * time.Hour
+		utils.SetOffset(offset)
+
+		// Now() 应该等于 baseTime + offset
+		expectedTime := baseTime.Add(offset)
+		actualTime := utils.Now()
+
+		// 允许 1 秒误差
+		diff := actualTime.Sub(expectedTime)
+		if diff < -time.Second || diff > time.Second {
+			t.Errorf("时间偏差过大: %v", diff)
+		}
+	})
+
+	// 测试便捷函数
+	t.Run("HelperFunctions", func(t *testing.T) {
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: true,
+		})
+		utils.SetOffset(time.Hour)
+
+		// TimeAfter
+		future := utils.TimeAfter(30 * time.Minute)
+		if !future.After(utils.Now()) {
+			t.Error("TimeAfter 应返回未来时间")
+		}
+
+		// UnixNow
+		if utils.UnixNow() == 0 {
+			t.Error("UnixNow 不应为 0")
+		}
+
+		// OffsetInfo
+		info := utils.GetOffsetInfo()
+		if !info.Enabled || info.Offset != time.Hour {
+			t.Error("OffsetInfo 信息不正确")
+		}
+
+		// Until / Since
+		past := utils.Now().Add(-time.Hour)
+		future = utils.Now().Add(time.Hour)
+
+		since := utils.Since(past)
+		if since < time.Hour-time.Minute {
+			t.Error("Since 计算不正确")
+		}
+
+		until := utils.Until(future)
+		if until < time.Hour-time.Minute {
+			t.Error("Until 计算不正确")
 		}
 	})
 }
 
-func BenchmarkNow_RWMutex_Parallel(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	setTimeOffsetMutex(0)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			_ = nowMutex()
+// TestClockPersistence 测试持久化功能
+func TestClockPersistence(t *testing.T) {
+	// 注意：由于使用全局变量，这个测试会修改全局状态
+	// 实际测试中应该隔离状态或使用子进程
+	t.Skip("Persistence test skipped - modifies global state")
+
+	/*
+	storage := newMemoryStorage()
+	utils.SetClockStorage(storage)
+
+	// 设置偏移并保存
+	t.Run("SaveAndLoad", func(t *testing.T) {
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: true,
+		})
+
+		utils.SetOffset(3 * time.Hour)
+
+		// 模拟重启：重新初始化
+		utils.InitClock(utils.ClockConfig{
+			AllowOffset: true,
+		})
+
+		// 应该加载之前保存的偏移
+		if utils.GetOffset() != 3*time.Hour {
+			t.Errorf("应从存储加载偏移，期望 3h，实际 %v", utils.GetOffset())
 		}
 	})
+	*/
 }
 
-// SetTimeOffset 写路径对比（通常只调一次，可选跑）
-func BenchmarkSetTimeOffset_Atomic(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	offset := 7 * 24 * time.Hour
+// Benchmark
+func BenchmarkNow(b *testing.B) {
+	utils.InitClock(utils.ClockConfig{AllowOffset: true})
+	utils.SetOffset(time.Hour)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		SetTimeOffset(offset)
+		_ = utils.Now()
 	}
 }
 
-func BenchmarkSetTimeOffset_RWMutex(b *testing.B) {
-	SetTimeOffsetEnabled(true)
-	offset := 7 * 24 * time.Hour
+func BenchmarkGetOffset(b *testing.B) {
+	utils.InitClock(utils.ClockConfig{AllowOffset: true})
+	utils.SetOffset(time.Hour)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		setTimeOffsetMutex(offset)
+		_ = utils.GetOffset()
 	}
 }

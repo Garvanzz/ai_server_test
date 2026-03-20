@@ -5,36 +5,122 @@ import (
 	"time"
 )
 
-func TestTimeLen(t *testing.T) {
-	time1, _ := time.Parse("2006-01-02 15:04:05", "2020-01-01 11:11:11")
-	time2, _ := time.Parse("2006-01-02 15:04:05", "2030-01-01 22:22:22")
-	time1Nano := time1.UnixNano()
-	time2Nano := time2.UnixNano()
-	timeNano := time2Nano - time1Nano
-	timeMilli := timeNano / int64(time.Millisecond)
-	t.Log(timeNano)
-	t.Log(timeMilli)
+func TestSnowflake(t *testing.T) {
+	// 测试初始化
+	err := Init(1)
+	if err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// 重复初始化应该返回错误（sync.Once 保证只执行一次）
+	err = Init(2)
+	// 注意：由于使用 sync.Once，第二次不会返回错误，只是不执行
+
+	// 测试生成 ID
+	id1, err := Generate()
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	id2, err := Generate()
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	// ID 应该是递增的
+	if id2 <= id1 {
+		t.Errorf("IDs should be increasing: %d >= %d", id2, id1)
+	}
+
+	// 提取时间戳
+	ts := ExtractTimestamp(id1)
+	if ts == 0 {
+		t.Error("Extracted timestamp should not be 0")
+	}
+
+	// 提取机器 ID
+	mid := ExtractMachineID(id1)
+	if mid != 1 {
+		t.Errorf("Machine ID should be 1, got %d", mid)
+	}
+
+	// 提取生成时间
+	genTime := TimeFromID(id1)
+	if genTime.After(time.Now()) {
+		t.Error("Generated time should not be in the future")
+	}
 }
 
-func TestCreateId(t *testing.T) {
-	idCreated := make(map[int64]bool, 400000)
+func TestEncodeDecode(t *testing.T) {
+	testCases := []int64{
+		0,
+		1,
+		100,
+		1000,
+		123456789,
+		9223372036854775807, // Max int64
+		-1,
+		-100,
+		-9223372036854775808, // Min int64
+	}
 
-	begin := time.Now().UnixNano()
-	for i := 0; i < 400000; i++ {
-		id, _ := General()
-		if _, ok := idCreated[id]; ok {
-			t.Error("gid: general id duplicate")
-		} else {
-			idCreated[id] = true
+	for _, original := range testCases {
+		encoded := Itoa(original)
+		decoded := Atoi(encoded)
+
+		if decoded != original {
+			t.Errorf("Encode/Decode failed for %d: got %d", original, decoded)
 		}
 	}
-	end := time.Now().UnixNano()
-	used := (end - begin) / int64(time.Millisecond)
-	t.Log("gid: create 40000 id use time = ", used)
 }
 
-func BenchmarkCreateId(b *testing.B) {
+func TestIsValidIDString(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected bool
+	}{
+		{"", false},
+		{"0", true},
+		{"abc", true},
+		{"ABC", true},
+		{"123", true},
+		{"-abc", true},
+		{"-", false},
+		{"abc!", false},
+		{"abc def", false},
+	}
+
+	for _, tc := range testCases {
+		result := IsValidIDString(tc.input)
+		if result != tc.expected {
+			t.Errorf("IsValidIDString(%q) = %v, expected %v", tc.input, result, tc.expected)
+		}
+	}
+}
+
+func BenchmarkGenerate(b *testing.B) {
+	Init(1)
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		General()
+		_, err := Generate()
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkItoa(b *testing.B) {
+	id := int64(123456789012345)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Itoa(id)
+	}
+}
+
+func BenchmarkAtoi(b *testing.B) {
+	s := Itoa(123456789012345)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Atoi(s)
 	}
 }

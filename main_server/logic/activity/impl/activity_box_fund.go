@@ -2,12 +2,13 @@ package impl
 
 import (
 	"errors"
-	"xfx/pkg/utils"
+	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 
@@ -143,6 +144,15 @@ func (a *ActivityBoxFund) GetAward(ctx *proto_player.Context, req *proto_activit
 
 func (a *ActivityBoxFund) OnClose() {
 	//活动结束补发奖励
+}
+
+func (a *ActivityBoxFund) Update(now time.Time) {
+	// 跨天逻辑已迁移到 OnDayReset
+}
+
+// OnDayReset 跨天重置
+func (a *ActivityBoxFund) OnDayReset(now time.Time) {
+	log.Debug("ActivityBoxFund OnDayReset: actId=%v", a.GetId())
 }
 
 func init() {
