@@ -1,12 +1,22 @@
 package activity
 
 import (
+	"errors"
 	"testing"
 	"xfx/core/define"
 	"xfx/core/fsm"
 	"xfx/main_server/logic/activity/impl"
 	"xfx/pkg/log"
 )
+
+type mockLifecycleActivity struct {
+	impl.BaseActivity
+	recoverCount int
+}
+
+func (m *mockLifecycleActivity) OnRecover() {
+	m.recoverCount++
+}
 
 func TestMain(m *testing.M) {
 	log.DefaultInit()
@@ -29,9 +39,9 @@ func TestFSM_TransitionTable(t *testing.T) {
 	valid := map[string]string{
 		StateWaiting + "+" + EventStart:   StateRunning,
 		StateWaiting + "+" + EventClose:   StateClosed,
-		StateRunning + "+" + EventStop:     StateStopped,
+		StateRunning + "+" + EventStop:    StateStopped,
 		StateRunning + "+" + EventClose:   StateClosed,
-		StateStopped + "+" + EventRecover:  StateRunning,
+		StateStopped + "+" + EventRecover: StateRunning,
 		StateStopped + "+" + EventClose:   StateClosed,
 		StateStopped + "+" + EventRestart: StateWaiting,
 		StateClosed + "+" + EventRestart:  StateWaiting,
@@ -54,11 +64,12 @@ func TestFSM_TransitionTable(t *testing.T) {
 
 func TestFSM_Trigger_ValidTransitions(t *testing.T) {
 	m := &Manager{}
+	m.entities = newEntityStore()
 	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
 	ent := newTestEntity(1, 100, "TestType", StateRunning)
 	ent.handler = &impl.BaseActivity{}
 	ent.handler.SetBaseInfo(ent)
-	m.entities.Store(ent.Id, ent)
+	m.entities.store(ent)
 
 	err := m.sm.Trigger(StateRunning, EventStop, ent)
 	if err != nil {
@@ -79,12 +90,16 @@ func TestFSM_Trigger_ValidTransitions(t *testing.T) {
 
 func TestFSM_Trigger_InvalidTransition(t *testing.T) {
 	m := &Manager{}
+	m.entities = newEntityStore()
 	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
 	ent := newTestEntity(1, 100, "Test", StateRunning)
 
 	err := m.sm.Trigger(StateRunning, EventRestart, ent)
 	if err == nil {
 		t.Fatal("Trigger(Running, Restart) should fail")
+	}
+	if !errors.Is(err, fsm.ErrTransitionNotFound) {
+		t.Fatalf("expected ErrTransitionNotFound, got %v", err)
 	}
 }
 
@@ -147,21 +162,22 @@ func TestEntityToInfo_Nil(t *testing.T) {
 
 func newTestManagerWithEntities(t *testing.T) *Manager {
 	m := &Manager{}
+	m.entities = newEntityStore()
 	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
 	e1 := newTestEntity(1, 100, "TypeA", StateRunning)
 	e1.handler = &impl.BaseActivity{}
 	e1.handler.SetBaseInfo(e1)
-	m.entities.Store(e1.Id, e1)
+	m.entities.store(e1)
 
 	e2 := newTestEntity(2, 100, "TypeA", StateWaiting) // 同 CfgId 100
 	e2.handler = &impl.BaseActivity{}
 	e2.handler.SetBaseInfo(e2)
-	m.entities.Store(e2.Id, e2)
+	m.entities.store(e2)
 
 	e3 := newTestEntity(3, 200, "TypeB", StateClosed)
 	e3.handler = &impl.BaseActivity{}
 	e3.handler.SetBaseInfo(e3)
-	m.entities.Store(e3.Id, e3)
+	m.entities.store(e3)
 	return m
 }
 
@@ -237,6 +253,9 @@ func TestManager_OnStopActivity(t *testing.T) {
 	if ent == nil || ent.State != StateStopped {
 		t.Fatalf("after Stop expected state Stopped, got %v", ent)
 	}
+	if got := m.getEntityByType("TypeA"); got != nil {
+		t.Fatalf("expected running type index to clear after stop, got %+v", got)
+	}
 
 	err = m.OnStopActivity(999)
 	if err == nil {
@@ -261,10 +280,31 @@ func TestManager_OnRecoverActivity(t *testing.T) {
 	if ent == nil || ent.State != StateRunning {
 		t.Fatalf("after Recover expected state Running, got %v", ent)
 	}
+	if got := m.getEntityByType("TypeA"); got == nil || got.Id != 1 {
+		t.Fatalf("expected running type index to restore actId 1, got %+v", got)
+	}
 
 	err = m.OnRecoverActivity(2)
 	if err == nil {
 		t.Fatal("OnRecoverActivity(2 Waiting) should return error")
+	}
+}
+
+func TestManager_OnRecoverActivity_CallsLifecycleHook(t *testing.T) {
+	m := &Manager{}
+	m.entities = newEntityStore()
+	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
+	ent := newTestEntity(10, 100, "TypeHook", StateStopped)
+	h := &mockLifecycleActivity{}
+	h.SetBaseInfo(ent)
+	ent.handler = h
+	m.entities.store(ent)
+
+	if err := m.OnRecoverActivity(ent.Id); err != nil {
+		t.Fatalf("OnRecoverActivity hook test failed: %v", err)
+	}
+	if h.recoverCount != 1 {
+		t.Fatalf("expected OnRecover to be called once, got %d", h.recoverCount)
 	}
 }
 

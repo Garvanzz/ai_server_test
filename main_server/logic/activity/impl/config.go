@@ -33,3 +33,17 @@ func GetTypedConf[T IActivityConfig](cfgId int64, allConfs map[int64]T) (map[int
 	}
 	return result, len(result) > 0
 }
+
+func FindTypedConf[T IActivityConfig](cfgId int64, allConfs map[int64]T, predicate func(T) bool) (T, bool) {
+	for _, t := range allConfs {
+		if t.GetActivityId() != cfgId {
+			continue
+		}
+		if predicate != nil && !predicate(t) {
+			continue
+		}
+		return t, true
+	}
+	var zero T
+	return zero, false
+}

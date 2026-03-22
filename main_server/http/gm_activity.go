@@ -17,7 +17,7 @@ func (m *HttpModule) GMActivityList(c *gin.Context) {
 		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
 		return
 	}
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{"list": list})
+	m.httpRetGameData(c, SUCCESS, "success", list, map[string]any{"list": list})
 }
 
 // GMActivityGetByActId 按活动实例 ID 查询
@@ -35,7 +35,7 @@ func (m *HttpModule) GMActivityGetByActId(c *gin.Context) {
 		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
 		return
 	}
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{"activity": info})
+	m.httpRetGameData(c, SUCCESS, "success", info, map[string]any{"activity": info})
 }
 
 // GMActivityGetByCfgId 按配置 ID 查询
@@ -53,7 +53,7 @@ func (m *HttpModule) GMActivityGetByCfgId(c *gin.Context) {
 		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
 		return
 	}
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{"activity": info})
+	m.httpRetGameData(c, SUCCESS, "success", info, map[string]any{"activity": info})
 }
 
 // GMActivityStop 暂停活动（Running -> Stopped）

@@ -37,13 +37,3 @@ var (
 		{StateClosed, EventRestart, StateWaiting, ActionRestart},
 	}
 )
-
-// activity_competition.go - chooseGroupId 重复判断 pd.IsChoose
-
-// activity_daily_acc_recharge.go - 跨天重置已添加 OnDayReset 接口
-
-// activity_month_card.go - 跨天重置已添加 OnDayReset 接口
-
-// activity_passport.go - 已修复：getAward 已领取判断逻辑
-
-// activity_arena.go - BattleReport 胜利后未更新排行榜积分

@@ -1,14 +1,18 @@
 package dto
 
-// ForceUpdate 强制更新检查请求
-type ForceUpdate struct {
+// ForceUpdateRequest 强制更新检查请求。
+type ForceUpdateRequest struct {
 	Version string `json:"version"`
 	Channel int    `json:"channel"`
 }
 
-// ForceUpdateRes 强制更新响应（Status/Url 等由业务填充）
-type ForceUpdateRes struct {
+// ForceUpdateResponse 强制更新响应，保留旧字段兼容老客户端。
+type ForceUpdateResponse struct {
 	Status  int    `json:"status"`
-	Url     string `json:"url"`
+	URL     string `json:"url"`
 	Version string `json:"version,omitempty"`
+
+	LegacyStatus  int    `json:"Status,omitempty"`
+	LegacyURL     string `json:"Url,omitempty"`
+	LegacyVersion string `json:"Version,omitempty"`
 }

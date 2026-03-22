@@ -62,7 +62,7 @@ func AddEquips(ctx global.IPlayer, pl *model.Player, Id, Num, Level int32) {
 
 // AddWeaponry 添加神兵 key = id, value = 等级
 func AddWeaponry(ctx global.IPlayer, pl *model.Player, Id, Num int32) {
-	log.Debug("领取神器:%v", Id, Num)
+	log.Debug("领取神器 id=%v num=%v", Id, Num)
 	if pl.Equip.Weaponry.WeaponryItems == nil {
 		pl.Equip.Weaponry.WeaponryItems = make(map[int32]*model.WeaponryItem)
 	}

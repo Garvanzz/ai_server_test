@@ -2,13 +2,13 @@ package impl
 
 import (
 	"time"
-	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
 	"xfx/main_server/invoke"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
 	Proto_Public "xfx/proto/proto_public"
@@ -33,7 +33,7 @@ func (a *ActivityTheCompetition) OnStart() {
 func (a *ActivityTheCompetition) Format(ctx *proto_player.Context) proto.Message {
 	pd := LoadPd[*model.TheCompetitionPd](a, ctx.Id)
 
-	log.Debug("加载决斗数据:%s", pd)
+	log.Debug("加载决斗数据:%v", pd)
 
 	isCanStake := false
 	confthe, ok := GetTypedConf[conf.ActTheCompetition](a.GetCfgId(), config.ActTheCompetition.All())

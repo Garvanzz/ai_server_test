@@ -13,8 +13,8 @@ import (
 
 // LoginResult 登录成功后的数据
 type LoginResult struct {
-	Token   string
-	UID     string
+	Token    string
+	UID      string
 	ServerID int64
 }
 
@@ -70,6 +70,12 @@ func (lc *LoginClient) post(path string, body any) (map[string]interface{}, erro
 	return m, nil
 }
 
+const (
+	loginRouteAuthRegister = "/auth/register"
+	loginRouteAuthLogin    = "/auth/login"
+	loginRouteServersList  = "/servers/list"
+)
+
 // Register 注册账号
 func (lc *LoginClient) Register(account, password string, platform, serverID int) error {
 	body := map[string]interface{}{
@@ -78,7 +84,7 @@ func (lc *LoginClient) Register(account, password string, platform, serverID int
 		"platform": platform,
 		"serverId": serverID,
 	}
-	m, err := lc.post("/register", body)
+	m, err := lc.post(loginRouteAuthRegister, body)
 	if err != nil {
 		return err
 	}
@@ -105,7 +111,7 @@ func (lc *LoginClient) Login(account, password string, serverID int, platform in
 		"platform": platform,
 		"serverId": serverID,
 	}
-	m, err := lc.post("/login", body)
+	m, err := lc.post(loginRouteAuthLogin, body)
 	if err != nil {
 		return nil, err
 	}
@@ -114,13 +120,17 @@ func (lc *LoginClient) Login(account, password string, serverID int, platform in
 		msg, _ := m["errmsg"].(string)
 		return nil, fmt.Errorf("login failed: errcode=%v errmsg=%s", code, msg)
 	}
-	token, _ := m["token"].(string)
-	uid, _ := m["uid"].(string)
+	payload, _ := m["data"].(map[string]interface{})
+	if payload == nil {
+		payload = m
+	}
+	token, _ := payload["token"].(string)
+	uid, _ := payload["uid"].(string)
 	if token == "" || uid == "" {
 		return nil, fmt.Errorf("login resp missing token or uid: %v", m)
 	}
 	var serverId int64 = int64(serverID)
-	if s, ok := m["serverId"]; ok {
+	if s, ok := payload["serverId"]; ok {
 		switch v := s.(type) {
 		case float64:
 			serverId = int64(v)
@@ -134,15 +144,29 @@ func (lc *LoginClient) Login(account, password string, serverID int, platform in
 // GetServerList 获取区服列表，返回 JSON 字符串（可解析出各服 Ip/Port）
 func (lc *LoginClient) GetServerList(channel int) (serverListJSON string, err error) {
 	body := map[string]interface{}{"channel": channel}
-	m, err := lc.post("/getserverlist", body)
+	m, err := lc.post(loginRouteServersList, body)
 	if err != nil {
 		return "", err
 	}
 	code, _ := m["errcode"].(float64)
 	if code != 0 {
 		msg, _ := m["errmsg"].(string)
-		return "", fmt.Errorf("getserverlist failed: errcode=%v errmsg=%s", code, msg)
+		return "", fmt.Errorf("server list failed: errcode=%v errmsg=%s", code, msg)
+	}
+	payload, _ := m["data"].(map[string]interface{})
+	if payload == nil {
+		payload = m
+	}
+	if serverList, ok := payload["serverList"]; ok {
+		b, marshalErr := json.Marshal(serverList)
+		if marshalErr != nil {
+			return "", fmt.Errorf("marshal server list: %w", marshalErr)
+		}
+		return string(b), nil
 	}
 	s, _ := m["ServerList"].(string)
+	if s == "" {
+		s, _ = m["serverList"].(string)
+	}
 	return s, nil
 }

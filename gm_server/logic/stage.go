@@ -76,15 +76,8 @@ func GmSetStageInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	var wrap struct {
-		Data string `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage response err")
-		return
-	}
 	var stage model.Stage
-	if err := json.Unmarshal([]byte(wrap.Data), &stage); err != nil {
+	if err := decodeForwardedData(respBody, &stage); err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage data err")
 		return
 	}
@@ -156,15 +149,8 @@ func GmAddStageInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	var wrap struct {
-		Data string `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage response err")
-		return
-	}
 	var stage model.Stage
-	if err := json.Unmarshal([]byte(wrap.Data), &stage); err != nil {
+	if err := decodeForwardedData(respBody, &stage); err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage data err")
 		return
 	}
@@ -236,15 +222,8 @@ func GmDeleteStageInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	var wrap struct {
-		Data string `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage response err")
-		return
-	}
 	var stage model.Stage
-	if err := json.Unmarshal([]byte(wrap.Data), &stage); err != nil {
+	if err := decodeForwardedData(respBody, &stage); err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage data err")
 		return
 	}

@@ -166,8 +166,7 @@ func listMergePlans(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(typed)
-	HTTPRetGame(c, SUCCESS, "success", map[string]interface{}{"data": string(js), "totalCount": len(typed)})
+	HTTPRetGameData(c, SUCCESS, "success", typed, map[string]interface{}{"totalCount": len(typed)})
 }
 
 func GmCreateMergePlan(c *gin.Context) {
@@ -223,7 +222,7 @@ func GmCreateMergePlan(c *gin.Context) {
 		}
 	}
 
-	HTTPRetGame(c, SUCCESS, "success", map[string]interface{}{"planId": plan.Id})
+	HTTPRetGameData(c, SUCCESS, "success", map[string]interface{}{"planId": plan.Id}, map[string]interface{}{"planId": plan.Id})
 }
 
 func GmPrecheckMerge(c *gin.Context) {
@@ -259,12 +258,16 @@ func GmPrecheckMerge(c *gin.Context) {
 		}
 	}
 
-	js, _ := json.Marshal(conflicts)
-	HTTPRetGame(c, SUCCESS, "success", map[string]interface{}{
+	HTTPRetGameData(c, SUCCESS, "success", map[string]interface{}{
 		"targetServerId":  req.TargetServerId,
 		"sourceServerIds": req.SourceServerIds,
 		"conflictCount":   len(conflicts),
-		"conflicts":       string(js),
+		"conflicts":       conflicts,
+	}, map[string]interface{}{
+		"targetServerId":  req.TargetServerId,
+		"sourceServerIds": req.SourceServerIds,
+		"conflictCount":   len(conflicts),
+		"conflicts":       conflicts,
 	})
 }
 
@@ -438,6 +441,5 @@ func GmListMergeConflicts(c *gin.Context) {
 		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
-	js, _ := json.Marshal(rows)
-	HTTPRetGame(c, SUCCESS, "success", map[string]interface{}{"data": string(js), "totalCount": len(rows)})
+	HTTPRetGameData(c, SUCCESS, "success", rows, map[string]interface{}{"totalCount": len(rows)})
 }

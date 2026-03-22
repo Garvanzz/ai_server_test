@@ -92,9 +92,8 @@ func GmGetServerList(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(servers)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"list": string(js),
+	HTTPRetGameData(c, SUCCESS, "success", servers, map[string]any{
+		"list": servers,
 	})
 }
 
@@ -340,11 +339,7 @@ func GmGetGameServerList(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(items)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(items),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
 }
 
 // GmGetHotUpdate 获取热更版本列表（从 hot_update 表）
@@ -365,11 +360,7 @@ func GmGetHotUpdate(c *gin.Context) {
 			Version:     list[i].Version,
 		})
 	}
-	js, _ := json.Marshal(items)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(items),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
 }
 
 // GmEditHotUpdateVersion 编辑指定热更版本的 version 字段（按 channel 查记录）
@@ -502,7 +493,7 @@ func GmCreateHotUpdatePath(c *gin.Context) {
 	hotUpdatePath := filepath.Join(hotUpdateBaseDir, channel, version)
 	_, statErr := os.Stat(hotUpdatePath)
 	if statErr == nil {
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"state": true, "msg": "目录已存在"})
+		HTTPRetGameData(c, SUCCESS, "success", map[string]any{"state": true, "msg": "目录已存在"}, map[string]any{"state": true, "msg": "目录已存在"})
 		return
 	}
 	if statErr != nil && !os.IsNotExist(statErr) {
@@ -515,7 +506,7 @@ func GmCreateHotUpdatePath(c *gin.Context) {
 		HTTPRetGame(c, ERR_DB, "创建热更目录失败")
 		return
 	}
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{"state": true})
+	HTTPRetGameData(c, SUCCESS, "success", map[string]any{"state": true}, map[string]any{"state": true})
 }
 
 // hotUpdateBaseDir 热更文件根目录，可按部署环境修改
@@ -572,7 +563,7 @@ func GmUpload(c *gin.Context) {
 	if err := os.Remove(dst); err != nil {
 		log.Debug("remove zip after unzip: %v", err)
 	}
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{"filename": filename})
+	HTTPRetGameData(c, SUCCESS, "success", map[string]any{"filename": filename}, map[string]any{"filename": filename})
 }
 
 // unzip 解压 ZIP 到目标目录，防止 Zip Slip，循环内及时关闭句柄
@@ -919,9 +910,5 @@ func GmGetGameServerProcessList(c *gin.Context) {
 			RunState:   runState,
 		})
 	}
-	js, _ := json.Marshal(items)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(items),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
 }

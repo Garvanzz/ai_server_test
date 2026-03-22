@@ -27,4 +27,23 @@ func TestPlayerDataKeyEncoding(t *testing.T) {
 	}
 }
 
+func TestPlayerDataKeyHelpers(t *testing.T) {
+	tests := []struct {
+		actID    int64
+		playerID int64
+	}{
+		{1, 42},
+		{88, 99001},
+		{999, 1234567},
+	}
+
+	for _, tt := range tests {
+		key := encodePlayerDataKey(tt.actID, tt.playerID)
+		actID, playerID := decodePlayerDataKey(key)
+		if actID != tt.actID || playerID != tt.playerID {
+			t.Fatalf("roundtrip mismatch: got actId=%d playerId=%d, want actId=%d playerId=%d", actID, playerID, tt.actID, tt.playerID)
+		}
+	}
+}
+
 // PurgeActivityPlayerData 依赖 db.GetEngine/Redis，单测不覆盖；仅保证 key 编码与 data 包可编译。

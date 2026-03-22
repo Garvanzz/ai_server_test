@@ -6,6 +6,7 @@ import (
 	"xfx/login_server/conf"
 	"xfx/login_server/internal/middleware"
 	"xfx/login_server/logic"
+	"xfx/login_server/router"
 	"xfx/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -21,21 +22,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
-	r.Use(gin.Recovery())
-
-	//无页面处理
-	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{
-			"code":    "PAGE_NOT_FOUND",
-			"message": "Page not found",
-		})
-	})
-
-	r.POST("/login", logic.Login)                 // 登录
-	r.POST("/register", logic.Register)           // 注册
-	r.POST("/forceupdate", logic.ForceUpdate)     // 判断更新
-	r.POST("/getserverlist", logic.GetServerList) // 获取服务器列表
-	r.POST("/getnotices", logic.GetNotices)       // 获取公告
+	router.Register(r)
 
 	aesKey := []byte(conf.Server.AesKey)
 	if len(aesKey) > 0 {

@@ -13,6 +13,7 @@ import (
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
+	"xfx/main_server/logic/activity/data"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
@@ -28,7 +29,8 @@ import (
 // ActivityLadderRace 天梯
 type ActivityLadderRace struct {
 	BaseActivity
-	data *model.ActDataLadderRace
+	data        *model.ActDataLadderRace
+	rankBuckets map[string]map[int64]struct{}
 }
 
 func (a *ActivityLadderRace) OnInit() {
@@ -39,28 +41,20 @@ func (a *ActivityLadderRace) OnStart() {
 		a.data = new(model.ActDataLadderRace)
 		a.data.RankPlayer = make(map[int64]*model.ActDataLadderRaceRankPlayer)
 	}
+	if a.rankBuckets == nil {
+		a.rankBuckets = make(map[string]map[int64]struct{})
+	}
 	a.data.Season = 1
 	//初始人机
 	log.Debug("初始竞技场人机")
-	ladderRaceConfs, ok := GetTypedConf[conf.ActLadderRace](a.GetCfgId(), config.ActLadderRace.All())
+	seasonConf, ok := a.getSeasonConf(a.data.Season)
 	if !ok {
 		return
 	}
 
-	var conf conf.ActLadderRace
-	for _, v := range ladderRaceConfs {
-		if v.Season == a.data.Season {
-			conf = v
-			break
-		}
-	}
-	if conf.Id <= 0 {
-		return
-	}
+	a.data.SeasonTime = utils.Now().Unix() + int64(seasonConf.SeasonTime*86400)
 
-	a.data.SeasonTime = utils.Now().Unix() + int64(conf.SeasonTime*86400)
-
-	robots, error := a.Module().Invoke(define.ModuleCommon, "matchRobots", define.RobotMode_Tianti, int64(conf.RobotPower[0]), int64(conf.RobotPower[1]), conf.PowerCount)
+	robots, error := a.Module().Invoke(define.ModuleCommon, "matchRobots", define.RobotMode_Tianti, int64(seasonConf.RobotPower[0]), int64(seasonConf.RobotPower[1]), seasonConf.PowerCount)
 	if error != nil {
 		log.Debug("初始天梯人机失败:%v", error)
 		return
@@ -76,7 +70,7 @@ func (a *ActivityLadderRace) OnStart() {
 		//上榜
 		ctx := new(proto_player.Context)
 		ctx.Id = int64(robot[i].Id)
-		updateActivityRank(a, ctx, 0, i*conf.BasicScore, define.RankTypeTianti)
+		updateActivityRank(a, ctx, 0, i*seasonConf.BasicScore, define.RankTypeTianti)
 	}
 
 	if a.data.RankPlayer == nil {
@@ -88,40 +82,20 @@ func (a *ActivityLadderRace) OnStart() {
 
 func (a *ActivityLadderRace) Format(ctx *proto_player.Context) proto.Message {
 	pd := LoadPd[*model.LadderRacePd](a, ctx.Id)
-	log.Debug("加载天梯数据:%s", pd)
+	log.Debug("加载天梯数据:%v", pd)
+	nowUnix := utils.Now().Unix()
 
 	if pd.LastChallengeTime <= 0 {
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, utils.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, nowUnix, 0) {
 		pd.ChallengeTime = 0
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
 	//布阵
-	lineUps := make([]*proto_public.CommonPlayerLineUpInfo, 0)
-	if len(pd.LineUp) > 0 {
-		_hero := global.GetPlayerHero(ctx.Id)
-		for _, v := range pd.LineUp {
-			_lineTemp := new(proto_public.CommonPlayerLineUpInfo)
-			_lineTemp.HeroId = make([]*proto_public.CommonPlayerLineUpItemInfo, 0)
-			for _, k := range v.Id {
-				if data, ok := _hero.Hero[k]; ok {
-					_lineTemp.HeroId = append(_lineTemp.HeroId, &proto_public.CommonPlayerLineUpItemInfo{
-						Id:    k,
-						Level: data.Level,
-						Star:  data.Star,
-					})
-				} else {
-					_lineTemp.HeroId = append(_lineTemp.HeroId, &proto_public.CommonPlayerLineUpItemInfo{
-						Id: k,
-					})
-				}
-			}
-			lineUps = append(lineUps, _lineTemp)
-		}
-	}
+	lineUps := getLadderRaceLineUp(ctx.Id, pd.LineUp)
 
 	//获取
 	return &proto_activity.LadderRace{
@@ -199,7 +173,7 @@ func (a *ActivityLadderRace) GetLadderRaceLineUpByPlayerId(ctx *proto_player.Con
 	res := new(proto_activity.S2CLadderRaceGetPlayerLineUp)
 
 	//获取排名
-	rankItem := getSelfRank(a.Module().GetApp().GetEnv().ID, fmt.Sprintf("%s:%d", define.RankTypeTianti, a.GetId()), req.PlayerId)
+	rankItem := getSelfRank(a.Module().GetApp().GetEnv().ID, fmt.Sprintf("%s:%d", define.RankTypeTiantiKey, a.GetId()), req.PlayerId)
 	//人机
 	if req.PlayerId < define.PlayerIdBase {
 		res.PlayerInfo = global.ToCommonPlayerByRobot(req.PlayerId)
@@ -263,46 +237,19 @@ func (a *ActivityLadderRace) Battle(ctx *proto_player.Context, req *proto_activi
 		pd.LastChallengeTime = utils.Now().Unix()
 	}
 
-	//当前积分
-	score := pd.Score
-
-	// 步骤1: 计算当前玩家的段位
-	scoreConfigs := config.ActLadderRaceScore.All()
-
-	// 遍历配置找到当前积分对应的段位
-	var currentRank, currentLittleRank int32
-	var maxScore int32 = -1
-	for _, cfg := range scoreConfigs {
-		if cfg.Score <= int32(score) && cfg.Score > maxScore {
-			maxScore = cfg.Score
-			currentRank = cfg.Rank
-			currentLittleRank = cfg.LittleRank
-		}
+	rankList := getLadderRaceScoreList()
+	currentIndex, currentCfg := findLadderRaceScoreConfig(rankList, pd.Score)
+	if currentIndex < 0 || currentCfg == nil {
+		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
+		return res, errors.New("ladder race score config not found")
 	}
-
-	// 步骤2: 构建段位索引数组
-	// 将配置转为数组并按积分排序
-	rankList := make([]conf.ActLadderRaceScore, 0, len(scoreConfigs))
-	for _, cfg := range scoreConfigs {
-		rankList = append(rankList, cfg)
-	}
-	sort.Slice(rankList, func(i, j int) bool {
-		return rankList[i].Score < rankList[j].Score
-	})
-
-	// 找到当前段位在数组中的索引
-	var currentIndex int = -1
-	for i, cfg := range rankList {
-		if cfg.Rank == currentRank && cfg.LittleRank == currentLittleRank {
-			currentIndex = i
-			break
-		}
-	}
+	currentRank := currentCfg.Rank
+	currentLittleRank := currentCfg.LittleRank
 
 	// 确定匹配区间的三个段位
 	var lowerRankConfig, sameRankConfig, higherRankConfig *conf.ActLadderRaceScore
 	if currentIndex >= 0 {
-		sameRankConfig = &rankList[currentIndex]
+		sameRankConfig = currentCfg
 		if currentIndex > 0 {
 			lowerRankConfig = &rankList[currentIndex-1]
 		}
@@ -365,15 +312,8 @@ func (a *ActivityLadderRace) Battle(ctx *proto_player.Context, req *proto_activi
 		a.initRankPlayerFromRedis()
 	}
 
-	// 步骤4: 从 RankPlayer 中过滤目标段位的玩家
-	candidatePlayers := make([]int64, 0)
-	for playerId, playerData := range a.data.RankPlayer {
-		if playerData.Rank == targetRank &&
-			playerData.LittleRank == targetLittleRank &&
-			playerId != ctx.Id {
-			candidatePlayers = append(candidatePlayers, playerId)
-		}
-	}
+	// 步骤4: 从目标段位桶中挑选玩家
+	candidatePlayers := a.getPlayersByRank(targetRank, targetLittleRank, ctx.Id)
 
 	// 步骤5: 随机选择一个玩家
 	var matchedPlayerId int64 = 0
@@ -383,7 +323,7 @@ func (a *ActivityLadderRace) Battle(ctx *proto_player.Context, req *proto_activi
 	}
 
 	log.Debug("天梯匹配: 玩家[%d] 积分[%d] 段位[%d-%d] -> 目标段位[%d-%d] 匹配玩家[%d]",
-		ctx.Id, score, currentRank, currentLittleRank, targetRank, targetLittleRank, matchedPlayerId)
+		ctx.Id, pd.Score, currentRank, currentLittleRank, targetRank, targetLittleRank, matchedPlayerId)
 
 	// TODO: 后续使用 matchedPlayerId 进行战斗逻辑
 
@@ -393,26 +333,20 @@ func (a *ActivityLadderRace) Battle(ctx *proto_player.Context, req *proto_activi
 	}
 
 	//判断次数
-	ladderRaceConfs, ok := GetTypedConf[conf.ActLadderRace](a.GetCfgId(), config.ActLadderRace.All())
+	seasonConf, ok := a.getSeasonConf(a.data.Season)
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
 		return res, nil
 	}
 
-	var arenaConf conf.ActLadderRace
-	for _, v := range ladderRaceConfs {
-		arenaConf = v
-		break
-	}
-
-	if arenaConf.Id <= 0 {
+	if seasonConf.Id <= 0 {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
 		return res, nil
 
 	}
-	if pd.ChallengeTime >= arenaConf.ChallengeTime {
+	if pd.ChallengeTime >= seasonConf.ChallengeTime {
 		res.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 		return res, nil
 	}
@@ -435,15 +369,11 @@ func (a *ActivityLadderRace) BattleReport(ctx *proto_player.Context, req *proto_
 	//判断挑战玩家
 	pd := LoadPd[*model.LadderRacePd](a, ctx.Id)
 
-	//当前积分
-	score := pd.Score
-
 	lastConf := conf.ActLadderRaceScore{}
 	isSuc := req.WinId == ctx.Id
-	// 步骤1: 计算当前玩家的段位
-	scoreConfigs := config.ActLadderRaceScore.All()
-	for _, cfg := range scoreConfigs {
-		if cfg.Score <= int32(score) && cfg.Score > lastConf.Score {
+	rankList := getLadderRaceScoreList()
+	for _, cfg := range rankList {
+		if cfg.Score <= pd.Score && cfg.Score > lastConf.Score {
 			lastConf = cfg
 		}
 	}
@@ -466,19 +396,16 @@ func (a *ActivityLadderRace) BattleReport(ctx *proto_player.Context, req *proto_
 		a.data.RankPlayer = make(map[int64]*model.ActDataLadderRaceRankPlayer)
 	}
 
-	// 遍历配置找到当前积分对应的段位
-	var currentRank, currentLittleRank int32
-	var maxScore int32 = -1
-	for _, cfg := range scoreConfigs {
-		if cfg.Score <= int32(pd.Score) && cfg.Score > maxScore {
-			maxScore = cfg.Score
-			currentRank = cfg.Rank
-			currentLittleRank = cfg.LittleRank
-		}
+	_, currentCfg := findLadderRaceScoreConfig(rankList, pd.Score)
+	if currentCfg == nil {
+		return res, errors.New("config is null")
 	}
+	currentRank := currentCfg.Rank
+	currentLittleRank := currentCfg.LittleRank
 
 	//判断存不存在
 	if data, ok := a.data.RankPlayer[ctx.Id]; ok {
+		a.removeRankBucket(ctx.Id, data.Rank, data.LittleRank)
 		data.Score = int64(pd.Score)
 		data.Rank = currentRank
 		data.LittleRank = currentLittleRank
@@ -488,6 +415,7 @@ func (a *ActivityLadderRace) BattleReport(ctx *proto_player.Context, req *proto_
 		a.data.RankPlayer[ctx.Id].Rank = currentRank
 		a.data.RankPlayer[ctx.Id].LittleRank = currentLittleRank
 	}
+	a.addRankBucket(ctx.Id, currentRank, currentLittleRank)
 
 	//更新排行
 	updateActivityRank(a, ctx, 0, int32(pd.Score), define.RankTypeTianti)
@@ -528,7 +456,14 @@ func (a *ActivityLadderRace) Update(now time.Time) {
 
 // OnDayReset 跨天重置：重置所有玩家的挑战次数
 func (a *ActivityLadderRace) OnDayReset(now time.Time) {
-	// TODO: 遍历所有参与过该活动的玩家，重置 pd.ChallengeTime
+	data.IterateActivityPlayerData[*model.LadderRacePd](a.GetId(), func(_ int64, pd *model.LadderRacePd) bool {
+		if pd == nil {
+			return true
+		}
+		pd.ChallengeTime = 0
+		pd.LastChallengeTime = now.Unix()
+		return true
+	})
 	log.Debug("ActivityLadderRace OnDayReset: actId=%v", a.GetId())
 }
 
@@ -541,6 +476,78 @@ func (a *ActivityLadderRace) OnStop() {
 }
 
 func (a *ActivityLadderRace) OnClose() {
+}
+
+func (a *ActivityLadderRace) getSeasonConf(season int32) (conf.ActLadderRace, bool) {
+	return FindTypedConf[conf.ActLadderRace](a.GetCfgId(), config.ActLadderRace.All(), func(cfg conf.ActLadderRace) bool {
+		return cfg.Season == season
+	})
+}
+
+func getLadderRaceScoreList() []conf.ActLadderRaceScore {
+	scoreConfigs := config.ActLadderRaceScore.All()
+	rankList := make([]conf.ActLadderRaceScore, 0, len(scoreConfigs))
+	for _, cfg := range scoreConfigs {
+		rankList = append(rankList, cfg)
+	}
+	sort.Slice(rankList, func(i, j int) bool {
+		return rankList[i].Score < rankList[j].Score
+	})
+	return rankList
+}
+
+func findLadderRaceScoreConfig(rankList []conf.ActLadderRaceScore, score int32) (int, *conf.ActLadderRaceScore) {
+	index := -1
+	for i := range rankList {
+		if rankList[i].Score > score {
+			break
+		}
+		index = i
+	}
+	if index < 0 {
+		return -1, nil
+	}
+	return index, &rankList[index]
+}
+
+func ladderRaceBucketKey(rank, littleRank int32) string {
+	return fmt.Sprintf("%d_%d", rank, littleRank)
+}
+
+func (a *ActivityLadderRace) addRankBucket(playerID int64, rank, littleRank int32) {
+	if a.rankBuckets == nil {
+		a.rankBuckets = make(map[string]map[int64]struct{})
+	}
+	key := ladderRaceBucketKey(rank, littleRank)
+	bucket, ok := a.rankBuckets[key]
+	if !ok {
+		bucket = make(map[int64]struct{})
+		a.rankBuckets[key] = bucket
+	}
+	bucket[playerID] = struct{}{}
+}
+
+func (a *ActivityLadderRace) removeRankBucket(playerID int64, rank, littleRank int32) {
+	key := ladderRaceBucketKey(rank, littleRank)
+	bucket, ok := a.rankBuckets[key]
+	if !ok {
+		return
+	}
+	delete(bucket, playerID)
+	if len(bucket) == 0 {
+		delete(a.rankBuckets, key)
+	}
+}
+
+func (a *ActivityLadderRace) getPlayersByRank(rank, littleRank int32, excludeID int64) []int64 {
+	bucket := a.rankBuckets[ladderRaceBucketKey(rank, littleRank)]
+	players := make([]int64, 0, len(bucket))
+	for playerID := range bucket {
+		if playerID != excludeID {
+			players = append(players, playerID)
+		}
+	}
+	return players
 }
 
 // initRankPlayerFromRedis 从Redis排行榜初始化RankPlayer数据
@@ -560,10 +567,11 @@ func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 	}
 
 	// 获取段位配置
-	scoreConfigs := config.ActLadderRaceScore.All()
+	rankList := getLadderRaceScoreList()
 
 	// 清空现有数据
 	a.data.RankPlayer = make(map[int64]*model.ActDataLadderRaceRankPlayer)
+	a.rankBuckets = make(map[string]map[int64]struct{})
 
 	// 解析排行榜数据，填充RankPlayer
 	for i := 0; i < len(result); i += 2 {
@@ -582,23 +590,18 @@ func (a *ActivityLadderRace) initRankPlayerFromRedis() {
 			continue
 		}
 
-		// 根据积分查找对应的段位配置
-		var rank, littleRank int32
-		var maxScore int32 = -1
-		for _, cfg := range scoreConfigs {
-			if cfg.Score <= int32(score) && cfg.Score > maxScore {
-				maxScore = cfg.Score
-				rank = cfg.Rank
-				littleRank = cfg.LittleRank
-			}
+		_, rankCfg := findLadderRaceScoreConfig(rankList, int32(score))
+		if rankCfg == nil {
+			continue
 		}
 
 		// 添加到RankPlayer
 		a.data.RankPlayer[playerId] = &model.ActDataLadderRaceRankPlayer{
 			Score:      int64(score),
-			Rank:       rank,
-			LittleRank: littleRank,
+			Rank:       rankCfg.Rank,
+			LittleRank: rankCfg.LittleRank,
 		}
+		a.addRankBucket(playerId, rankCfg.Rank, rankCfg.LittleRank)
 	}
 
 	log.Debug("天梯排行榜已初始化，玩家数:%d", len(a.data.RankPlayer))
@@ -618,9 +621,11 @@ func init() {
 		},
 		InjectFunc: func(handler IActivity, data any) {
 			h := handler.(*ActivityLadderRace)
+			h.rankBuckets = make(map[string]map[int64]struct{})
 			if data == nil {
 				h.data = new(model.ActDataLadderRace)
 				h.data.Season = 1
+				h.data.RankPlayer = make(map[int64]*model.ActDataLadderRaceRankPlayer)
 				return
 			}
 			h.data = data.(*model.ActDataLadderRace)

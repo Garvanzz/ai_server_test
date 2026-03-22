@@ -15,16 +15,16 @@ import (
 
 // GetNotices 获取公告
 func GetNotices(c *gin.Context) {
-	var req dto2.ReqNoticeList
+	var req dto2.NoticeListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
 	}
 	log.Debug(" 获取公告： %v", req)
-	logicServerId := req.ServerId
-	if req.ServerId > 0 {
+	logicServerId := req.ServerID
+	if req.ServerID > 0 {
 		serverItem := new(model.ServerItem)
-		has, getErr := AccountEngine.Table(define.GameServerTable).Where("id = ?", req.ServerId).Get(serverItem)
+		has, getErr := AccountEngine.Table(define.GameServerTable).Where("id = ?", req.ServerID).Get(serverItem)
 		if getErr != nil {
 			log.Error("获取区服映射错误: %s", getErr)
 			middleware.RetGame(c, dto2.ERR_DB, "server map err")
@@ -59,8 +59,6 @@ func GetNotices(c *gin.Context) {
 	}
 
 	js, _ := json.Marshal(items)
-	middleware.RetGame(c, dto2.SUCCESS, "success",
-		map[string]any{
-			"data": js,
-		})
+	resp := dto2.NoticeListResponse{Notices: items}
+	middleware.RetGameData(c, dto2.SUCCESS, "success", resp, map[string]any{"data": js})
 }

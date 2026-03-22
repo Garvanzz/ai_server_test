@@ -12,6 +12,7 @@ import (
 	"xfx/core/model"
 	"xfx/main_server/global"
 	"xfx/main_server/invoke"
+	"xfx/main_server/logic/activity/data"
 	"xfx/pkg/log"
 	"xfx/pkg/utils"
 	"xfx/proto/proto_activity"
@@ -36,21 +37,12 @@ func (a *ActivityArena) OnInit() {
 func (a *ActivityArena) OnStart() {
 	//初始人机
 	log.Debug("初始竞技场人机")
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
+	arenaConf, ok := a.getArenaConf()
 	if !ok {
 		return
 	}
 
-	var conf conf.ActArena
-	for _, v := range arenaConfs {
-		conf = v
-		break
-	}
-	if conf.Id <= 0 {
-		return
-	}
-
-	robots, error := a.Module().Invoke(define.ModuleCommon, "matchRobots", define.RobotMode_Arena, int64(conf.RobotPower[0]), int64(conf.RobotPower[1]), conf.PowerCount)
+	robots, error := a.Module().Invoke(define.ModuleCommon, "matchRobots", define.RobotMode_Arena, int64(arenaConf.RobotPower[0]), int64(arenaConf.RobotPower[1]), arenaConf.PowerCount)
 	if error != nil {
 		log.Debug("初始竞技场人机失败:%v", error)
 		return
@@ -67,7 +59,8 @@ func (a *ActivityArena) OnStart() {
 
 func (a *ActivityArena) Format(ctx *proto_player.Context) proto.Message {
 	pd := LoadPd[*model.ArenaOptionPd](a, ctx.Id)
-	log.Debug("加载竞技场数据:%s", pd)
+	log.Debug("加载竞技场数据:%v", pd)
+	nowUnix := utils.Now().Unix()
 
 	if len(pd.PlayerIds) <= 0 {
 		//初始敌人
@@ -79,7 +72,7 @@ func (a *ActivityArena) Format(ctx *proto_player.Context) proto.Message {
 	}
 
 	//敌人
-	enemys := make([]*proto_public.CommonPlayerInfo, len(pd.PlayerIds))
+	enemys := make([]*proto_public.CommonPlayerInfo, 0, len(pd.PlayerIds))
 	for _, v := range pd.PlayerIds {
 		if v <= 0 {
 			continue
@@ -100,27 +93,27 @@ func (a *ActivityArena) Format(ctx *proto_player.Context) proto.Message {
 	lineUps := getLineUp(ctx.Id, pd.LineUp)
 
 	if pd.LastRefreshTime == 0 {
-		pd.LastRefreshTime = utils.Now().Unix()
+		pd.LastRefreshTime = nowUnix
 	}
 
-	offseTime := pd.RefreshCD - utils.Now().Unix()
+	offseTime := pd.RefreshCD - nowUnix
 	if offseTime <= 0 {
 		offseTime = 0
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastRefreshTime, utils.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastRefreshTime, nowUnix, 0) {
 		pd.RefreshTime = 0
-		pd.LastRefreshTime = utils.Now().Unix()
+		pd.LastRefreshTime = nowUnix
 		offseTime = 0
 	}
 
 	if pd.LastChallengeTime <= 0 {
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, utils.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, nowUnix, 0) {
 		pd.ChallengeTime = 0
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
 	//获取
@@ -149,7 +142,7 @@ func (a *ActivityArena) OnEvent(key string, ctx *proto_player.Context, params Ev
 func (a *ActivityArena) RefreshBattlePlayer(ctx *proto_player.Context, params EventParams) {
 	res := &proto_activity.S2CArenaRefreshBattlePlayer{}
 
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
+	arenaConf, ok := a.getArenaConf()
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
@@ -157,22 +150,17 @@ func (a *ActivityArena) RefreshBattlePlayer(ctx *proto_player.Context, params Ev
 		return
 	}
 
-	var arenaConf conf.ActArena
-	for _, v := range arenaConfs {
-		arenaConf = v
-		break
-	}
-
 	pd := LoadPd[*model.ArenaOptionPd](a, ctx.Id)
+	nowUnix := utils.Now().Unix()
 
 	if pd.RefreshTime >= arenaConf.RefreshTime {
-		if utils.Now().Unix() <= pd.RefreshCD {
+		if nowUnix <= pd.RefreshCD {
 			res.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
 			invoke.Dispatch(a.Module(), ctx.Id, res)
 			return
 		}
 
-		pd.RefreshCD = utils.Now().Unix() + int64(arenaConf.RefreshCD)
+		pd.RefreshCD = nowUnix + int64(arenaConf.RefreshCD)
 	} else {
 		pd.RefreshTime += 1
 	}
@@ -193,6 +181,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 	serverId := ctx.Id / define.PlayerIdBase
 	rankKey := fmt.Sprintf("%s:%d", define.RankTypeArenaKey, a.GetId())
 	rankItem := getSelfRank(int(serverId), rankKey, ctx.Id)
+	myIdStr := strconv.FormatInt(ctx.Id, 10)
 
 	var result []string
 
@@ -207,13 +196,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 		}
 
 		// 排除自己
-		myIdStr := strconv.FormatInt(ctx.Id, 10)
-		result = make([]string, 0)
-		for _, id := range candidates {
-			if id != myIdStr {
-				result = append(result, id)
-			}
-		}
+		result = filterOutPlayerID(candidates, myIdStr)
 	} else if rankItem.Rank > 6 {
 		// 自己排名 > 6，从比自己排名靠前的20名中随机选6个
 		// 计算候选范围：从排名 max(1, 自己排名-20) 到 自己排名-1
@@ -235,13 +218,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 		}
 
 		// 排除自己
-		filteredCandidates := make([]string, 0)
-		myIdStr := strconv.FormatInt(ctx.Id, 10)
-		for _, id := range candidates {
-			if id != myIdStr {
-				filteredCandidates = append(filteredCandidates, id)
-			}
-		}
+		filteredCandidates := filterOutPlayerID(candidates, myIdStr)
 
 		// 随机选择6个
 		if len(filteredCandidates) <= 6 {
@@ -273,13 +250,7 @@ func (a *ActivityArena) RangeOtherPlayer(ctx *proto_player.Context) {
 				result = []string{}
 			} else {
 				// 排除自己
-				myIdStr := strconv.FormatInt(ctx.Id, 10)
-				filteredCandidates := make([]string, 0)
-				for _, id := range candidates {
-					if id != myIdStr {
-						filteredCandidates = append(filteredCandidates, id)
-					}
-				}
+				filteredCandidates := filterOutPlayerID(candidates, myIdStr)
 
 				// 随机选择6个
 				if len(filteredCandidates) <= 6 {
@@ -431,17 +402,11 @@ func (a *ActivityArena) Battle(ctx *proto_player.Context, req *proto_activity.C2
 		return res, nil
 	}
 
-	arenaConfs, ok := GetTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All())
+	arenaConf, ok := a.getArenaConf()
 	if !ok {
 		log.Error("get activity typed config error:%v", a.GetCfgId())
 		res.Code = proto_public.CommonErrorCode_ERR_NoConfig
 		return res, nil
-	}
-
-	var arenaConf conf.ActArena
-	for _, v := range arenaConfs {
-		arenaConf = v
-		break
 	}
 
 	if arenaConf.Id <= 0 {
@@ -450,13 +415,14 @@ func (a *ActivityArena) Battle(ctx *proto_player.Context, req *proto_activity.C2
 		return res, nil
 	}
 
+	nowUnix := utils.Now().Unix()
 	if pd.LastChallengeTime <= 0 {
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
-	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, utils.Now().Unix(), 0) {
+	if !utils.CheckIsSameDayBySec(pd.LastChallengeTime, nowUnix, 0) {
 		pd.ChallengeTime = 0
-		pd.LastChallengeTime = utils.Now().Unix()
+		pd.LastChallengeTime = nowUnix
 	}
 
 	//判断次数
@@ -517,7 +483,17 @@ func (a *ActivityArena) Update(now time.Time) {
 
 // OnDayReset 跨天重置：重置所有玩家的挑战次数和刷新次数
 func (a *ActivityArena) OnDayReset(now time.Time) {
-	// TODO: 遍历所有参与过该活动的玩家，重置 pd.ChallengeTime 和 pd.RefreshTime
+	data.IterateActivityPlayerData[*model.ArenaOptionPd](a.GetId(), func(_ int64, pd *model.ArenaOptionPd) bool {
+		if pd == nil {
+			return true
+		}
+		pd.ChallengeTime = 0
+		pd.RefreshTime = 0
+		pd.RefreshCD = 0
+		pd.LastChallengeTime = now.Unix()
+		pd.LastRefreshTime = now.Unix()
+		return true
+	})
 	log.Debug("ActivityArena OnDayReset: actId=%v", a.GetId())
 }
 
@@ -530,6 +506,22 @@ func (a *ActivityArena) OnStop() {
 }
 
 func (a *ActivityArena) OnClose() {
+}
+
+func (a *ActivityArena) getArenaConf() (conf.ActArena, bool) {
+	return FindTypedConf[conf.ActArena](a.GetCfgId(), config.ActArena.All(), func(arenaConf conf.ActArena) bool {
+		return arenaConf.Id > 0
+	})
+}
+
+func filterOutPlayerID(candidates []string, exclude string) []string {
+	filtered := make([]string, 0, len(candidates))
+	for _, id := range candidates {
+		if id != exclude {
+			filtered = append(filtered, id)
+		}
+	}
+	return filtered
 }
 
 // 获取

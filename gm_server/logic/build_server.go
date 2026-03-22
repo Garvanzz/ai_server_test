@@ -42,23 +42,23 @@ func GmBuildServer(c *gin.Context) {
 
 	result := GitPullOrClone(serverRepoDir, serverRepoURL)
 	if !result.Success {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message}, map[string]any{"msg": result.Message})
 		return
 	}
 	log.Debug("server pull ok: %s", result.Message)
 
 	protoResult := GitPullOrClone(protoSubDir, protoRepoURL)
 	if !protoResult.Success {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": protoResult.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": protoResult.Message}, map[string]any{"msg": protoResult.Message})
 		return
 	}
 	log.Debug("proto pull ok: %s", protoResult.Message)
 
 	res := buildServer(mainServerRunDir, buildOutputDir, "run")
 	if res.Success {
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"msg": res.Message})
+		HTTPRetGameData(c, SUCCESS, "success", map[string]any{"msg": res.Message}, map[string]any{"msg": res.Message})
 	} else {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": res.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": res.Message}, map[string]any{"msg": res.Message})
 	}
 }
 
@@ -76,23 +76,23 @@ func GmGameBuildServer(c *gin.Context) {
 
 	result := GitPullOrClone(serverRepoDir, serverRepoURL)
 	if !result.Success {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message}, map[string]any{"msg": result.Message})
 		return
 	}
 	log.Debug("server pull ok: %s", result.Message)
 
 	protoResult := GitPullOrClone(protoSubDir, protoRepoURL)
 	if !protoResult.Success {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": protoResult.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": protoResult.Message}, map[string]any{"msg": protoResult.Message})
 		return
 	}
 	log.Debug("proto pull ok: %s", protoResult.Message)
 
 	res := buildServer(gameServerRunDir, buildOutputDir, "game")
 	if res.Success {
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"msg": res.Message})
+		HTTPRetGameData(c, SUCCESS, "success", map[string]any{"msg": res.Message}, map[string]any{"msg": res.Message})
 	} else {
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": res.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": res.Message}, map[string]any{"msg": res.Message})
 	}
 }
 

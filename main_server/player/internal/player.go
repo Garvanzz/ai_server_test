@@ -30,7 +30,7 @@ func PushPlayerData(ctx global.IPlayer, pl *model.Player) {
 	res.Player = player
 	ctx.Send(res)
 
-	log.Debug("PushPlayerData", res)
+	log.Debug("PushPlayerData: %v", res)
 }
 
 // 同步头像框/称号/泡泡
@@ -41,7 +41,7 @@ func PushPlayerProp(ctx global.IPlayer, pl *model.Player) {
 	res.Bubbles = pl.PlayerProp.Bubbles
 	ctx.Send(res)
 
-	log.Debug("PushPlayerProp", res)
+	log.Debug("PushPlayerProp: %v", res)
 }
 
 // 添加头像框

@@ -22,6 +22,20 @@ func (m *HttpModule) httpRetGame(c *gin.Context, code int, message string, data 
 	c.JSON(http.StatusOK, ret)
 }
 
+func (m *HttpModule) httpRetGameData(c *gin.Context, code int, message string, payload any, legacy ...map[string]any) {
+	ret := gin.H{
+		"errcode": code,
+		"errmsg":  message,
+		"data":    payload,
+	}
+	if len(legacy) > 0 {
+		for k, v := range legacy[0] {
+			ret[k] = v
+		}
+	}
+	c.JSON(http.StatusOK, ret)
+}
+
 // http返回
 func (m *HttpModule) httpRet(c *gin.Context, code int, message string, data ...map[string]any) {
 	if data != nil && len(data) > 0 {

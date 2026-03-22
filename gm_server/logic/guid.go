@@ -74,9 +74,5 @@ func GmGetGuildList(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(opts)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(opts),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", opts, map[string]any{"totalCount": len(opts)})
 }

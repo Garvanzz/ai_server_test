@@ -3,7 +3,6 @@ package activity
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 	"xfx/core/cache"
 	"xfx/core/config"
@@ -36,13 +35,14 @@ func init() {
 
 type Manager struct {
 	modules.BaseModule
-	entities sync.Map
+	entities entityStore
 	sm       *fsm.StateMachine
 	lastTick int64
 }
 
 func (m *Manager) OnInit(app module.App) {
 	m.BaseModule.OnInit(app)
+	m.entities = newEntityStore()
 	m.sm = fsm.NewStateMachine(&fsm.DefaultDelegate{P: m}, transitions...)
 	data.Cache = cache.New[int64, any](cache.Options[int64, any]{
 		Capacity:      10000,
@@ -89,7 +89,7 @@ func (m *Manager) OnInit(app module.App) {
 
 		existIds[ent.CfgId] = struct{}{}
 		log.Info("初始加载活动:%v", activity.CfgId)
-		m.entities.Store(ent.Id, ent)
+		m.entities.store(ent)
 	}
 
 	// 根据配置加载新活动
@@ -98,7 +98,9 @@ func (m *Manager) OnInit(app module.App) {
 		if _, ok := existIds[activityConf.Id]; !ok {
 			log.Info("注册新活动:%v", activityConf.Id)
 			ent := m.register(activityConf.Id)
-			m.entities.Store(ent.Id, ent)
+			if ent != nil {
+				m.entities.store(ent)
+			}
 		}
 	}
 
@@ -143,8 +145,7 @@ func (m *Manager) OnTick(delta time.Duration) {
 		}
 	}
 
-	m.entities.Range(func(key, value any) bool {
-		ent := value.(*entity)
+	for _, ent := range m.entities.snapshot() {
 
 		// 检查配置是否变动
 		if !ent.checked {
@@ -155,12 +156,13 @@ func (m *Manager) OnTick(delta time.Duration) {
 					log.Error("%v", err)
 				}
 			}
+			ent.handler.OnReloadConfig()
 			ent.checked = true
-			return true
+			continue
 		}
 
 		if ent.State == StateClosed {
-			return true
+			continue
 		}
 
 		// 状态转换处理
@@ -169,7 +171,7 @@ func (m *Manager) OnTick(delta time.Duration) {
 			err := m.sm.Trigger(ent.State, triggerEvent, ent)
 			if err != nil {
 				log.Error("sm trigger error:%v", err)
-				return true
+				continue
 			}
 		}
 
@@ -188,9 +190,7 @@ func (m *Manager) OnTick(delta time.Duration) {
 			}
 			ent.handler.Update(now)
 		}
-
-		return true
-	})
+	}
 }
 
 // OnEvent 事件回调
@@ -226,12 +226,7 @@ func (m *Manager) OnEvent(ev *event.Event) {
 
 // 重置所有配置检查标记
 func (m *Manager) resetAllConfigChecked() {
-	m.entities.Range(func(_ any, value any) bool {
-		if ent, ok := value.(*entity); ok {
-			ent.checked = false
-		}
-		return true
-	})
+	m.entities.resetChecked()
 	log.Info("activity: config reload notified, all entity checked reset")
 }
 
@@ -256,8 +251,7 @@ func (m *Manager) OnStop() {
 }
 
 func (m *Manager) saveData() bool {
-	m.entities.Range(func(key, value any) bool {
-		ent := value.(*entity)
+	for _, ent := range m.entities.snapshot() {
 
 		actData := new(model.ActivityData)
 		actData.Id = ent.Id
@@ -273,7 +267,7 @@ func (m *Manager) saveData() bool {
 		desc := impl.GetActivityDesc(ent.Type)
 		if desc == nil {
 			log.Error("activity saveData: no activity factory for type: %v", actData.Type)
-			return true
+			continue
 		}
 		if desc.ExtractFunc != nil {
 			actData.Data = desc.ExtractFunc(ent.handler)
@@ -283,8 +277,7 @@ func (m *Manager) saveData() bool {
 		if err != nil {
 			log.Error("save activity data error:%v", err)
 		}
-		return true
-	})
+	}
 
 	return true
 }
@@ -292,6 +285,9 @@ func (m *Manager) saveData() bool {
 // =========================================FSM PROCESS============================================
 
 func (m *Manager) OnExit(fromState string, args []interface{}) {
+	if len(args) == 0 {
+		return
+	}
 	e := args[0].(*entity)
 	if e.State != fromState {
 		log.Error("OnExit state error:%v,currentState:%v", fromState, e.State)
@@ -300,51 +296,22 @@ func (m *Manager) OnExit(fromState string, args []interface{}) {
 }
 
 func (m *Manager) Action(action string, fromState string, toState string, args []interface{}) error {
+	if len(args) == 0 {
+		return errors.New("activity action missing entity argument")
+	}
 	ent := args[0].(*entity)
 
 	switch action {
 	case ActionStart:
-		// waiting - running
-
-		ent.handler.OnStart()
-		log.Debug("activity start:%v,%v", ent.Id, ent.CfgId)
+		return m.handleActionStart(ent)
 	case ActionClose:
-		// waiting - closed
-		// running - closed
-		// stopped - closed
-
-		if fromState == StateRunning {
-			ent.handler.OnClose()
-			data.PurgeActivityPlayerData(ent.Id) // 清除活动对应玩家数据
-		}
-
-		log.Debug("activity close:%v,%v", ent.Id, ent.CfgId)
+		return m.handleActionClose(ent, fromState)
 	case ActionStop:
-		// running - stopped
-		if fromState == StateRunning {
-			ent.handler.OnStop()
-		}
-		log.Debug("activity stop:%v,%v", ent.Id, ent.CfgId)
+		return m.handleActionStop(ent, fromState)
 	case ActionRecover:
-		// stopped - running
-		log.Debug("activity recover:%v,%v", ent.Id, ent.CfgId)
+		return m.handleActionRecover(ent)
 	case ActionRestart:
-		// closed - waiting
-		// stopped - waiting
-
-		data.PurgeActivityPlayerData(ent.Id)
-		m.entities.Delete(ent.Id)
-		data.DelActivityData(ent.Id) // 清空活动数据
-
-		// 分配新的id
-		actId, err := db.GetActivityId()
-		if err != nil {
-			log.Error("get activity id from redis error:%v", err)
-			return err
-		}
-		ent.Id = int64(actId)
-		m.entities.Store(ent.Id, ent)
-		log.Debug("activity restart:%v,%v", ent.Id, ent.CfgId)
+		return m.handleActionRestart(ent)
 	default:
 		log.Error("unprocessed action:%v", action)
 	}
@@ -355,9 +322,60 @@ func (m *Manager) Action(action string, fromState string, toState string, args [
 func (m *Manager) OnActionFailure(action string, fromState string, toState string, args []interface{}, err error) {
 }
 
-func (m *Manager) OnEnter(toState string, args []interface{}) {
+func (m *Manager) handleActionStart(ent *entity) error {
+	ent.handler.OnStart()
+	log.Debug("activity start:%v,%v", ent.Id, ent.CfgId)
+	return nil
+}
+
+func (m *Manager) handleActionClose(ent *entity, fromState string) error {
+	if fromState == StateRunning {
+		ent.handler.OnClose()
+		data.PurgeActivityPlayerData(ent.Id)
+	}
+	log.Debug("activity close:%v,%v", ent.Id, ent.CfgId)
+	return nil
+}
+
+func (m *Manager) handleActionStop(ent *entity, fromState string) error {
+	if fromState == StateRunning {
+		ent.handler.OnStop()
+	}
+	log.Debug("activity stop:%v,%v", ent.Id, ent.CfgId)
+	return nil
+}
+
+func (m *Manager) handleActionRecover(ent *entity) error {
+	ent.handler.OnRecover()
+	log.Debug("activity recover:%v,%v", ent.Id, ent.CfgId)
+	return nil
+}
+
+func (m *Manager) handleActionRestart(ent *entity) error {
+	previousActID := ent.Id
+	data.PurgeActivityPlayerData(previousActID)
+	m.entities.delete(previousActID)
+	data.DelActivityData(previousActID)
+
+	actID, err := db.GetActivityId()
+	if err != nil {
+		log.Error("get activity id from redis error:%v", err)
+		return err
+	}
+	ent.Id = int64(actID)
+	m.entities.store(ent)
+	ent.handler.OnRestart(previousActID)
+	log.Debug("activity restart:%v,%v", ent.Id, ent.CfgId)
+	return nil
+}
+
+func (m *Manager) OnEnter(fromState string, toState string, args []interface{}) {
+	if len(args) == 0 {
+		return
+	}
 	ent := args[0].(*entity)
 	ent.State = toState
+	m.entities.updateState(ent, fromState, toState)
 }
 
 // ==================================================FSM PROCESS END======================================================================
@@ -369,13 +387,11 @@ func (m *Manager) notify(obj *proto_player.Context, content map[string]any) {
 	} else {
 		eventKey, ok := key.(string)
 		if ok && eventKey != "" {
-			m.entities.Range(func(k, v interface{}) bool {
-				ent := v.(*entity)
+			for _, ent := range m.entities.snapshot() {
 				if ent.State == StateRunning {
 					ent.handler.OnEvent(eventKey, obj, content)
 				}
-				return true
-			})
+			}
 		}
 	}
 }
@@ -484,13 +500,11 @@ func (m *Manager) register(cfgId int64) *entity {
 
 // OnGetActivityData 获取活动数据
 func (m *Manager) OnGetActivityData(ctx *proto_player.Context, id int64) (*proto_activity.ActivityData, error) {
-	v, ok := m.entities.Load(id)
+	ent, ok := m.entities.load(id)
 	if !ok {
 		log.Error("GetActivityData id:%v", id)
 		return nil, errors.New("GetActivityData id is null")
 	}
-
-	ent := v.(*entity)
 	if ent.State != StateRunning {
 		log.Error("GetActivityData state is not running:%v", id)
 		return nil, errors.New("GetActivityData id is not run")
@@ -509,77 +523,32 @@ func (m *Manager) OnGetActivityData(ctx *proto_player.Context, id int64) (*proto
 // OnGetActivityStatus 获取活动状态列表
 func (m *Manager) OnGetActivityStatus() ([]*proto_activity.ActivityStatusInfo, error) {
 	result := make([]*proto_activity.ActivityStatusInfo, 0)
-	m.entities.Range(func(key, value interface{}) bool {
-		ent := value.(*entity)
-		if ent.State == StateRunning { // 开启中的活动
-
-			var endTime, closeTime int64
-			if ent.TimeType == define.ActTimeAlwaysOpen {
-				endTime = 0
-				closeTime = 0
-			} else {
-				closeTime = ent.CloseTime
-				endTime = ent.EndTime
-			}
-
-			result = append(result, &proto_activity.ActivityStatusInfo{
-				ActivityId: ent.Id,
-				ConfigId:   ent.CfgId,
-				StartTime:  ent.StartTime,
-				EndTime:    endTime,
-				CloseTime:  closeTime,
-				IsOpen:     true,
-				Season:     ent.TimeValue,
-			})
+	for _, ent := range m.entities.snapshot() {
+		if info := statusInfoForEntity(ent); info != nil {
+			result = append(result, info)
 		}
-
-		return true
-	})
+	}
 	return result, nil
 }
 
 // OnGetActivityStatusByType 获取活动根据类型
 func (m *Manager) OnGetActivityStatusByType(typ string) (*proto_activity.ActivityStatusInfo, error) {
-	result := new(proto_activity.ActivityStatusInfo)
-	m.entities.Range(func(key, value interface{}) bool {
-		ent := value.(*entity)
-		if ent.State == StateRunning && ent.Type == typ { // 开启中的活动
-			var endTime, closeTime int64
-			if ent.TimeType == define.ActTimeAlwaysOpen {
-				endTime = 0
-				closeTime = 0
-			} else {
-				closeTime = ent.CloseTime
-				endTime = ent.EndTime
-			}
-
-			result = &proto_activity.ActivityStatusInfo{
-				ActivityId: ent.Id,
-				ConfigId:   ent.CfgId,
-				StartTime:  ent.StartTime,
-				EndTime:    endTime,
-				CloseTime:  closeTime,
-				IsOpen:     true,
-				Season:     ent.TimeValue,
-			}
-		}
-
-		return true
-	})
-	return result, nil
+	ent := m.getEntityByType(typ)
+	if ent == nil {
+		return new(proto_activity.ActivityStatusInfo), nil
+	}
+	return statusInfoForEntity(ent), nil
 }
 
 func (m *Manager) OnGetActivityDataList(ctx *proto_player.Context, ids []int64) []*proto_activity.ActivityData {
 	result := make([]*proto_activity.ActivityData, 0)
 
 	for _, id := range ids {
-		v, ok := m.entities.Load(id)
+		ent, ok := m.entities.load(id)
 		if !ok {
 			log.Error("get activity data list id error:%v", id)
 			continue
 		}
-
-		ent := v.(*entity)
 		if ent.State != StateRunning {
 			continue
 		}
@@ -597,12 +566,10 @@ func (m *Manager) OnGetActivityDataList(ctx *proto_player.Context, ids []int64) 
 
 // OnRouterMsg 直接转发proto到活动内部
 func (m *Manager) OnRouterMsg(ctx *proto_player.Context, actId int64, req proto.Message) (any, error) {
-	v, ok := m.entities.Load(actId)
+	ent, ok := m.entities.load(actId)
 	if !ok {
 		return nil, errors.New("router msg activity id error")
 	}
-
-	ent := v.(*entity)
 	if ent.State != StateRunning {
 		return nil, errors.New("router msg activity is not running")
 	}
@@ -627,45 +594,43 @@ func entityToInfo(ent *entity) *model.ActivityInfo {
 	}
 }
 
+func statusInfoForEntity(ent *entity) *proto_activity.ActivityStatusInfo {
+	if ent == nil || ent.State != StateRunning {
+		return nil
+	}
+
+	endTime := ent.EndTime
+	closeTime := ent.CloseTime
+	if ent.TimeType == define.ActTimeAlwaysOpen {
+		endTime = 0
+		closeTime = 0
+	}
+
+	return &proto_activity.ActivityStatusInfo{
+		ActivityId: ent.Id,
+		ConfigId:   ent.CfgId,
+		StartTime:  ent.StartTime,
+		EndTime:    endTime,
+		CloseTime:  closeTime,
+		IsOpen:     true,
+		Season:     ent.TimeValue,
+	}
+}
+
 func (m *Manager) getEntityByActId(actId int64) *entity {
-	v, ok := m.entities.Load(actId)
+	ent, ok := m.entities.load(actId)
 	if !ok {
 		return nil
 	}
-	ent, _ := v.(*entity)
 	return ent
 }
 
 func (m *Manager) getEntityByCfgId(cfgId int64) *entity {
-	var found *entity
-	m.entities.Range(func(_, value any) bool {
-		ent := value.(*entity)
-		if ent.CfgId != cfgId {
-			return true
-		}
-		if ent.State == StateRunning {
-			found = ent
-			return false
-		}
-		if found == nil {
-			found = ent
-		}
-		return true
-	})
-	return found
+	return m.entities.getByCfgID(cfgId)
 }
 
 func (m *Manager) getEntityByType(typ string) *entity {
-	var found *entity
-	m.entities.Range(func(_, value any) bool {
-		ent := value.(*entity)
-		if ent.Type == typ && ent.State == StateRunning {
-			found = ent
-			return false
-		}
-		return true
-	})
-	return found
+	return m.entities.getRunningByType(typ)
 }
 
 // ==================== GM 后台接口 ====================
@@ -673,10 +638,9 @@ func (m *Manager) getEntityByType(typ string) *entity {
 // OnListAllActivities 列出所有活动（含状态），供 GM 后台展示
 func (m *Manager) OnListAllActivities() ([]*model.ActivityInfo, error) {
 	list := make([]*model.ActivityInfo, 0)
-	m.entities.Range(func(_, value any) bool {
-		list = append(list, entityToInfo(value.(*entity)))
-		return true
-	})
+	for _, ent := range m.entities.snapshot() {
+		list = append(list, entityToInfo(ent))
+	}
 	return list, nil
 }
 
@@ -769,7 +733,7 @@ func (m *Manager) OnRemoveActivity(actId int64) error {
 			return err
 		}
 	}
-	m.entities.Delete(actId)
+	m.entities.delete(actId)
 	data.DelActivityData(actId)
 	return nil
 }

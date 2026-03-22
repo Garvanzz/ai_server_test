@@ -16,13 +16,20 @@ func (m *HttpModule) GMTimeGet(c *gin.Context) {
 	gameNow := utils.Now()
 	offset := utils.GetTimeOffset()
 	offsetDays := int64(offset / (24 * time.Hour))
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"real_time":        realNow.Unix(),
-		"game_time":        gameNow.Unix(),
-		"offset_days":      offsetDays,
-		"offset_enabled":   utils.TimeOffsetEnabled(), // 是否允许修改偏移（Debug 模式为 true，正式服为 false）
-		"real_iso":         realNow.Format(time.RFC3339),
-		"game_iso":         gameNow.Format(time.RFC3339),
+	m.httpRetGameData(c, SUCCESS, "success", map[string]any{
+		"realTime":      realNow.Unix(),
+		"gameTime":      gameNow.Unix(),
+		"offsetDays":    offsetDays,
+		"offsetEnabled": utils.TimeOffsetEnabled(),
+		"realIso":       realNow.Format(time.RFC3339),
+		"gameIso":       gameNow.Format(time.RFC3339),
+	}, map[string]any{
+		"real_time":      realNow.Unix(),
+		"game_time":      gameNow.Unix(),
+		"offset_days":    offsetDays,
+		"offset_enabled": utils.TimeOffsetEnabled(),
+		"real_iso":       realNow.Format(time.RFC3339),
+		"game_iso":       gameNow.Format(time.RFC3339),
 	})
 }
 
@@ -42,7 +49,11 @@ func (m *HttpModule) GMTimeSetOffset(c *gin.Context) {
 	}
 	offset := time.Duration(req.OffsetDays) * 24 * time.Hour
 	utils.SetTimeOffset(offset)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
+	m.httpRetGameData(c, SUCCESS, "success", map[string]any{
+		"offsetDays": req.OffsetDays,
+		"gameTime":   utils.Now().Unix(),
+		"gameIso":    utils.Now().Format(time.RFC3339),
+	}, map[string]any{
 		"offset_days": req.OffsetDays,
 		"game_time":   utils.Now().Unix(),
 		"game_iso":    utils.Now().Format(time.RFC3339),

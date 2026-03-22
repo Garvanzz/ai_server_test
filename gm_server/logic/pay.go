@@ -118,12 +118,7 @@ func GmGetOrderList(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(items)
-
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(items),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
 }
 
 // 获取缓存充值列表
@@ -231,10 +226,5 @@ func GmGetCacheOrderList(c *gin.Context) {
 		})
 	}
 
-	js, _ := json.Marshal(items)
-
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(items),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
 }

@@ -1,5 +1,3 @@
-// time.go 提供时间、日期计算工具函数。
-// 本包使用 clock.Now() 作为时间源，支持游戏逻辑时间偏移。
 package utils
 
 import (

@@ -54,7 +54,7 @@ func updateActivityRank(a BaseInfo, ctx *proto_player.Context, Id int32, score i
 	rankItem := new(proto_rank.RankItem)
 	switch rankType {
 	case define.RankTypeDrawHero:
-		rankItem = getSelfRank(int(serverId), fmt.Sprintf("%s:%d", define.RankTypeDrawHero, a.GetId()), ctx.Id)
+		rankItem = getSelfRank(int(serverId), fmt.Sprintf("%s:%d", define.RankDrawHeroKey, a.GetId()), ctx.Id)
 	case define.RankTypeRecharge:
 		rankItem = getSelfRank(int(serverId), fmt.Sprintf("%s:%d", define.RankRechargeKey, a.GetId()), ctx.Id)
 	case define.RankTypeTheCompetition:
@@ -106,7 +106,7 @@ func getSelfRank(serverId int, rankKey string, id int64) *proto_rank.RankItem {
 func deleteActivityRank(a BaseInfo, rankType int) {
 	key, ok := define.RankTypeToKey[rankType]
 	if !ok {
-		log.Error("deleteActivityRank error : rankType not exist", key)
+		log.Error("deleteActivityRank error : rankType not exist, rankType=%v", rankType)
 		return
 	}
 
@@ -121,7 +121,7 @@ func sendRankReward(a BaseInfo, rankType int, ignoreList []int64) {
 
 	key, ok := define.RankTypeToKey[rankType]
 	if !ok {
-		log.Error("sendRankReward error : rankType not exist", key)
+		log.Error("sendRankReward error : rankType not exist, rankType=%v", rankType)
 		return
 	}
 

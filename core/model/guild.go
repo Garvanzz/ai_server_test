@@ -56,7 +56,7 @@ type YuanchiItem struct {
 	Num int32
 }
 
-// GuildLog 帮会炼制记录
+// GuildRefiningLog 帮会炼制记录
 type GuildRefiningLog struct {
 	Data  *YuanchiRefining
 	State bool

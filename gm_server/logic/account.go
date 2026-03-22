@@ -46,11 +46,7 @@ func GmGetPlayerInfo(c *gin.Context) {
 			return
 		}
 	}
-	js, _ := json.Marshal(pl)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(pl),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", pl, map[string]any{"totalCount": len(pl)})
 }
 
 // 获取玩家游戏数据（经 main_server 读 Redis Player）
@@ -85,7 +81,7 @@ func GmGetPlayerGameInfo(c *gin.Context) {
 		}
 	}
 	if len(pl) == 0 {
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
+		HTTPRetGameData(c, SUCCESS, "success", []model.Account{}, map[string]any{"totalCount": 0})
 		return
 	}
 
@@ -168,19 +164,12 @@ func GmEditHero(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	var wrap struct {
-		Data string `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero response err")
-		return
-	}
 	var heroLineup struct {
-		Hero   *model.Hero `json:"Hero"`
-		LineUp interface{} `json:"LineUp"`
+		Hero   *model.Hero `json:"hero"`
+		LineUp interface{} `json:"lineup"`
 	}
-	if err := json.Unmarshal([]byte(wrap.Data), &heroLineup); err != nil || heroLineup.Hero == nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero data err")
+	if err := decodeForwardedData(respBody, &heroLineup); err != nil || heroLineup.Hero == nil {
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero response err")
 		return
 	}
 	if heroLineup.Hero.Hero != nil {

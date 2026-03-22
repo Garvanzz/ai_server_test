@@ -51,176 +51,95 @@ func (m *C2SGetTasks) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_C2SGetTasks proto.InternalMessageInfo
 
-type S2CGetTasks struct {
-	DailyTasks            map[int32]*TaskState `protobuf:"bytes,1,rep,name=DailyTasks,proto3" json:"DailyTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	WeekTasks             map[int32]*TaskState `protobuf:"bytes,2,rep,name=WeekTasks,proto3" json:"WeekTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	MonthTasks            map[int32]*TaskState `protobuf:"bytes,3,rep,name=MonthTasks,proto3" json:"MonthTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	AchieveTasks          map[int32]*TaskState `protobuf:"bytes,4,rep,name=AchieveTasks,proto3" json:"AchieveTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	MainTasks             map[int32]*TaskState `protobuf:"bytes,5,rep,name=MainTasks,proto3" json:"MainTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	GuildTasks            map[int32]*TaskState `protobuf:"bytes,6,rep,name=GuildTasks,proto3" json:"GuildTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	ActivePointRecord     map[int32]bool       `protobuf:"bytes,7,rep,name=ActivePointRecord,proto3" json:"ActivePointRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	GuildPointRecord      map[int32]bool       `protobuf:"bytes,8,rep,name=GuildPointRecord,proto3" json:"GuildPointRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	ActivePointWeekRecord map[int32]bool       `protobuf:"bytes,9,rep,name=ActivePointWeekRecord,proto3" json:"ActivePointWeekRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	DailyActivePoint      int32                `protobuf:"varint,10,opt,name=DailyActivePoint,proto3" json:"DailyActivePoint,omitempty"`
-	GuildPoint            int32                `protobuf:"varint,11,opt,name=GuildPoint,proto3" json:"GuildPoint,omitempty"`
-	DrawRankTasks         map[int32]*TaskState `protobuf:"bytes,12,rep,name=DrawRankTasks,proto3" json:"DrawRankTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	TheCompetitionTasks   map[int32]*TaskState `protobuf:"bytes,13,rep,name=TheCompetitionTasks,proto3" json:"TheCompetitionTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportDailyTasks    map[int32]*TaskState `protobuf:"bytes,14,rep,name=PassportDailyTasks,proto3" json:"PassportDailyTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportWeekTasks     map[int32]*TaskState `protobuf:"bytes,15,rep,name=PassportWeekTasks,proto3" json:"PassportWeekTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportSeasonTasks   map[int32]*TaskState `protobuf:"bytes,16,rep,name=PassportSeasonTasks,proto3" json:"PassportSeasonTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	ParternerTasks        map[int32]*TaskState `protobuf:"bytes,17,rep,name=ParternerTasks,proto3" json:"ParternerTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral  struct{}             `json:"-"`
-	XXX_unrecognized      []byte               `json:"-"`
-	XXX_sizecache         int32                `json:"-"`
+type C2SGetReward struct {
+	BucketType           int32    `protobuf:"varint,1,opt,name=bucket_type,json=bucketType,proto3" json:"bucket_type,omitempty"`
+	TaskId               int32    `protobuf:"varint,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *S2CGetTasks) Reset()         { *m = S2CGetTasks{} }
-func (m *S2CGetTasks) String() string { return proto.CompactTextString(m) }
-func (*S2CGetTasks) ProtoMessage()    {}
-func (*S2CGetTasks) Descriptor() ([]byte, []int) {
+func (m *C2SGetReward) Reset()         { *m = C2SGetReward{} }
+func (m *C2SGetReward) String() string { return proto.CompactTextString(m) }
+func (*C2SGetReward) ProtoMessage()    {}
+func (*C2SGetReward) Descriptor() ([]byte, []int) {
 	return fileDescriptor_ce5d8dd45b4a91ff, []int{1}
 }
 
-func (m *S2CGetTasks) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_S2CGetTasks.Unmarshal(m, b)
+func (m *C2SGetReward) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_C2SGetReward.Unmarshal(m, b)
 }
-func (m *S2CGetTasks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_S2CGetTasks.Marshal(b, m, deterministic)
+func (m *C2SGetReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_C2SGetReward.Marshal(b, m, deterministic)
 }
-func (m *S2CGetTasks) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_S2CGetTasks.Merge(m, src)
+func (m *C2SGetReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_C2SGetReward.Merge(m, src)
 }
-func (m *S2CGetTasks) XXX_Size() int {
-	return xxx_messageInfo_S2CGetTasks.Size(m)
+func (m *C2SGetReward) XXX_Size() int {
+	return xxx_messageInfo_C2SGetReward.Size(m)
 }
-func (m *S2CGetTasks) XXX_DiscardUnknown() {
-	xxx_messageInfo_S2CGetTasks.DiscardUnknown(m)
+func (m *C2SGetReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_C2SGetReward.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_S2CGetTasks proto.InternalMessageInfo
+var xxx_messageInfo_C2SGetReward proto.InternalMessageInfo
 
-func (m *S2CGetTasks) GetDailyTasks() map[int32]*TaskState {
+func (m *C2SGetReward) GetBucketType() int32 {
 	if m != nil {
-		return m.DailyTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetWeekTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.WeekTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetMonthTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.MonthTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetAchieveTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.AchieveTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetMainTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.MainTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetGuildTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.GuildTasks
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetActivePointRecord() map[int32]bool {
-	if m != nil {
-		return m.ActivePointRecord
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetGuildPointRecord() map[int32]bool {
-	if m != nil {
-		return m.GuildPointRecord
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetActivePointWeekRecord() map[int32]bool {
-	if m != nil {
-		return m.ActivePointWeekRecord
-	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetDailyActivePoint() int32 {
-	if m != nil {
-		return m.DailyActivePoint
+		return m.BucketType
 	}
 	return 0
 }
 
-func (m *S2CGetTasks) GetGuildPoint() int32 {
+func (m *C2SGetReward) GetTaskId() int32 {
 	if m != nil {
-		return m.GuildPoint
+		return m.TaskId
 	}
 	return 0
 }
 
-func (m *S2CGetTasks) GetDrawRankTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.DrawRankTasks
-	}
-	return nil
+type C2SGetActivePointReward struct {
+	RewardId             int32    `protobuf:"varint,1,opt,name=reward_id,json=rewardId,proto3" json:"reward_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *S2CGetTasks) GetTheCompetitionTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.TheCompetitionTasks
-	}
-	return nil
+func (m *C2SGetActivePointReward) Reset()         { *m = C2SGetActivePointReward{} }
+func (m *C2SGetActivePointReward) String() string { return proto.CompactTextString(m) }
+func (*C2SGetActivePointReward) ProtoMessage()    {}
+func (*C2SGetActivePointReward) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{2}
 }
 
-func (m *S2CGetTasks) GetPassportDailyTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.PassportDailyTasks
-	}
-	return nil
+func (m *C2SGetActivePointReward) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_C2SGetActivePointReward.Unmarshal(m, b)
+}
+func (m *C2SGetActivePointReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_C2SGetActivePointReward.Marshal(b, m, deterministic)
+}
+func (m *C2SGetActivePointReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_C2SGetActivePointReward.Merge(m, src)
+}
+func (m *C2SGetActivePointReward) XXX_Size() int {
+	return xxx_messageInfo_C2SGetActivePointReward.Size(m)
+}
+func (m *C2SGetActivePointReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_C2SGetActivePointReward.DiscardUnknown(m)
 }
 
-func (m *S2CGetTasks) GetPassportWeekTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.PassportWeekTasks
-	}
-	return nil
-}
+var xxx_messageInfo_C2SGetActivePointReward proto.InternalMessageInfo
 
-func (m *S2CGetTasks) GetPassportSeasonTasks() map[int32]*TaskState {
+func (m *C2SGetActivePointReward) GetRewardId() int32 {
 	if m != nil {
-		return m.PassportSeasonTasks
+		return m.RewardId
 	}
-	return nil
-}
-
-func (m *S2CGetTasks) GetParternerTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.ParternerTasks
-	}
-	return nil
+	return 0
 }
 
 type TaskState struct {
-	Progress             int32    `protobuf:"varint,1,opt,name=Progress,proto3" json:"Progress,omitempty"`
-	GetReward            bool     `protobuf:"varint,2,opt,name=GetReward,proto3" json:"GetReward,omitempty"`
+	Progress             int32    `protobuf:"varint,1,opt,name=progress,proto3" json:"progress,omitempty"`
+	Rewarded             bool     `protobuf:"varint,2,opt,name=rewarded,proto3" json:"rewarded,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -230,7 +149,7 @@ func (m *TaskState) Reset()         { *m = TaskState{} }
 func (m *TaskState) String() string { return proto.CompactTextString(m) }
 func (*TaskState) ProtoMessage()    {}
 func (*TaskState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{2}
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{3}
 }
 
 func (m *TaskState) XXX_Unmarshal(b []byte) error {
@@ -258,41 +177,127 @@ func (m *TaskState) GetProgress() int32 {
 	return 0
 }
 
-func (m *TaskState) GetGetReward() bool {
+func (m *TaskState) GetRewarded() bool {
 	if m != nil {
-		return m.GetReward
+		return m.Rewarded
 	}
 	return false
 }
 
+type TaskGroup struct {
+	BucketType           int32                `protobuf:"varint,1,opt,name=bucket_type,json=bucketType,proto3" json:"bucket_type,omitempty"`
+	Tasks                map[int32]*TaskState `protobuf:"bytes,2,rep,name=tasks,proto3" json:"tasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ClaimRecord          map[int32]bool       `protobuf:"bytes,3,rep,name=claim_record,json=claimRecord,proto3" json:"claim_record,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	Point                int32                `protobuf:"varint,4,opt,name=point,proto3" json:"point,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *TaskGroup) Reset()         { *m = TaskGroup{} }
+func (m *TaskGroup) String() string { return proto.CompactTextString(m) }
+func (*TaskGroup) ProtoMessage()    {}
+func (*TaskGroup) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{4}
+}
+
+func (m *TaskGroup) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TaskGroup.Unmarshal(m, b)
+}
+func (m *TaskGroup) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TaskGroup.Marshal(b, m, deterministic)
+}
+func (m *TaskGroup) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TaskGroup.Merge(m, src)
+}
+func (m *TaskGroup) XXX_Size() int {
+	return xxx_messageInfo_TaskGroup.Size(m)
+}
+func (m *TaskGroup) XXX_DiscardUnknown() {
+	xxx_messageInfo_TaskGroup.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TaskGroup proto.InternalMessageInfo
+
+func (m *TaskGroup) GetBucketType() int32 {
+	if m != nil {
+		return m.BucketType
+	}
+	return 0
+}
+
+func (m *TaskGroup) GetTasks() map[int32]*TaskState {
+	if m != nil {
+		return m.Tasks
+	}
+	return nil
+}
+
+func (m *TaskGroup) GetClaimRecord() map[int32]bool {
+	if m != nil {
+		return m.ClaimRecord
+	}
+	return nil
+}
+
+func (m *TaskGroup) GetPoint() int32 {
+	if m != nil {
+		return m.Point
+	}
+	return 0
+}
+
+type S2CGetTasks struct {
+	Groups               []*TaskGroup `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *S2CGetTasks) Reset()         { *m = S2CGetTasks{} }
+func (m *S2CGetTasks) String() string { return proto.CompactTextString(m) }
+func (*S2CGetTasks) ProtoMessage()    {}
+func (*S2CGetTasks) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{5}
+}
+
+func (m *S2CGetTasks) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_S2CGetTasks.Unmarshal(m, b)
+}
+func (m *S2CGetTasks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_S2CGetTasks.Marshal(b, m, deterministic)
+}
+func (m *S2CGetTasks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_S2CGetTasks.Merge(m, src)
+}
+func (m *S2CGetTasks) XXX_Size() int {
+	return xxx_messageInfo_S2CGetTasks.Size(m)
+}
+func (m *S2CGetTasks) XXX_DiscardUnknown() {
+	xxx_messageInfo_S2CGetTasks.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_S2CGetTasks proto.InternalMessageInfo
+
+func (m *S2CGetTasks) GetGroups() []*TaskGroup {
+	if m != nil {
+		return m.Groups
+	}
+	return nil
+}
+
 type PushTask struct {
-	DailyTasks            map[int32]*TaskState `protobuf:"bytes,1,rep,name=DailyTasks,proto3" json:"DailyTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	WeekTasks             map[int32]*TaskState `protobuf:"bytes,2,rep,name=WeekTasks,proto3" json:"WeekTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	MonthTasks            map[int32]*TaskState `protobuf:"bytes,3,rep,name=MonthTasks,proto3" json:"MonthTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	AchieveTasks          map[int32]*TaskState `protobuf:"bytes,4,rep,name=AchieveTasks,proto3" json:"AchieveTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	MainTasks             map[int32]*TaskState `protobuf:"bytes,5,rep,name=MainTasks,proto3" json:"MainTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	GuildTasks            map[int32]*TaskState `protobuf:"bytes,6,rep,name=GuildTasks,proto3" json:"GuildTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	ActivePointRecord     map[int32]bool       `protobuf:"bytes,7,rep,name=ActivePointRecord,proto3" json:"ActivePointRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	GuildPointRecord      map[int32]bool       `protobuf:"bytes,8,rep,name=GuildPointRecord,proto3" json:"GuildPointRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	ActivePointWeekRecord map[int32]bool       `protobuf:"bytes,9,rep,name=ActivePointWeekRecord,proto3" json:"ActivePointWeekRecord,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	DailyActivePoint      int32                `protobuf:"varint,10,opt,name=DailyActivePoint,proto3" json:"DailyActivePoint,omitempty"`
-	GuildPoint            int32                `protobuf:"varint,11,opt,name=GuildPoint,proto3" json:"GuildPoint,omitempty"`
-	DrawRankTasks         map[int32]*TaskState `protobuf:"bytes,12,rep,name=DrawRankTasks,proto3" json:"DrawRankTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	TheCompetitionTasks   map[int32]*TaskState `protobuf:"bytes,13,rep,name=TheCompetitionTasks,proto3" json:"TheCompetitionTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportDailyTasks    map[int32]*TaskState `protobuf:"bytes,14,rep,name=PassportDailyTasks,proto3" json:"PassportDailyTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportWeekTasks     map[int32]*TaskState `protobuf:"bytes,15,rep,name=PassportWeekTasks,proto3" json:"PassportWeekTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	PassportSeasonTasks   map[int32]*TaskState `protobuf:"bytes,16,rep,name=PassportSeasonTasks,proto3" json:"PassportSeasonTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	ParternerTasks        map[int32]*TaskState `protobuf:"bytes,17,rep,name=ParternerTasks,proto3" json:"ParternerTasks,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral  struct{}             `json:"-"`
-	XXX_unrecognized      []byte               `json:"-"`
-	XXX_sizecache         int32                `json:"-"`
+	Groups               []*TaskGroup `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *PushTask) Reset()         { *m = PushTask{} }
 func (m *PushTask) String() string { return proto.CompactTextString(m) }
 func (*PushTask) ProtoMessage()    {}
 func (*PushTask) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{3}
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{6}
 }
 
 func (m *PushTask) XXX_Unmarshal(b []byte) error {
@@ -313,176 +318,16 @@ func (m *PushTask) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PushTask proto.InternalMessageInfo
 
-func (m *PushTask) GetDailyTasks() map[int32]*TaskState {
+func (m *PushTask) GetGroups() []*TaskGroup {
 	if m != nil {
-		return m.DailyTasks
+		return m.Groups
 	}
 	return nil
-}
-
-func (m *PushTask) GetWeekTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.WeekTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetMonthTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.MonthTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetAchieveTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.AchieveTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetMainTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.MainTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetGuildTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.GuildTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetActivePointRecord() map[int32]bool {
-	if m != nil {
-		return m.ActivePointRecord
-	}
-	return nil
-}
-
-func (m *PushTask) GetGuildPointRecord() map[int32]bool {
-	if m != nil {
-		return m.GuildPointRecord
-	}
-	return nil
-}
-
-func (m *PushTask) GetActivePointWeekRecord() map[int32]bool {
-	if m != nil {
-		return m.ActivePointWeekRecord
-	}
-	return nil
-}
-
-func (m *PushTask) GetDailyActivePoint() int32 {
-	if m != nil {
-		return m.DailyActivePoint
-	}
-	return 0
-}
-
-func (m *PushTask) GetGuildPoint() int32 {
-	if m != nil {
-		return m.GuildPoint
-	}
-	return 0
-}
-
-func (m *PushTask) GetDrawRankTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.DrawRankTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetTheCompetitionTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.TheCompetitionTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetPassportDailyTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.PassportDailyTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetPassportWeekTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.PassportWeekTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetPassportSeasonTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.PassportSeasonTasks
-	}
-	return nil
-}
-
-func (m *PushTask) GetParternerTasks() map[int32]*TaskState {
-	if m != nil {
-		return m.ParternerTasks
-	}
-	return nil
-}
-
-// 领取任务奖励
-type C2SGetReward struct {
-	Type                 int32    `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`
-	Id                   int32    `protobuf:"varint,2,opt,name=Id,proto3" json:"Id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *C2SGetReward) Reset()         { *m = C2SGetReward{} }
-func (m *C2SGetReward) String() string { return proto.CompactTextString(m) }
-func (*C2SGetReward) ProtoMessage()    {}
-func (*C2SGetReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{4}
-}
-
-func (m *C2SGetReward) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_C2SGetReward.Unmarshal(m, b)
-}
-func (m *C2SGetReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_C2SGetReward.Marshal(b, m, deterministic)
-}
-func (m *C2SGetReward) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_C2SGetReward.Merge(m, src)
-}
-func (m *C2SGetReward) XXX_Size() int {
-	return xxx_messageInfo_C2SGetReward.Size(m)
-}
-func (m *C2SGetReward) XXX_DiscardUnknown() {
-	xxx_messageInfo_C2SGetReward.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_C2SGetReward proto.InternalMessageInfo
-
-func (m *C2SGetReward) GetType() int32 {
-	if m != nil {
-		return m.Type
-	}
-	return 0
-}
-
-func (m *C2SGetReward) GetId() int32 {
-	if m != nil {
-		return m.Id
-	}
-	return 0
 }
 
 type S2CGetReward struct {
-	Succ                 bool     `protobuf:"varint,1,opt,name=Succ,proto3" json:"Succ,omitempty"`
-	Id                   int32    `protobuf:"varint,2,opt,name=Id,proto3" json:"Id,omitempty"`
+	Succ                 bool     `protobuf:"varint,1,opt,name=succ,proto3" json:"succ,omitempty"`
+	TaskId               int32    `protobuf:"varint,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -492,7 +337,7 @@ func (m *S2CGetReward) Reset()         { *m = S2CGetReward{} }
 func (m *S2CGetReward) String() string { return proto.CompactTextString(m) }
 func (*S2CGetReward) ProtoMessage()    {}
 func (*S2CGetReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{5}
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{7}
 }
 
 func (m *S2CGetReward) XXX_Unmarshal(b []byte) error {
@@ -520,55 +365,15 @@ func (m *S2CGetReward) GetSucc() bool {
 	return false
 }
 
-func (m *S2CGetReward) GetId() int32 {
+func (m *S2CGetReward) GetTaskId() int32 {
 	if m != nil {
-		return m.Id
-	}
-	return 0
-}
-
-// 领取活跃点奖励
-type C2SGetActivePointReward struct {
-	Id                   int32    `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *C2SGetActivePointReward) Reset()         { *m = C2SGetActivePointReward{} }
-func (m *C2SGetActivePointReward) String() string { return proto.CompactTextString(m) }
-func (*C2SGetActivePointReward) ProtoMessage()    {}
-func (*C2SGetActivePointReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{6}
-}
-
-func (m *C2SGetActivePointReward) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_C2SGetActivePointReward.Unmarshal(m, b)
-}
-func (m *C2SGetActivePointReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_C2SGetActivePointReward.Marshal(b, m, deterministic)
-}
-func (m *C2SGetActivePointReward) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_C2SGetActivePointReward.Merge(m, src)
-}
-func (m *C2SGetActivePointReward) XXX_Size() int {
-	return xxx_messageInfo_C2SGetActivePointReward.Size(m)
-}
-func (m *C2SGetActivePointReward) XXX_DiscardUnknown() {
-	xxx_messageInfo_C2SGetActivePointReward.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_C2SGetActivePointReward proto.InternalMessageInfo
-
-func (m *C2SGetActivePointReward) GetId() int32 {
-	if m != nil {
-		return m.Id
+		return m.TaskId
 	}
 	return 0
 }
 
 type S2CGetActivePointReward struct {
-	Succ                 bool     `protobuf:"varint,1,opt,name=Succ,proto3" json:"Succ,omitempty"`
+	Succ                 bool     `protobuf:"varint,1,opt,name=succ,proto3" json:"succ,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -578,7 +383,7 @@ func (m *S2CGetActivePointReward) Reset()         { *m = S2CGetActivePointReward
 func (m *S2CGetActivePointReward) String() string { return proto.CompactTextString(m) }
 func (*S2CGetActivePointReward) ProtoMessage()    {}
 func (*S2CGetActivePointReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{7}
+	return fileDescriptor_ce5d8dd45b4a91ff, []int{8}
 }
 
 func (m *S2CGetActivePointReward) XXX_Unmarshal(b []byte) error {
@@ -606,126 +411,18 @@ func (m *S2CGetActivePointReward) GetSucc() bool {
 	return false
 }
 
-//一键领取奖励
-type C2SOneKeyGetAward struct {
-	Type                 int32    `protobuf:"varint,1,opt,name=Type,proto3" json:"Type,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *C2SOneKeyGetAward) Reset()         { *m = C2SOneKeyGetAward{} }
-func (m *C2SOneKeyGetAward) String() string { return proto.CompactTextString(m) }
-func (*C2SOneKeyGetAward) ProtoMessage()    {}
-func (*C2SOneKeyGetAward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{8}
-}
-
-func (m *C2SOneKeyGetAward) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_C2SOneKeyGetAward.Unmarshal(m, b)
-}
-func (m *C2SOneKeyGetAward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_C2SOneKeyGetAward.Marshal(b, m, deterministic)
-}
-func (m *C2SOneKeyGetAward) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_C2SOneKeyGetAward.Merge(m, src)
-}
-func (m *C2SOneKeyGetAward) XXX_Size() int {
-	return xxx_messageInfo_C2SOneKeyGetAward.Size(m)
-}
-func (m *C2SOneKeyGetAward) XXX_DiscardUnknown() {
-	xxx_messageInfo_C2SOneKeyGetAward.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_C2SOneKeyGetAward proto.InternalMessageInfo
-
-func (m *C2SOneKeyGetAward) GetType() int32 {
-	if m != nil {
-		return m.Type
-	}
-	return 0
-}
-
-type S2COneKeyGetAward struct {
-	Succ                 bool     `protobuf:"varint,1,opt,name=Succ,proto3" json:"Succ,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *S2COneKeyGetAward) Reset()         { *m = S2COneKeyGetAward{} }
-func (m *S2COneKeyGetAward) String() string { return proto.CompactTextString(m) }
-func (*S2COneKeyGetAward) ProtoMessage()    {}
-func (*S2COneKeyGetAward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ce5d8dd45b4a91ff, []int{9}
-}
-
-func (m *S2COneKeyGetAward) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_S2COneKeyGetAward.Unmarshal(m, b)
-}
-func (m *S2COneKeyGetAward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_S2COneKeyGetAward.Marshal(b, m, deterministic)
-}
-func (m *S2COneKeyGetAward) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_S2COneKeyGetAward.Merge(m, src)
-}
-func (m *S2COneKeyGetAward) XXX_Size() int {
-	return xxx_messageInfo_S2COneKeyGetAward.Size(m)
-}
-func (m *S2COneKeyGetAward) XXX_DiscardUnknown() {
-	xxx_messageInfo_S2COneKeyGetAward.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_S2COneKeyGetAward proto.InternalMessageInfo
-
-func (m *S2COneKeyGetAward) GetSucc() bool {
-	if m != nil {
-		return m.Succ
-	}
-	return false
-}
-
 func init() {
 	proto.RegisterType((*C2SGetTasks)(nil), "Proto.Task.C2SGetTasks")
-	proto.RegisterType((*S2CGetTasks)(nil), "Proto.Task.S2CGetTasks")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.AchieveTasksEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.S2CGetTasks.ActivePointRecordEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.S2CGetTasks.ActivePointWeekRecordEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.DailyTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.DrawRankTasksEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.S2CGetTasks.GuildPointRecordEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.GuildTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.MainTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.MonthTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.ParternerTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.PassportDailyTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.PassportSeasonTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.PassportWeekTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.TheCompetitionTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.S2CGetTasks.WeekTasksEntry")
-	proto.RegisterType((*TaskState)(nil), "Proto.Task.TaskState")
-	proto.RegisterType((*PushTask)(nil), "Proto.Task.PushTask")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.AchieveTasksEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.PushTask.ActivePointRecordEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.PushTask.ActivePointWeekRecordEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.DailyTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.DrawRankTasksEntry")
-	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.PushTask.GuildPointRecordEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.GuildTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.MainTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.MonthTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.ParternerTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.PassportDailyTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.PassportSeasonTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.PassportWeekTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.TheCompetitionTasksEntry")
-	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.PushTask.WeekTasksEntry")
 	proto.RegisterType((*C2SGetReward)(nil), "Proto.Task.C2SGetReward")
-	proto.RegisterType((*S2CGetReward)(nil), "Proto.Task.S2CGetReward")
 	proto.RegisterType((*C2SGetActivePointReward)(nil), "Proto.Task.C2SGetActivePointReward")
+	proto.RegisterType((*TaskState)(nil), "Proto.Task.TaskState")
+	proto.RegisterType((*TaskGroup)(nil), "Proto.Task.TaskGroup")
+	proto.RegisterMapType((map[int32]bool)(nil), "Proto.Task.TaskGroup.ClaimRecordEntry")
+	proto.RegisterMapType((map[int32]*TaskState)(nil), "Proto.Task.TaskGroup.TasksEntry")
+	proto.RegisterType((*S2CGetTasks)(nil), "Proto.Task.S2CGetTasks")
+	proto.RegisterType((*PushTask)(nil), "Proto.Task.PushTask")
+	proto.RegisterType((*S2CGetReward)(nil), "Proto.Task.S2CGetReward")
 	proto.RegisterType((*S2CGetActivePointReward)(nil), "Proto.Task.S2CGetActivePointReward")
-	proto.RegisterType((*C2SOneKeyGetAward)(nil), "Proto.Task.C2SOneKeyGetAward")
-	proto.RegisterType((*S2COneKeyGetAward)(nil), "Proto.Task.S2COneKeyGetAward")
 }
 
 func init() {
@@ -733,62 +430,31 @@ func init() {
 }
 
 var fileDescriptor_ce5d8dd45b4a91ff = []byte{
-	// 906 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x98, 0x5d, 0x6f, 0xda, 0x3c,
-	0x14, 0xc7, 0x05, 0x2d, 0x7d, 0xe0, 0x50, 0x28, 0xf5, 0xd3, 0x17, 0x84, 0x1e, 0x3d, 0xaa, 0xd8,
-	0xd4, 0xd2, 0x32, 0xe8, 0x94, 0xdd, 0x4c, 0xbb, 0x63, 0x50, 0xb1, 0x6e, 0x42, 0x8b, 0x12, 0xd4,
-	0xae, 0x5b, 0x27, 0x94, 0x82, 0x35, 0x22, 0x3a, 0x82, 0x92, 0xd0, 0x8a, 0x0f, 0xb6, 0x8f, 0xb4,
-	0xef, 0x31, 0xd9, 0x0e, 0x24, 0x10, 0xdb, 0x80, 0x14, 0x69, 0x37, 0xdc, 0xb4, 0xb1, 0x39, 0xe7,
-	0x77, 0x5e, 0xb0, 0x8f, 0xfe, 0x04, 0xc0, 0x35, 0x9c, 0x41, 0x75, 0x64, 0x5b, 0xae, 0x85, 0x40,
-	0x25, 0xff, 0xaa, 0x6d, 0xc3, 0x19, 0x14, 0x33, 0x90, 0xae, 0x2b, 0x7a, 0x13, 0xbb, 0x64, 0xe5,
-	0x14, 0x7f, 0x1f, 0x40, 0x5a, 0x57, 0xea, 0xd3, 0x35, 0x6a, 0x02, 0x34, 0x0c, 0xf3, 0x71, 0x42,
-	0x57, 0xf9, 0xd8, 0xc9, 0x56, 0x29, 0xad, 0x9c, 0x55, 0x7d, 0xff, 0x6a, 0xc0, 0xb8, 0xea, 0x5b,
-	0x5e, 0x0d, 0x5d, 0x7b, 0xa2, 0x05, 0x5c, 0x51, 0x03, 0x52, 0xb7, 0x18, 0x0f, 0x18, 0x27, 0x4e,
-	0x39, 0xa7, 0x22, 0xce, 0xcc, 0x90, 0x61, 0x7c, 0x47, 0x92, 0x4e, 0xcb, 0x1a, 0xba, 0x7d, 0x86,
-	0xd9, 0x92, 0xa7, 0xe3, 0x5b, 0x7a, 0xe9, 0xf8, 0x1b, 0xa8, 0x05, 0xbb, 0xb5, 0x6e, 0xdf, 0xc4,
-	0x4f, 0x98, 0xa1, 0xb6, 0x29, 0xea, 0x5c, 0x84, 0x0a, 0xda, 0x32, 0xd8, 0x9c, 0x3b, 0xa9, 0xae,
-	0x65, 0x98, 0x43, 0xc6, 0x4a, 0xc8, 0xab, 0x9b, 0x19, 0x7a, 0xd5, 0xcd, 0xd6, 0xa4, 0xba, 0xe6,
-	0xd8, 0x7c, 0xec, 0x31, 0xcc, 0x8e, 0xbc, 0x3a, 0xdf, 0xd2, 0xab, 0xce, 0xdf, 0x40, 0xf7, 0xb0,
-	0x5f, 0xeb, 0xba, 0xe6, 0x13, 0x56, 0x2d, 0x73, 0xe8, 0x6a, 0xb8, 0x6b, 0xd9, 0xbd, 0xfc, 0x3f,
-	0x94, 0x57, 0x15, 0x97, 0xb8, 0xe0, 0xc0, 0xb0, 0x61, 0x10, 0xba, 0x83, 0x1c, 0x8d, 0x15, 0x84,
-	0x27, 0x29, 0xbc, 0x22, 0x4d, 0x36, 0xc4, 0x0e, 0x61, 0x50, 0x1f, 0x0e, 0x03, 0xf1, 0xc8, 0xf7,
-	0xee, 0xf1, 0x53, 0x94, 0xaf, 0xac, 0x90, 0xbc, 0xef, 0xc4, 0x82, 0xf0, 0x81, 0xe8, 0x02, 0x72,
-	0xf4, 0x74, 0x06, 0x3e, 0xcd, 0xc3, 0x49, 0xac, 0x94, 0xd0, 0x42, 0xfb, 0xe8, 0x7f, 0xef, 0x7b,
-	0x61, 0x56, 0x69, 0x6a, 0x15, 0xd8, 0x41, 0x2a, 0x64, 0x1a, 0xb6, 0xf1, 0xac, 0x19, 0x43, 0xef,
-	0x7c, 0xef, 0xd2, 0x6c, 0x2f, 0x84, 0xf7, 0x24, 0x68, 0xcc, 0xb2, 0x9c, 0x07, 0xa0, 0x07, 0xf8,
-	0xb7, 0xdd, 0xc7, 0x75, 0xeb, 0xe7, 0x08, 0xbb, 0xa6, 0x6b, 0x5a, 0xde, 0xc9, 0xca, 0x50, 0xee,
-	0x6b, 0x11, 0x97, 0xe3, 0xc2, 0xe8, 0x3c, 0x18, 0xea, 0x00, 0x52, 0x0d, 0xc7, 0x19, 0x59, 0xb6,
-	0x1b, 0xb8, 0xe2, 0x59, 0x1a, 0xe2, 0x52, 0x14, 0x22, 0xec, 0xc1, 0x22, 0x70, 0x50, 0xe4, 0x14,
-	0x4e, 0x77, 0xfd, 0xab, 0xbf, 0x27, 0x3f, 0x85, 0x21, 0x07, 0xef, 0x14, 0x86, 0xf6, 0x49, 0x8b,
-	0xa6, 0x9b, 0x3a, 0x36, 0x9c, 0x69, 0x8b, 0x72, 0xf2, 0x16, 0x71, 0x5c, 0xbc, 0x16, 0x71, 0x3e,
-	0x41, 0x3a, 0x64, 0x55, 0xc3, 0x76, 0xb1, 0x3d, 0xc4, 0x36, 0xc3, 0xef, 0x53, 0x7c, 0x59, 0x8c,
-	0x0f, 0x5a, 0x33, 0xf2, 0x02, 0xa2, 0xd0, 0x86, 0xbd, 0x85, 0xee, 0xa1, 0x1c, 0x6c, 0x0d, 0xf0,
-	0x24, 0x1f, 0xa3, 0x27, 0x8b, 0x3c, 0xa2, 0x32, 0x24, 0x9e, 0x8c, 0xc7, 0x31, 0xce, 0xc7, 0x4f,
-	0x62, 0xa5, 0xb4, 0x72, 0x18, 0x0c, 0x48, 0xfe, 0xe8, 0xae, 0xe1, 0x62, 0x8d, 0xd9, 0xbc, 0x8b,
-	0xbf, 0x8d, 0x15, 0x74, 0xc8, 0xce, 0xf7, 0x2c, 0x0a, 0x68, 0x1b, 0xf6, 0x16, 0x86, 0x68, 0x14,
-	0xd4, 0x1b, 0x32, 0x9d, 0x16, 0xe6, 0x69, 0x44, 0x2d, 0x98, 0x9f, 0xad, 0x11, 0xb5, 0x60, 0x61,
-	0xd2, 0x46, 0x41, 0x6d, 0xc0, 0x11, 0x7f, 0xde, 0x72, 0xe0, 0x07, 0x41, 0x78, 0x32, 0x48, 0xa9,
-	0xc3, 0x21, 0x77, 0xb0, 0xae, 0x05, 0xf9, 0x00, 0x05, 0xf1, 0xf4, 0x5c, 0x8b, 0x74, 0x0b, 0x28,
-	0x3c, 0xd9, 0xa2, 0xe8, 0xd6, 0x77, 0xc8, 0x8b, 0x46, 0x5b, 0x14, 0xf8, 0x7b, 0x38, 0x16, 0x8c,
-	0xb5, 0x28, 0xe8, 0xdf, 0xe0, 0x88, 0x3f, 0xd4, 0x22, 0xea, 0x8c, 0x68, 0xa2, 0x45, 0x81, 0xff,
-	0x42, 0x66, 0x6c, 0x68, 0xa2, 0x45, 0x40, 0x2e, 0x5e, 0x41, 0x6a, 0xb6, 0x8f, 0x0a, 0x90, 0x54,
-	0x6d, 0xeb, 0x87, 0x8d, 0x1d, 0xc7, 0x83, 0xce, 0xd6, 0xe8, 0x3f, 0x48, 0x35, 0xb1, 0xab, 0xe1,
-	0x67, 0xc3, 0xee, 0x79, 0x47, 0xce, 0xdf, 0x28, 0xfe, 0x3a, 0x80, 0xa4, 0x3a, 0x76, 0xe8, 0x80,
-	0x42, 0x0d, 0x8e, 0x56, 0x7d, 0x19, 0xcc, 0x64, 0x6a, 0x29, 0x15, 0xaa, 0xb5, 0xb0, 0x50, 0x7d,
-	0xc1, 0x85, 0x88, 0x55, 0x6a, 0x83, 0xa3, 0x52, 0xf9, 0x89, 0xc8, 0x24, 0xea, 0x47, 0xae, 0x44,
-	0x3d, 0xe5, 0x72, 0x96, 0xe9, 0xd3, 0x5a, 0x58, 0x9f, 0xf2, 0x8b, 0x12, 0x8b, 0xd3, 0x06, 0x47,
-	0x9c, 0xf2, 0x8b, 0x92, 0x29, 0xd3, 0x3b, 0xb1, 0x32, 0x2d, 0x0b, 0x2a, 0x5b, 0x55, 0x96, 0xde,
-	0x08, 0x65, 0xe9, 0x85, 0x38, 0xcd, 0x15, 0x34, 0x29, 0x96, 0x6b, 0xd2, 0xcb, 0x65, 0x69, 0xff,
-	0x05, 0x41, 0xda, 0xe2, 0x0b, 0xd2, 0x33, 0xfe, 0x65, 0x58, 0xaa, 0x46, 0x3b, 0x32, 0x35, 0x5a,
-	0xe1, 0x42, 0xd7, 0x93, 0xa2, 0xf7, 0x12, 0x29, 0xfa, 0x8a, 0xcb, 0x5f, 0x47, 0x87, 0xde, 0x89,
-	0x75, 0x68, 0x59, 0x0a, 0x5f, 0x2e, 0x42, 0x3b, 0x32, 0x11, 0x5a, 0x91, 0xc2, 0x57, 0x53, 0xa0,
-	0xaa, 0x40, 0x81, 0x96, 0x04, 0xec, 0x8d, 0xfc, 0xdc, 0xc8, 0xcf, 0x8d, 0xfc, 0xdc, 0xc8, 0xcf,
-	0x8d, 0xfc, 0x94, 0xca, 0x4f, 0x05, 0x76, 0xd9, 0x5b, 0x4f, 0xa6, 0x23, 0x11, 0x82, 0xed, 0xf6,
-	0x64, 0x84, 0x3d, 0x26, 0x7d, 0x46, 0x59, 0x88, 0x5f, 0x33, 0xc9, 0x99, 0xd0, 0xe2, 0xd7, 0x3d,
-	0xe2, 0xc3, 0x7e, 0xea, 0xfb, 0x3e, 0xfa, 0xb8, 0xdb, 0xa5, 0x3e, 0x49, 0x8d, 0x3e, 0x87, 0x7c,
-	0xce, 0xe1, 0x98, 0xc5, 0x99, 0xbb, 0x6e, 0xd4, 0x9d, 0x99, 0xc6, 0x66, 0xa6, 0x15, 0x38, 0x66,
-	0xf8, 0xb0, 0x29, 0x27, 0x52, 0xf1, 0x0c, 0xf6, 0xeb, 0x8a, 0xfe, 0x79, 0x88, 0x3f, 0xe1, 0x09,
-	0x71, 0x12, 0x95, 0x41, 0x0c, 0x75, 0xa5, 0x1e, 0x36, 0x5c, 0x24, 0xbe, 0xcf, 0x7c, 0x4d, 0x5f,
-	0xd2, 0xf7, 0xc3, 0x1d, 0xd7, 0x70, 0x06, 0x0f, 0x3b, 0xf4, 0xf9, 0xcd, 0x9f, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x3a, 0x30, 0x68, 0xab, 0x39, 0x16, 0x00, 0x00,
+	// 412 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x53, 0xdf, 0x8b, 0xda, 0x40,
+	0x10, 0xc6, 0xc4, 0xd8, 0x38, 0xb1, 0x20, 0x8b, 0xad, 0xc1, 0x3e, 0x54, 0xf2, 0x50, 0x84, 0x62,
+	0x0a, 0x29, 0x48, 0x7f, 0x51, 0x68, 0x43, 0xb1, 0x3e, 0x9d, 0xac, 0x3e, 0xdd, 0x4b, 0x88, 0xc9,
+	0x9e, 0x17, 0xe2, 0x99, 0xb0, 0xbb, 0xf1, 0xcc, 0x3f, 0x7a, 0x7f, 0xcf, 0xb1, 0xbb, 0x46, 0xc5,
+	0xcb, 0x71, 0xdc, 0x4b, 0x32, 0xb3, 0xfb, 0x7d, 0xdf, 0x7c, 0x33, 0x99, 0x00, 0xf0, 0x90, 0xa5,
+	0x6e, 0x4e, 0x33, 0x9e, 0x21, 0x98, 0x8b, 0x97, 0xbb, 0x0c, 0x59, 0xea, 0xbc, 0x05, 0xcb, 0xf7,
+	0x16, 0x53, 0xc2, 0x45, 0xc6, 0x9c, 0xff, 0xd0, 0x51, 0x29, 0x26, 0xf7, 0x21, 0x8d, 0xd1, 0x47,
+	0xb0, 0x56, 0x45, 0x94, 0x12, 0x1e, 0xf0, 0x32, 0x27, 0x76, 0x63, 0xd8, 0x18, 0x19, 0x18, 0xd4,
+	0xd1, 0xb2, 0xcc, 0x09, 0xea, 0xc3, 0x1b, 0xa1, 0x1c, 0x24, 0xb1, 0xad, 0xc9, 0xcb, 0x96, 0x48,
+	0x67, 0xb1, 0x33, 0x81, 0xbe, 0x52, 0xfa, 0x13, 0xf1, 0x64, 0x47, 0xe6, 0x59, 0xb2, 0xad, 0x44,
+	0x3f, 0x40, 0x9b, 0xca, 0x48, 0xb0, 0x94, 0xa4, 0xa9, 0x0e, 0x66, 0xb1, 0xe3, 0x43, 0x5b, 0x58,
+	0x59, 0xf0, 0x90, 0x13, 0x34, 0x00, 0x33, 0xa7, 0xd9, 0x9a, 0x12, 0xc6, 0x2a, 0x60, 0x95, 0x8b,
+	0x3b, 0x45, 0x22, 0xaa, 0xb4, 0x89, 0x8f, 0xb9, 0xf3, 0xa0, 0x29, 0x95, 0x29, 0xcd, 0x8a, 0xfc,
+	0xe5, 0x26, 0x26, 0x60, 0x08, 0xd7, 0xcc, 0xd6, 0x86, 0xfa, 0xc8, 0xf2, 0x86, 0xee, 0x69, 0x40,
+	0xee, 0x51, 0x46, 0x46, 0xec, 0xdf, 0x96, 0xd3, 0x12, 0x2b, 0x38, 0x9a, 0x41, 0x27, 0xda, 0x84,
+	0xc9, 0x5d, 0x40, 0x49, 0x94, 0xd1, 0xd8, 0xd6, 0x25, 0xfd, 0x53, 0x3d, 0xdd, 0x17, 0x48, 0x2c,
+	0x81, 0x4a, 0xc4, 0x8a, 0x4e, 0x27, 0xa8, 0x07, 0x46, 0x2e, 0x46, 0x64, 0x37, 0xa5, 0x3b, 0x95,
+	0x0c, 0xae, 0x00, 0x4e, 0x55, 0x51, 0x17, 0xf4, 0x94, 0x94, 0x07, 0xff, 0x22, 0x44, 0x9f, 0xc1,
+	0xd8, 0x85, 0x9b, 0x82, 0xc8, 0x01, 0x58, 0xde, 0xbb, 0xcb, 0xca, 0x72, 0x8a, 0x58, 0x61, 0x7e,
+	0x68, 0xdf, 0x1a, 0x83, 0xdf, 0xd0, 0xbd, 0xf4, 0x51, 0x23, 0xdb, 0x3b, 0x97, 0x35, 0xcf, 0xf8,
+	0xce, 0x2f, 0xb0, 0x16, 0x9e, 0x5f, 0xad, 0x0b, 0x1a, 0x43, 0x6b, 0x2d, 0x9a, 0x13, 0x5f, 0x47,
+	0xaf, 0x33, 0x20, 0x5b, 0xc7, 0x07, 0x90, 0xf3, 0x1d, 0xcc, 0x79, 0xc1, 0x6e, 0xc5, 0xc5, 0x6b,
+	0xa9, 0x3f, 0xa1, 0xa3, 0x0a, 0x1f, 0x76, 0x08, 0x41, 0x93, 0x15, 0x51, 0x24, 0x5d, 0x9b, 0x58,
+	0xc6, 0xcf, 0xef, 0xe2, 0x18, 0xfa, 0x8a, 0xfc, 0x74, 0x17, 0x6b, 0x74, 0xfe, 0xbe, 0xbf, 0xee,
+	0xed, 0x6f, 0xf6, 0x5f, 0xe4, 0xcf, 0xa2, 0x9e, 0x81, 0x10, 0x5a, 0xb5, 0x64, 0xfc, 0xf5, 0x31,
+	0x00, 0x00, 0xff, 0xff, 0xb5, 0x92, 0x9c, 0xf6, 0x4c, 0x03, 0x00, 0x00,
 }

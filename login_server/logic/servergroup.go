@@ -29,10 +29,10 @@ func mergeStateToText(state int) string {
 
 // GetServerList 获取区服列表
 func GetServerList(c *gin.Context) {
-	var req dto.ReqServerList
+	var req dto.ServerListRequest
 	_ = c.ShouldBindJSON(&req)
 	if req.Channel > 0 {
-		log.Debug("GetServerList channel=%d (attribution only)", req.Channel)
+		log.Debug("GetServerList channel=%d", req.Channel)
 	}
 
 	metaList := make([]model.ServerGroup, 0)
@@ -53,29 +53,29 @@ func GetServerList(c *gin.Context) {
 		return
 	}
 
-	groups := make(map[int][]dto.LoginServerItem)
+	groups := make(map[int][]dto.ServerListItem)
 	groupIds := make([]int, 0)
 
 	for _, v := range items {
 		gid := v.GroupId
 		if _, ok := groups[gid]; !ok {
-			groups[gid] = make([]dto.LoginServerItem, 0)
+			groups[gid] = make([]dto.ServerListItem, 0)
 			groupIds = append(groupIds, gid)
 		}
-		groups[gid] = append(groups[gid], dto.LoginServerItem{
-			Id:             v.Id,
-			LogicServerId:  v.LogicServerId,
+		groups[gid] = append(groups[gid], dto.ServerListItem{
+			ID:             v.Id,
+			LogicServerID:  v.LogicServerId,
 			MergeState:     v.MergeState,
 			MergeStateText: mergeStateToText(v.MergeState),
 			MergeTime:      v.MergeTime,
-			Ip:             v.Ip,
+			IP:             v.Ip,
 			Port:           v.Port,
 			Channel:        v.Channel,
 			ServerState:    v.ServerState,
 			OpenServerTime: v.OpenServerTime,
 			StopServerTime: v.StopServerTime,
 			ServerName:     v.ServerName,
-			GroupId:        gid,
+			GroupID:        gid,
 		})
 	}
 
@@ -88,14 +88,14 @@ func GetServerList(c *gin.Context) {
 		return a - b
 	})
 
-	serverMap := make([]dto.ServerGroupResp, 0)
+	serverMap := make([]dto.ServerGroupResponse, 0)
 	for _, gid := range groupIds {
 		meta, ok := metaMap[int64(gid)]
 		name := fmt.Sprintf("服务器组 %d", gid)
 		if ok && meta.Name != "" {
 			name = meta.Name
 		}
-		serverMap = append(serverMap, dto.ServerGroupResp{
+		serverMap = append(serverMap, dto.ServerGroupResponse{
 			Group:   int32(gid),
 			Name:    name,
 			Servers: groups[gid],
@@ -103,7 +103,8 @@ func GetServerList(c *gin.Context) {
 	}
 	js, _ := json.Marshal(serverMap)
 
-	middleware.RetGame(c, dto.SUCCESS, "success", map[string]interface{}{
+	middleware.RetGameData(c, dto.SUCCESS, "success", dto.ServerListResponse{ServerList: serverMap}, map[string]interface{}{
+		"serverList": serverMap,
 		"ServerList": string(js),
 	})
 }

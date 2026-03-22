@@ -56,6 +56,21 @@ func HTTPRetGame(c *gin.Context, code int, message string, data ...map[string]in
 	c.JSON(http.StatusOK, ret)
 }
 
+func HTTPRetGameData(c *gin.Context, code int, message string, payload any, legacy ...map[string]interface{}) {
+	ret := gin.H{
+		"errcode": code,
+		"errmsg":  message,
+		"data":    payload,
+	}
+	if len(legacy) > 0 {
+		for k, v := range legacy[0] {
+			ret[k] = v
+		}
+	}
+	log.Debug(" ret %v", ret)
+	c.JSON(http.StatusOK, ret)
+}
+
 // HTTPRet 通用 HTTP JSON 返回
 func HTTPRet(c *gin.Context, code int, message string, data ...map[string]interface{}) {
 	if data != nil && len(data) > 0 {

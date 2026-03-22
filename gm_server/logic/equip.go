@@ -43,15 +43,8 @@ func GmEquip(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	var wrap struct {
-		Data string `json:"data"`
-	}
-	if err := json.Unmarshal([]byte(respBody), &wrap); err != nil || wrap.Data == "" {
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
-		return
-	}
-	dst := new(model.Equip)
-	if err := json.Unmarshal([]byte(wrap.Data), dst); err != nil {
+	var dst model.Equip
+	if err := decodeForwardedData(respBody, &dst); err != nil {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse equip data err")
 		return
 	}
@@ -93,11 +86,7 @@ func GmEquip(c *gin.Context) {
 		}
 		return false
 	})
-	js, _ := json.Marshal(dsts)
-	HTTPRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(dsts),
-	})
+	HTTPRetGameData(c, SUCCESS, "success", dsts, map[string]any{"totalCount": len(dsts)})
 }
 
 // 删除装备（经 main_server 写 Redis）

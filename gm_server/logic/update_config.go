@@ -22,10 +22,10 @@ func doConfigUpdate(targetDir, repoURL string) GitResult {
 func respondConfigUpdate(c *gin.Context, result GitResult) {
 	if result.Success {
 		log.Debug("config update ok: %s, dir=%s branch=%s", result.Message, result.Directory, result.Branch)
-		HTTPRetGame(c, SUCCESS, "success", map[string]any{"msg": result.Message})
+		HTTPRetGameData(c, SUCCESS, "success", map[string]any{"msg": result.Message}, map[string]any{"msg": result.Message})
 	} else {
 		log.Debug("config update failed: %s", result.Message)
-		HTTPRetGame(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message})
+		HTTPRetGameData(c, ERR_GIT_ERROR, "failed", map[string]any{"msg": result.Message}, map[string]any{"msg": result.Message})
 	}
 }
 

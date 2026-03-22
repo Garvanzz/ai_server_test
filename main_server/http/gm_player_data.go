@@ -48,11 +48,7 @@ func (m *HttpModule) GMGetBag(c *gin.Context) {
 	for k, v := range bag.Items {
 		list = append(list, itemRow{ItemId: k, ItemNum: v})
 	}
-	js, _ := json.Marshal(list)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(list),
-	})
+	m.httpRetGameData(c, SUCCESS, "success", list, map[string]any{"totalCount": len(list)})
 }
 
 // GMDeleteItem 删除玩家背包道具（读-改-写 Redis）
@@ -122,11 +118,7 @@ func (m *HttpModule) GMGetEquip(c *gin.Context) {
 	if equip == nil {
 		equip = new(model.Equip)
 	}
-	js, _ := json.Marshal(equip)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": 0,
-	})
+	m.httpRetGameData(c, SUCCESS, "success", equip, map[string]any{"totalCount": 0})
 }
 
 // GMSetEquip 设置玩家装备（写 Redis）
@@ -224,11 +216,7 @@ func (m *HttpModule) GMGetStage(c *gin.Context) {
 	if stage == nil {
 		stage = new(model.Stage)
 	}
-	js, _ := json.Marshal(stage)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": 0,
-	})
+	m.httpRetGameData(c, SUCCESS, "success", stage, map[string]any{"totalCount": 0})
 }
 
 // GMSetStage 设置玩家关卡（写 Redis）
@@ -271,11 +259,7 @@ func (m *HttpModule) GMGetHero(c *gin.Context) {
 		Hero   *model.Hero   `json:"hero"`
 		LineUp *model.LineUp `json:"lineup"`
 	}
-	js, _ := json.Marshal(&out{Hero: hero, LineUp: lineup})
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": 0,
-	})
+	m.httpRetGameData(c, SUCCESS, "success", &out{Hero: hero, LineUp: lineup}, map[string]any{"totalCount": 0})
 }
 
 // GMSetHero 设置玩家英雄（写 Redis）
@@ -302,11 +286,10 @@ func (m *HttpModule) GMGetPlayerGameInfo(c *gin.Context) {
 	if err := json.Unmarshal(body, &single); err == nil && single.PlayerId != 0 {
 		info := global.GetPlayerInfo(single.PlayerId)
 		if info == nil {
-			m.httpRetGame(c, SUCCESS, "success", map[string]any{"data": "[]", "totalCount": 0})
+			m.httpRetGameData(c, SUCCESS, "success", []*model.PlayerInfo{}, map[string]any{"totalCount": 0})
 			return
 		}
-		js, _ := json.Marshal([]*model.PlayerInfo{info})
-		m.httpRetGame(c, SUCCESS, "success", map[string]any{"data": string(js), "totalCount": 1})
+		m.httpRetGameData(c, SUCCESS, "success", []*model.PlayerInfo{info}, map[string]any{"totalCount": 1})
 		return
 	}
 	var multi model.GMPlayerIdsReq
@@ -321,11 +304,7 @@ func (m *HttpModule) GMGetPlayerGameInfo(c *gin.Context) {
 			list = append(list, info)
 		}
 	}
-	js, _ := json.Marshal(list)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": len(list),
-	})
+	m.httpRetGameData(c, SUCCESS, "success", list, map[string]any{"totalCount": len(list)})
 }
 
 // GMGetPlayerInfo 单玩家 Redis Player 表（hgetall），返回与 gm 后台一致结构
@@ -349,9 +328,5 @@ func (m *HttpModule) GMGetPlayerInfo(c *gin.Context) {
 			return
 		}
 	}
-	js, _ := json.Marshal(info)
-	m.httpRetGame(c, SUCCESS, "success", map[string]any{
-		"data":       string(js),
-		"totalCount": 1,
-	})
+	m.httpRetGameData(c, SUCCESS, "success", info, map[string]any{"totalCount": 1})
 }

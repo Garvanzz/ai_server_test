@@ -3,14 +3,14 @@ package impl
 import (
 	"errors"
 	"time"
-	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
 	"xfx/core/model"
+	"xfx/main_server/logic/activity/data"
+	"xfx/pkg/utils"
 
 	"github.com/golang/protobuf/proto"
-	//"xfx/main_server/logic/activity/data"
 	"xfx/pkg/log"
 	"xfx/proto/proto_activity"
 	"xfx/proto/proto_player"
@@ -105,9 +105,14 @@ func (a *ActivityDailyAccRecharge) Update(now time.Time) {
 
 // OnDayReset 跨天重置：清空每日累充金额和已领取列表
 func (a *ActivityDailyAccRecharge) OnDayReset(now time.Time) {
-	// 跨天重置所有玩家的每日累充数据
-	// TODO: 遍历所有参与过该活动的玩家，重置 pd.Money 和 pd.GetList
-	// 可以通过 data.Cache.Range 遍历玩家数据
+	data.IterateActivityPlayerData[*model.DailyAccumulateRechargePd](a.GetId(), func(_ int64, pd *model.DailyAccumulateRechargePd) bool {
+		if pd == nil {
+			return true
+		}
+		pd.Money = 0
+		pd.GetList = pd.GetList[:0]
+		return true
+	})
 	log.Debug("ActivityDailyAccRecharge OnDayReset: actId=%v", a.GetId())
 }
 

@@ -4,8 +4,10 @@
 
 ## 流程
 
-1. **登录服**（HTTP）：可选注册 → `POST /login`，拿到 `token`、`uid`、`serverId`
+1. **登录服**（HTTP）：可选注册 `POST /auth/register` → 登录 `POST /auth/login`，拿到 `token`、`uid`、`serverId`
 2. **游戏服**（TCP）：连接配置的 main 地址 → 发 `C2SLogin{Token}` → 收到 `S2CLogin` 后按间隔随机发无参/默认参 C2S（背包、任务、邮件、排行榜、商店等）
+
+补充：拉取区服列表时使用 `POST /servers/list`，响应主字段为 `serverList`；服务端仍兼容旧字段 `ServerList`。
 
 ## 用法
 

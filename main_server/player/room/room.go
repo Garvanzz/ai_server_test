@@ -36,7 +36,7 @@ func CreateRoom(ctx global.IPlayer, pl *model.Player, msg *proto_room.C2SCreateR
 
 	roomInfo, err := invoke.RoomClient(ctx).CreateRoom(pl.ToContext(), msg)
 	if err != nil {
-		log.Error("CreateRoom error", err)
+		log.Error("CreateRoom error: %v", err)
 		data.Code = proto_room.ERRORCODE_ERR_RoomState
 		ctx.Send(data)
 		return

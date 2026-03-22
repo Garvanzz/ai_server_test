@@ -4,7 +4,7 @@ type EventProcessor interface {
 	OnExit(fromState string, args []interface{})
 	Action(action string, fromState string, toState string, args []interface{}) error
 	OnActionFailure(action string, fromState string, toState string, args []interface{}, err error)
-	OnEnter(toState string, args []interface{})
+	OnEnter(fromState string, toState string, args []interface{})
 }
 
 type DefaultDelegate struct {
@@ -23,7 +23,7 @@ func (dd *DefaultDelegate) HandleEvent(action string, fromState string, toState 
 	}
 
 	if fromState != toState {
-		dd.P.OnEnter(toState, args)
+		dd.P.OnEnter(fromState, toState, args)
 	}
 
 	return nil

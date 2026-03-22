@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"xfx/core/cache"
 	"xfx/core/db"
 	"xfx/core/define"
@@ -108,10 +109,8 @@ func SavePlayerData(key int64, data any) bool {
 		return false
 	}
 
-	playerId := key % define.ActivityPlayerDataBase
-	baseKet := key - playerId
-	actId := baseKet / define.ActivityPlayerDataBase
-	_, err = db.RedisExec("HSET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId), b)
+	actId, playerId := decodePlayerDataKey(key)
+	_, err = db.RedisExec("HSET", activityPlayerRedisKey(actId), fmt.Sprintf("%d", playerId), b)
 	if err != nil {
 		log.Error("save player activity data db error:%v", err)
 		return false
@@ -124,13 +123,13 @@ func SavePlayerData(key int64, data any) bool {
 // SetPlayerData 保存角色数据
 func SetPlayerData(actId, playerId int64, pd any) {
 	//log.Debug("玩家数据活动变化: %v, %v, %s", actId, playerId, pd)
-	key := actId*define.ActivityPlayerDataBase + playerId
+	key := encodePlayerDataKey(actId, playerId)
 	Cache.Set(key, pd)
 }
 
 // LoadPlayerData 获取活动对应玩家数据
 func LoadPlayerData[T comparable](actId, playerId int64) T {
-	key := actId*define.ActivityPlayerDataBase + playerId
+	key := encodePlayerDataKey(actId, playerId)
 
 	pd, ok := Cache.Get(key)
 	if ok {
@@ -139,7 +138,7 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 
 	var ret T
 
-	bytes, err := redis.Bytes(db.RedisExec("HGET", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId), fmt.Sprintf("%d", playerId)))
+	bytes, err := redis.Bytes(db.RedisExec("HGET", activityPlayerRedisKey(actId), fmt.Sprintf("%d", playerId)))
 	if err != nil && !errors.Is(err, redis.ErrNil) {
 		log.Error("load activity player data error:%v", err)
 		return ret
@@ -154,8 +153,60 @@ func LoadPlayerData[T comparable](actId, playerId int64) T {
 		log.Error("load activity player data unmarshal error:%v,%v,%v", err, actId, playerId)
 	}
 
-	Cache.Set(key, ret)
+	Cache.SetClean(key, ret)
 	return ret
+}
+
+func IterateActivityPlayerData[T any](actId int64, fn func(playerId int64, pd T) bool) {
+	if fn == nil {
+		return
+	}
+
+	visited := make(map[int64]struct{})
+	if Cache != nil {
+		Cache.Iterate(func(key int64, value any) bool {
+			cacheActId, playerId := decodePlayerDataKey(key)
+			if cacheActId != actId {
+				return true
+			}
+			pd, ok := value.(T)
+			if !ok {
+				return true
+			}
+			visited[playerId] = struct{}{}
+			return fn(playerId, pd)
+		})
+	}
+
+	entries, err := redis.ByteSlices(db.RedisExec("HGETALL", activityPlayerRedisKey(actId)))
+	if err != nil && !errors.Is(err, redis.ErrNil) {
+		log.Error("IterateActivityPlayerData HGETALL error:%v", err)
+		return
+	}
+
+	for i := 0; i+1 < len(entries); i += 2 {
+		playerID, err := strconv.ParseInt(string(entries[i]), 10, 64)
+		if err != nil {
+			log.Error("IterateActivityPlayerData parse player id error:%v", err)
+			continue
+		}
+		if _, ok := visited[playerID]; ok {
+			continue
+		}
+
+		var pd T
+		if err = json.Unmarshal(entries[i+1], &pd); err != nil {
+			log.Error("IterateActivityPlayerData unmarshal error:%v, actId=%v, playerId=%v", err, actId, playerID)
+			continue
+		}
+
+		if Cache != nil {
+			Cache.SetClean(encodePlayerDataKey(actId, playerID), any(pd))
+		}
+		if !fn(playerID, pd) {
+			return
+		}
+	}
 }
 
 // PurgeActivityPlayerData 删除活动所有对应玩家数据
@@ -163,7 +214,7 @@ func PurgeActivityPlayerData(actId int64) {
 	var keysToDel []int64
 	if Cache != nil {
 		Cache.Iterate(func(key int64, _ any) bool {
-			if key/define.ActivityPlayerDataBase == actId {
+			if cacheActId, _ := decodePlayerDataKey(key); cacheActId == actId {
 				keysToDel = append(keysToDel, key)
 			}
 			return true
@@ -173,8 +224,22 @@ func PurgeActivityPlayerData(actId int64) {
 		}
 	}
 
-	_, err := db.RedisExec("DEL", fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId))
+	_, err := db.RedisExec("DEL", activityPlayerRedisKey(actId))
 	if err != nil {
 		log.Error("PurgeActivityPlayerData redis DEL error:%v", err)
 	}
+}
+
+func encodePlayerDataKey(actId, playerId int64) int64 {
+	return actId*define.ActivityPlayerDataBase + playerId
+}
+
+func decodePlayerDataKey(key int64) (actId, playerId int64) {
+	playerId = key % define.ActivityPlayerDataBase
+	actId = (key - playerId) / define.ActivityPlayerDataBase
+	return actId, playerId
+}
+
+func activityPlayerRedisKey(actId int64) string {
+	return fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId)
 }

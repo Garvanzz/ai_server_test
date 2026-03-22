@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package Proto.Task;
+
+option go_package = "xfx/proto/proto_task";
+
+message C2SGetTasks {}
+
+message C2SGetReward {
+  int32 bucket_type = 1;
+  int32 task_id = 2;
+}
+
+message C2SGetActivePointReward {
+  int32 reward_id = 1;
+}
+
+message TaskState {
+  int32 progress = 1;
+  bool rewarded = 2;
+}
+
+message TaskGroup {
+  int32 bucket_type = 1;
+  map<int32, TaskState> tasks = 2;
+  map<int32, bool> claim_record = 3;
+  int32 point = 4;
+}
+
+message S2CGetTasks {
+  repeated TaskGroup groups = 1;
+}
+
+message PushTask {
+  repeated TaskGroup groups = 1;
+}
+
+message S2CGetReward {
+  bool succ = 1;
+  int32 task_id = 2;
+}
+
+message S2CGetActivePointReward {
+  bool succ = 1;
+}

@@ -12,7 +12,7 @@ import (
 
 // ForceUpdate 更新
 func ForceUpdate(c *gin.Context) {
-	var forceUpdate dto2.ForceUpdate
+	var forceUpdate dto2.ForceUpdateRequest
 	if err := c.ShouldBindJSON(&forceUpdate); err != nil {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
@@ -61,18 +61,23 @@ func ForceUpdate(c *gin.Context) {
 	//}
 	version := item.Version
 	if version == forceUpdate.Version {
-		middleware.RetGame(c, dto2.SUCCESS, "success",
-			map[string]any{
-				"Status": 2,
-				"Url":    "",
-			})
+		resp := dto2.ForceUpdateResponse{Status: 2, URL: ""}
+		middleware.RetGameData(c, dto2.SUCCESS, "success", resp, map[string]any{
+			"status": 2,
+			"url":    "",
+			"Status": 2,
+			"Url":    "",
+		})
 		return
 	}
 
-	middleware.RetGame(c, dto2.SUCCESS, "success",
-		map[string]any{
-			"Status":  0,
-			"Url":     "",
-			"Version": item.Version,
-		})
+	resp := dto2.ForceUpdateResponse{Status: 0, URL: "", Version: item.Version}
+	middleware.RetGameData(c, dto2.SUCCESS, "success", resp, map[string]any{
+		"status":  0,
+		"url":     "",
+		"version": item.Version,
+		"Status":  0,
+		"Url":     "",
+		"Version": item.Version,
+	})
 }

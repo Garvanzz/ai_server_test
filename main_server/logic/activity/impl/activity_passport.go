@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"sort"
 	"time"
 	"xfx/core/config"
 	"xfx/core/config/conf"
@@ -16,12 +17,20 @@ import (
 // ActivityPassport 通行证活动
 type ActivityPassport struct {
 	BaseActivity
-	data *model.ActDataPassport
+	data         *model.ActDataPassport
+	configByID   map[int32]conf.ActPassport
+	levelConfigs []conf.ActPassport
 }
 
-func (a *ActivityPassport) OnInit() {}
+func (a *ActivityPassport) OnInit() {
+	a.ensureState()
+	a.reloadConfigs()
+}
 
-func (a *ActivityPassport) OnStart() {}
+func (a *ActivityPassport) OnStart() {
+	a.ensureState()
+	a.reloadConfigs()
+}
 
 // Format 格式化玩家数据返回给客户端
 func (a *ActivityPassport) Format(ctx *proto_player.Context) proto.Message {
@@ -108,16 +117,25 @@ func (a *ActivityPassport) buyAdvancePassport(ctx *proto_player.Context, item []
 // getAward 领取奖励
 func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activity.C2SPassportGetAward) ([]conf.ItemE, error) {
 	pd := LoadPd[*model.PassportPd](a, ctx.Id)
-
-	// 获取所有通行证配置
-	passportConfs := config.ActPassport.All()
+	a.ensureState()
+	if len(a.configByID) == 0 {
+		a.reloadConfigs()
+	}
+	normalReceived := make(map[int32]struct{}, len(pd.NormalIds))
+	for _, id := range pd.NormalIds {
+		normalReceived[id] = struct{}{}
+	}
+	advanceReceived := make(map[int32]struct{}, len(pd.AdvanceIds))
+	for _, id := range pd.AdvanceIds {
+		advanceReceived[id] = struct{}{}
+	}
 
 	// 收集所有奖励
 	awards := make([]conf.ItemE, 0)
 
 	// 遍历要领取的奖励ID
 	for _, id := range req.Ids {
-		conf, ok := passportConfs[int64(id)]
+		conf, ok := a.configByID[id]
 		if !ok {
 			log.Error("通行证配置不存在: id=%d", id)
 			return nil, nil
@@ -130,30 +148,33 @@ func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activi
 		}
 
 		// 检查普通奖励是否已领取
-		normalReceived := a.hasReceived(pd.NormalIds, id)
+		_, normalGot := normalReceived[id]
 		// 检查高级奖励是否已领取（或未购买高级通行证则视为已处理）
-		advanceReceived := !pd.IsBuy || a.hasReceived(pd.AdvanceIds, id)
+		_, advanceGot := advanceReceived[id]
+		advanceDone := !pd.IsBuy || advanceGot
 
-		if normalReceived && advanceReceived {
+		if normalGot && advanceDone {
 			log.Warn("奖励已领取: 玩家=%d, id=%d", ctx.Id, id)
 			return nil, nil
 		}
 
 		//普通奖励
-		if !normalReceived {
+		if !normalGot {
 			// 领取普通奖励
 			if len(conf.NormalAward) > 0 {
 				awards = append(awards, conf.NormalAward...)
 				pd.NormalIds = append(pd.NormalIds, id)
+				normalReceived[id] = struct{}{}
 				log.Debug("领取普通奖励: 玩家=%d, id=%d", ctx.Id, id)
 			}
 		}
 
 		// 如果购买了高级通行证且有高级奖励
-		if pd.IsBuy && !a.hasReceived(pd.AdvanceIds, id) && len(conf.AdvanceAward) > 0 {
+		if pd.IsBuy && !advanceGot && len(conf.AdvanceAward) > 0 {
 			// 领取高级奖励
 			awards = append(awards, conf.AdvanceAward...)
 			pd.AdvanceIds = append(pd.AdvanceIds, id)
+			advanceReceived[id] = struct{}{}
 			log.Debug("领取高级奖励: 玩家=%d, id=%d", ctx.Id, id)
 		}
 	}
@@ -166,28 +187,20 @@ func (a *ActivityPassport) getAward(ctx *proto_player.Context, req *proto_activi
 
 // calculateLevel 根据积分计算等级
 func (a *ActivityPassport) calculateLevel(score int32) int32 {
-	passportConfs := config.ActPassport.All()
-
-	level := int32(0)
-	for _, conf := range passportConfs {
-		if score >= conf.Score {
-			if conf.Level > level {
-				level = conf.Level
-			}
-		}
+	a.ensureState()
+	if len(a.levelConfigs) == 0 {
+		a.reloadConfigs()
 	}
-
-	return level
-}
-
-// hasReceived 检查是否已领取
-func (a *ActivityPassport) hasReceived(ids []int32, id int32) bool {
-	for _, v := range ids {
-		if v == id {
-			return true
-		}
+	if len(a.levelConfigs) == 0 {
+		return 0
 	}
-	return false
+	idx := sort.Search(len(a.levelConfigs), func(i int) bool {
+		return a.levelConfigs[i].Score > score
+	}) - 1
+	if idx < 0 {
+		return 0
+	}
+	return a.levelConfigs[idx].Level
 }
 
 func (a *ActivityPassport) OnClose() {
@@ -200,8 +213,36 @@ func (a *ActivityPassport) Update(now time.Time) {
 
 // OnDayReset 跨天重置：重置通行证每日任务
 func (a *ActivityPassport) OnDayReset(now time.Time) {
-	// TODO: 重置每日任务相关数据
+	a.reloadConfigs()
 	log.Debug("ActivityPassport OnDayReset: actId=%v", a.GetId())
+}
+
+func (a *ActivityPassport) ensureState() {
+	if a.data == nil {
+		a.data = new(model.ActDataPassport)
+	}
+	if a.data.Season == 0 {
+		a.data.Season = 1
+	}
+}
+
+func (a *ActivityPassport) reloadConfigs() {
+	a.ensureState()
+	a.configByID = make(map[int32]conf.ActPassport)
+	a.levelConfigs = a.levelConfigs[:0]
+	for _, passportConf := range config.ActPassport.All() {
+		if passportConf.Season != a.data.Season {
+			continue
+		}
+		a.configByID[int32(passportConf.Id)] = passportConf
+		a.levelConfigs = append(a.levelConfigs, passportConf)
+	}
+	sort.Slice(a.levelConfigs, func(i, j int) bool {
+		if a.levelConfigs[i].Score == a.levelConfigs[j].Score {
+			return a.levelConfigs[i].Level < a.levelConfigs[j].Level
+		}
+		return a.levelConfigs[i].Score < a.levelConfigs[j].Score
+	})
 }
 
 func init() {

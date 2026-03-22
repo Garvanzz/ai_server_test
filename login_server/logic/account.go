@@ -18,7 +18,7 @@ const TokenExpire = 60 * 60 * 2  // token 失效(秒) 2 小时
 const VerifyCodeExpire = 60 * 10 // 验证码失效(秒)
 
 func Register(c *gin.Context) {
-	var registerUser dto2.RegisterUser
+	var registerUser dto2.RegisterRequest
 	if err := c.ShouldBindJSON(&registerUser); err != nil {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err")
 		return
@@ -60,7 +60,7 @@ func Register(c *gin.Context) {
 
 	now := time.Now()
 	serverItem := new(model.ServerItem)
-	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", registerUser.ServerId).Get(serverItem)
+	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", registerUser.ServerID).Get(serverItem)
 	if err != nil {
 		middleware.RetGame(c, dto2.ERR_DB, err.Error())
 		return
@@ -95,7 +95,7 @@ func Register(c *gin.Context) {
 	p.Password = registerUser.Password
 	p.CreateTime = now
 	p.ServerId = logicServerId
-	p.OriginServerId = registerUser.ServerId
+	p.OriginServerId = registerUser.ServerID
 
 	_, err = AccountEngine.Table(define.AccountTable).Insert(p)
 	if err != nil {
@@ -104,12 +104,12 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	middleware.RetGame(c, dto2.SUCCESS, "success", map[string]interface{}{"account": p.Account})
+	middleware.RetGameData(c, dto2.SUCCESS, "success", dto2.RegisterResponse{Account: p.Account}, map[string]interface{}{"account": p.Account})
 }
 
 // Login 登录
 func Login(c *gin.Context) {
-	var loginUser dto2.LoginUser
+	var loginUser dto2.LoginRequest
 	if err := c.ShouldBindJSON(&loginUser); err != nil {
 		middleware.RetGame(c, dto2.ERR_ACCOUNT_PARAMS_ERROR, "params err1")
 		return
@@ -185,7 +185,7 @@ func Login(c *gin.Context) {
 	}
 
 	var serverItem model.ServerItem
-	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", loginUser.ServerId).Get(&serverItem)
+	has, err = AccountEngine.Table(define.GameServerTable).Where("id = ?", loginUser.ServerID).Get(&serverItem)
 	if err != nil {
 		log.Error("get server list find db err :%v", err.Error())
 		middleware.RetGame(c, dto2.ERR_DB, "get server list find db err")
@@ -222,7 +222,7 @@ func Login(c *gin.Context) {
 	player.OnlineTime = time.Now()
 	player.ServerId = logicServerId
 	if player.OriginServerId == 0 {
-		player.OriginServerId = loginUser.ServerId
+		player.OriginServerId = loginUser.ServerID
 	}
 
 	n, err := AccountEngine.Table(define.AccountTable).Where("id = ?", player.Id).
@@ -254,12 +254,18 @@ func Login(c *gin.Context) {
 
 	log.Debug("login success")
 
-	middleware.RetGame(c, dto2.SUCCESS, "success",
-		map[string]any{
-			"serverId":          logicServerId,
-			"entryServerId":     serverItem.Id,
-			"token":             loginToken,
-			"uid":               player.Uid,
-			"lastLoginServerId": lastLoginServerId,
-		})
+	resp := dto2.LoginResponse{
+		ServerID:          logicServerId,
+		EntryServerID:     serverItem.Id,
+		Token:             loginToken,
+		UID:               player.Uid,
+		LastLoginServerID: lastLoginServerId,
+	}
+	middleware.RetGameData(c, dto2.SUCCESS, "success", resp, map[string]any{
+		"serverId":          logicServerId,
+		"entryServerId":     serverItem.Id,
+		"token":             loginToken,
+		"uid":               player.Uid,
+		"lastLoginServerId": lastLoginServerId,
+	})
 }
