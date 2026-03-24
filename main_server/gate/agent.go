@@ -98,8 +98,14 @@ func (a *Agent) OnRecv(msg any) {
 func (a *Agent) OnStart(ctx agent.Context) {
 	log.Debug("* gate agent context started:%v", ctx)
 	a.BaseAgent.OnStart(ctx)
-	a.pingTime = PingTime
 	close(a.startedCh) // 通知所有等待方
+	// 若 Close() 在 actor 启动前已被调用（context is nil 路径），session 已关闭，
+	// 此时直接 Stop actor，避免 tick 永远运行导致 "ping timeout" 无限打印。
+	if a.GetSession().IsClosed() {
+		ctx.Stop()
+		return
+	}
+	a.pingTime = PingTime
 }
 
 func (a *Agent) OnStop() { // actor stop call
@@ -138,6 +144,8 @@ func (a *Agent) OnTick(delta time.Duration) {
 	if a.pingTime <= 0 {
 		// 玩家超时未 ping，踢下线
 		log.Info("* gate agent[session:%v playerId:%v] kick: ping timeout", a.GetSession().ID(), a.playerId)
+		// 重置计时，防止 actor 在 Stop 消息到来前重复触发此日志
+		a.pingTime = PingTime
 		// Session.Close → CloseCallback → agent.Close → Context.Stop → OnStop → Disconnect
 		a.GetSession().Close()
 	}

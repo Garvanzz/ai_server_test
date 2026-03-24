@@ -73,7 +73,7 @@ func (gt *Gate) handleConnect(sess *tcp.Session) {
 			} else if errors.Is(err, net.ErrClosed) {
 				log.Debug("session %d disconnected (connection closed)", sess.ID())
 			} else {
-				log.Error("gate handler msg error: %v", err)
+				log.Warn("gate handler msg error: %v", err)
 			}
 			return
 		}
