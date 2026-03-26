@@ -22,12 +22,6 @@ type ServerItem struct {
 	OpenServerTime    int64  `json:"openServerTime" xorm:"open_server_time"`
 	StopServerTime    int64  `json:"stopServerTime" xorm:"stop_server_time"`
 	ServerName        string `json:"serverName" xorm:"server_name varchar(64)"`
-	ManageMode        string `json:"manageMode" xorm:"manage_mode varchar(32)"`
-	ProcessName       string `json:"processName" xorm:"process_name varchar(128)"`
-	StartCommand      string `json:"startCommand" xorm:"start_command varchar(512)"`
-	WorkDir           string `json:"workDir" xorm:"work_dir varchar(512)"`
-	ExeName           string `json:"exeName" xorm:"exe_name"`
-	ExePath           string `json:"exePath" xorm:"exe_path"`
 }
 
 type MergePlan struct {
@@ -62,4 +56,25 @@ type MergeConflictLog struct {
 	NewValue     string `json:"newValue" xorm:"new_value"`
 	Resolved     int    `json:"resolved"`
 	CreatedAt    int64  `json:"createdAt" xorm:"created_at"`
+}
+
+// ServerProcess 进程管理表
+// server_type: 1=login_server 2=main_server 3=game_server/battle
+// server_ref_id: 关联 game_server.id（login 为 0）
+type ServerProcess struct {
+	Id              int64  `json:"id" xorm:"pk autoincr"`
+	ServerType      int    `json:"serverType" xorm:"server_type"`
+	ServerRefId     int64  `json:"serverRefId" xorm:"server_ref_id"`
+	ServerName      string `json:"serverName" xorm:"server_name varchar(128)"`
+	ManageMode      string `json:"manageMode" xorm:"manage_mode varchar(32)"`
+	ProcessBinName  string `json:"processBinName" xorm:"process_bin_name varchar(128)"`
+	StartCommand    string `json:"startCommand" xorm:"start_command varchar(512)"`
+	WorkDir         string `json:"workDir" xorm:"work_dir varchar(512)"`
+	HttpHealthUrl   string `json:"httpHealthUrl" xorm:"http_health_url varchar(256)"`
+	BuildRepoUrl    string `json:"buildRepoUrl" xorm:"build_repo_url varchar(512)"`
+	BuildSourceDir  string `json:"buildSourceDir" xorm:"build_source_dir varchar(512)"`
+	BuildOutputDir  string `json:"buildOutputDir" xorm:"build_output_dir varchar(512)"`
+	BuildOutputName string `json:"buildOutputName" xorm:"build_output_name varchar(128)"`
+	SortOrder       int    `json:"sortOrder" xorm:"sort_order"`
+	Remark          string `json:"remark" xorm:"remark varchar(512)"`
 }

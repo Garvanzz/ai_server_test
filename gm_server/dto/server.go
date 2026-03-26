@@ -67,12 +67,6 @@ type GmServerManageUpsertReq struct {
 	OpenServerTime    string `json:"openServerTime"`
 	StopServerTime    string `json:"stopServerTime"`
 	ServerName        string `json:"serverName"`
-	ManageMode        string `json:"manageMode"`
-	ProcessName       string `json:"processName"`
-	StartCommand      string `json:"startCommand"`
-	WorkDir           string `json:"workDir"`
-	ExeName           string `json:"exeName"`
-	ExePath           string `json:"exePath"`
 }
 
 type GmServerManageDeleteReq struct {
@@ -96,6 +90,64 @@ type GmServerGroupUpsertReq struct {
 
 type GmServerGroupDeleteReq struct {
 	Ids []int64 `json:"ids"`
+}
+
+// ===================== server_process DTO =====================
+
+const (
+	ServerProcessTypeLogin = 1 // login_server
+	ServerProcessTypeMain  = 2 // main_server（大厅服）
+	ServerProcessTypeGame  = 3 // game_server / battle_server
+)
+
+type GmProcessUpsertReq struct {
+	Id              int64  `json:"id"`
+	ServerType      int    `json:"serverType"`
+	ServerRefId     int64  `json:"serverRefId"`
+	ServerName      string `json:"serverName"`
+	ManageMode      string `json:"manageMode"`
+	ProcessBinName  string `json:"processBinName"`
+	StartCommand    string `json:"startCommand"`
+	WorkDir         string `json:"workDir"`
+	HttpHealthUrl   string `json:"httpHealthUrl"`
+	BuildRepoUrl    string `json:"buildRepoUrl"`
+	BuildSourceDir  string `json:"buildSourceDir"`
+	BuildOutputDir  string `json:"buildOutputDir"`
+	BuildOutputName string `json:"buildOutputName"`
+	SortOrder       int    `json:"sortOrder"`
+	Remark          string `json:"remark"`
+}
+
+type GmProcessDeleteReq struct {
+	Ids []int64 `json:"ids"`
+}
+
+type GmProcessActionReq struct {
+	Id int64 `json:"id"`
+}
+
+type GmProcessBuildReq struct {
+	Id int64 `json:"id"`
+}
+
+type GMRespProcessItem struct {
+	Id              int64  `json:"id"`
+	ServerType      int    `json:"serverType"`
+	ServerTypeName  string `json:"serverTypeName"`
+	ServerRefId     int64  `json:"serverRefId"`
+	ServerName      string `json:"serverName"`
+	ManageMode      string `json:"manageMode"`
+	ProcessBinName  string `json:"processBinName"`
+	StartCommand    string `json:"startCommand"`
+	WorkDir         string `json:"workDir"`
+	HttpHealthUrl   string `json:"httpHealthUrl"`
+	BuildRepoUrl    string `json:"buildRepoUrl"`
+	BuildSourceDir  string `json:"buildSourceDir"`
+	BuildOutputDir  string `json:"buildOutputDir"`
+	BuildOutputName string `json:"buildOutputName"`
+	SortOrder       int    `json:"sortOrder"`
+	Remark          string `json:"remark"`
+	RunState        string `json:"runState"`
 }
 
 type GmServerGroupManageItem struct {

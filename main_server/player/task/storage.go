@@ -10,13 +10,7 @@ import (
 	"xfx/pkg/log"
 )
 
-const (
-	taskDataVersion = 2
-
-	claimTypeDaily int32 = 1
-	claimTypeWeek  int32 = 2
-	claimTypeGuild int32 = 3
-)
+const taskDataVersion = 2
 
 type legacyPlayerTask struct {
 	Status                 map[int32]map[int32]int32
@@ -118,14 +112,14 @@ func ensureTaskData(pl *model.Player) {
 	if pl.Task.ResetAt == nil {
 		pl.Task.ResetAt = make(map[int32]int64)
 	}
-	if _, ok := pl.Task.ClaimRecord[claimTypeDaily]; !ok {
-		pl.Task.ClaimRecord[claimTypeDaily] = make(map[int32]bool)
-	}
-	if _, ok := pl.Task.ClaimRecord[claimTypeWeek]; !ok {
-		pl.Task.ClaimRecord[claimTypeWeek] = make(map[int32]bool)
-	}
-	if _, ok := pl.Task.ClaimRecord[claimTypeGuild]; !ok {
-		pl.Task.ClaimRecord[claimTypeGuild] = make(map[int32]bool)
+	// Ensure a claim-record map exists for every bucket that has one.
+	// Derived from bucketPolicies so new buckets are covered automatically.
+	for _, p := range bucketPolicies {
+		if p.claimType != 0 {
+			if _, ok := pl.Task.ClaimRecord[p.claimType]; !ok {
+				pl.Task.ClaimRecord[p.claimType] = make(map[int32]bool)
+			}
+		}
 	}
 }
 

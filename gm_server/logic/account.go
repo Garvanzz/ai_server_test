@@ -23,6 +23,8 @@ SELECT
 	a.uid AS uid,
 	a.account AS account,
 	r.nick_name AS nick_name,
+	a.type AS type,
+	a.device_id AS device_id,
 	a.platform AS platform,
 	a.is_white_acc AS is_white_acc,
 	a.login_ban AS login_ban,
@@ -115,7 +117,7 @@ func GmGetPlayerGameInfo(c *gin.Context) {
 	forwardMainServerResponse(c, respBody)
 }
 
-// 角色（经 main_server 读 Redis Hero+LineUp）
+// 角色（经 main_server 读 Redis Hero+LineUp），返回平铺英雄列表供前端展示
 func GmHero(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
@@ -146,7 +148,47 @@ func GmHero(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	forwardMainServerResponse(c, respBody)
+	var heroLineup struct {
+		Hero   *model.Hero   `json:"hero"`
+		LineUp *model.LineUp `json:"lineup"`
+	}
+	if err := decodeForwardedData(respBody, &heroLineup); err != nil {
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse hero data err")
+		return
+	}
+	// 计算哪些英雄在阵容中
+	usedHeroes := make(map[int32]bool)
+	if heroLineup.LineUp != nil && heroLineup.LineUp.LineUps != nil {
+		for _, lu := range heroLineup.LineUp.LineUps {
+			if lu == nil {
+				continue
+			}
+			for _, hid := range lu.HeroId {
+				usedHeroes[hid] = true
+			}
+		}
+	}
+	list := make([]*dto.GMRespHero, 0)
+	if heroLineup.Hero != nil && heroLineup.Hero.Hero != nil {
+		for _, v := range heroLineup.Hero.Hero {
+			if v == nil {
+				continue
+			}
+			isUse := "否"
+			if usedHeroes[v.Id] {
+				isUse = "是"
+			}
+			list = append(list, &dto.GMRespHero{
+				HeroId:    v.Id,
+				HeroLevel: v.Level,
+				HeroStage: v.Stage,
+				HeroStar:  v.Star,
+				HeroExp:   v.Exp,
+				HeroIsUse: isUse,
+			})
+		}
+	}
+	HTTPRetGameData(c, SUCCESS, "success", list, map[string]any{"totalCount": len(list)})
 }
 
 // 编辑角色（经 main_server 写 Redis Hero）

@@ -9,120 +9,96 @@ import (
 	"xfx/pkg/utils"
 )
 
+// resetTask checks every bucket against the current time and resets any that
+// have passed their cadence boundary. taskType == 0 checks all buckets.
 func resetTask(ctx global.IPlayer, pl *model.Player, taskType int32) {
 	ensureTaskData(pl)
 	now := utils.Now().Unix()
 
+	// First ever touch: populate all buckets from scratch.
 	if pl.Task.ResetAt[define.TaskTypeDaily] == 0 {
 		initBucketsOnFirstTouch(ctx, pl, now)
 		return
 	}
 
-	resetDailyTasks(pl, now, taskType)
-	resetPassportDailyTasks(pl, now, taskType)
-	resetGuildTasks(pl, now, taskType)
-	resetWeekTasks(pl, now, taskType)
-	resetPassportWeekTasks(pl, now, taskType)
-	resetMonthTasks(pl, now, taskType)
-	refreshActivityTaskBuckets(ctx, pl, taskType)
-}
-
-func resetDailyTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypeDaily && taskType != 0) || utils.IsSameDayBySecWithHour(now, pl.Task.ResetAt[define.TaskTypeDaily], 0) {
-		return
+	for _, p := range bucketPolicies {
+		if taskType != 0 && taskType != p.bucketType {
+			continue
+		}
+		applyReset(ctx, pl, p, now)
 	}
-	setBucket(pl, define.TaskTypeDaily, loadTaskFromConfig(pl, define.TaskTypeDaily))
-	setPoint(pl, define.TaskActivityTypeDaily, 0)
-	setClaimMap(pl, claimTypeDaily, make(map[int32]bool))
-	pl.Task.TaskLimit = make(map[int32]int32)
-	pl.Task.ResetAt[define.TaskTypeDaily] = now
 }
 
-func resetPassportDailyTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypePassportDaily && taskType != 0) || utils.IsSameDayBySecWithHour(now, pl.Task.ResetAt[define.TaskTypePassportDaily], 0) {
+// applyReset resets a single bucket according to its policy if the cadence has elapsed.
+func applyReset(ctx global.IPlayer, pl *model.Player, p bucketPolicy, now int64) {
+	switch p.reset {
+	case resetNone:
 		return
-	}
-	setBucket(pl, define.TaskTypePassportDaily, loadTaskFromConfig(pl, define.TaskTypePassportDaily))
-	pl.Task.ResetAt[define.TaskTypePassportDaily] = now
-}
-
-func resetGuildTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypeGuild && taskType != 0) || utils.IsSameDayBySecWithHour(now, pl.Task.ResetAt[define.TaskTypeGuild], 0) {
+	case resetActivity:
+		refreshActivityBucket(ctx, pl, p)
 		return
+	case resetDaily:
+		if utils.IsSameDayBySecWithHour(now, pl.Task.ResetAt[p.bucketType], 0) {
+			return
+		}
+	case resetWeekly:
+		if utils.IsSameWeekBySec(now, pl.Task.ResetAt[p.bucketType]) {
+			return
+		}
+	case resetMonthly:
+		if utils.IsSameMonthBySec(now, pl.Task.ResetAt[p.bucketType]) {
+			return
+		}
 	}
-	setBucket(pl, define.TaskTypeGuild, loadTaskFromConfig(pl, define.TaskTypeGuild))
-	setPoint(pl, define.TaskActivityTypeGuild, 0)
-	setClaimMap(pl, claimTypeGuild, make(map[int32]bool))
-	pl.Task.ResetAt[define.TaskTypeGuild] = now
+
+	setBucket(pl, p.bucketType, loadTaskFromConfig(pl, p.bucketType))
+	if p.claimType != 0 {
+		setClaimMap(pl, p.claimType, make(map[int32]bool))
+	}
+	if p.pointType != 0 {
+		setPoint(pl, p.pointType, 0)
+	}
+	if p.clearTaskLimit {
+		pl.Task.TaskLimit = make(map[int32]int32)
+	}
+	pl.Task.ResetAt[p.bucketType] = now
 }
 
-func resetWeekTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypeWeek && taskType != 0) || utils.IsSameWeekBySec(now, pl.Task.ResetAt[define.TaskTypeWeek]) {
-		return
-	}
-	setClaimMap(pl, claimTypeWeek, make(map[int32]bool))
-	setBucket(pl, define.TaskTypeWeek, loadTaskFromConfig(pl, define.TaskTypeWeek))
-	pl.Task.ResetAt[define.TaskTypeWeek] = now
-}
-
-func resetPassportWeekTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypePassportWeek && taskType != 0) || utils.IsSameWeekBySec(now, pl.Task.ResetAt[define.TaskTypePassportWeek]) {
-		return
-	}
-	setBucket(pl, define.TaskTypePassportWeek, loadTaskFromConfig(pl, define.TaskTypePassportWeek))
-	pl.Task.ResetAt[define.TaskTypePassportWeek] = now
-}
-
-func resetMonthTasks(pl *model.Player, now int64, taskType int32) {
-	if (taskType != define.TaskTypeMonth && taskType != 0) || utils.IsSameMonthBySec(now, pl.Task.ResetAt[define.TaskTypeMonth]) {
-		return
-	}
-	setBucket(pl, define.TaskTypeMonth, loadTaskFromConfig(pl, define.TaskTypeMonth))
-	pl.Task.ResetAt[define.TaskTypeMonth] = now
-}
-
-func refreshActivityTaskBuckets(ctx global.IPlayer, pl *model.Player, taskType int32) {
-	refreshOneActivityBucket(ctx, pl, taskType, define.TaskTypeDrawHeroRank, define.ActivityTypeDrawHeroRank)
-	refreshOneActivityBucket(ctx, pl, taskType, define.TaskTypeTheCompetitionRank, define.ActivityTypeTheCompetition)
-}
-
-func refreshOneActivityBucket(ctx global.IPlayer, pl *model.Player, taskType, bucketType int32, activityType string) {
-	if taskType != bucketType && taskType != 0 {
-		return
-	}
-	reply, err := invoke.ActivityClient(ctx).GetActivityStatusByType(activityType)
+// refreshActivityBucket enables or disables an activity-gated bucket based on
+// whether the upstream activity is currently running.
+func refreshActivityBucket(ctx global.IPlayer, pl *model.Player, p bucketPolicy) {
+	reply, err := invoke.ActivityClient(ctx).GetActivityStatusByType(p.activityKind)
 	if err != nil {
-		log.Error("get activity data id error:%v", err)
+		log.Error("get activity status error (kind=%s): %v", p.activityKind, err)
 		return
 	}
 	if reply.ActivityId <= 0 {
-		setBucket(pl, bucketType, nil)
+		setBucket(pl, p.bucketType, nil)
 		return
 	}
-	if getBucket(pl, bucketType) == nil {
-		setBucket(pl, bucketType, loadTaskFromConfig(pl, bucketType))
+	if getBucket(pl, p.bucketType) == nil {
+		setBucket(pl, p.bucketType, loadTaskFromConfig(pl, p.bucketType))
 	}
 }
 
+// initBucketsOnFirstTouch populates every bucket the first time a player touches
+// the task system, and seeds the reset-time cursors.
 func initBucketsOnFirstTouch(ctx global.IPlayer, pl *model.Player, now int64) {
-	setBucket(pl, define.TaskTypeDaily, loadTaskFromConfig(pl, define.TaskTypeDaily))
-	setBucket(pl, define.TaskTypeWeek, loadTaskFromConfig(pl, define.TaskTypeWeek))
-	setBucket(pl, define.TaskTypeMonth, loadTaskFromConfig(pl, define.TaskTypeMonth))
-	setBucket(pl, define.TaskTypeMain, loadTaskFromConfig(pl, define.TaskTypeMain))
-	setBucket(pl, define.TaskTypeAchieve, loadTaskFromConfig(pl, define.TaskTypeAchieve))
-	setBucket(pl, define.TaskTypeGuild, loadTaskFromConfig(pl, define.TaskTypeGuild))
-	setBucket(pl, define.TaskTypePassportDaily, loadTaskFromConfig(pl, define.TaskTypePassportDaily))
-	setBucket(pl, define.TaskTypePassportWeek, loadTaskFromConfig(pl, define.TaskTypePassportWeek))
-	setBucket(pl, define.TaskTypePassportSeason, loadTaskFromConfig(pl, define.TaskTypePassportSeason))
-	setPoint(pl, define.TaskActivityTypeDaily, 0)
-	setPoint(pl, define.TaskActivityTypeGuild, 0)
-
-	pl.Task.ResetAt[define.TaskTypeDaily] = now
-	pl.Task.ResetAt[define.TaskTypeWeek] = now
-	pl.Task.ResetAt[define.TaskTypeMonth] = now
-	pl.Task.ResetAt[define.TaskTypeGuild] = now
-	pl.Task.ResetAt[define.TaskTypePassportDaily] = now
-	pl.Task.ResetAt[define.TaskTypePassportWeek] = now
-
-	refreshActivityTaskBuckets(ctx, pl, 0)
+	for _, p := range bucketPolicies {
+		if p.reset == resetActivity {
+			refreshActivityBucket(ctx, pl, p)
+		} else {
+			setBucket(pl, p.bucketType, loadTaskFromConfig(pl, p.bucketType))
+		}
+		if p.pointType != 0 {
+			setPoint(pl, p.pointType, 0)
+		}
+		// Seed the reset cursor for periodic buckets so subsequent logins compare correctly.
+		if p.reset != resetNone && p.reset != resetActivity {
+			pl.Task.ResetAt[p.bucketType] = now
+		}
+	}
 }
+
+
+

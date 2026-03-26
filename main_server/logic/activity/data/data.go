@@ -22,27 +22,48 @@ var (
 // =================================活动数据===========================================
 
 func LoadAllActivityData() ([]*model.ActivityData, error) {
-	keys, err := redis.Strings(db.RedisExec("KEYS", fmt.Sprintf("%s:*", define.ActivityRedisKey)))
-	if err != nil {
-		return nil, fmt.Errorf("KEYS error: %v", err)
+	// 使用 SCAN 代替 KEYS，避免在大 keyspace 下阻塞 Redis
+	pattern := fmt.Sprintf("%s:*", define.ActivityRedisKey)
+	var keys []string
+	cursor := 0
+	for {
+		values, err := redis.Values(db.RedisExec("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
+		if err != nil {
+			return nil, fmt.Errorf("SCAN error: %v", err)
+		}
+		if len(values) < 2 {
+			break
+		}
+		cursor, err = redis.Int(values[0], nil)
+		if err != nil {
+			return nil, fmt.Errorf("SCAN cursor error: %v", err)
+		}
+		batch, err := redis.Strings(values[1], nil)
+		if err != nil {
+			return nil, fmt.Errorf("SCAN keys error: %v", err)
+		}
+		keys = append(keys, batch...)
+		if cursor == 0 {
+			break
+		}
 	}
 
 	if len(keys) == 0 {
 		return nil, nil
 	}
 
-	values, err := redis.Values(db.RedisExec("MGET", redis.Args{}.AddFlat(keys)...))
+	mgetValues, err := redis.Values(db.RedisExec("MGET", redis.Args{}.AddFlat(keys)...))
 	if err != nil {
 		return nil, fmt.Errorf("MGET error: %v", err)
 	}
 
 	results := make([]*model.ActivityData, 0)
 	for i := range keys {
-		if values[i] == nil {
+		if mgetValues[i] == nil {
 			continue
 		}
 
-		dataBytes, ok := values[i].([]byte)
+		dataBytes, ok := mgetValues[i].([]byte)
 		if !ok {
 			continue
 		}
@@ -51,7 +72,6 @@ func LoadAllActivityData() ([]*model.ActivityData, error) {
 		if err := json.Unmarshal(dataBytes, activityData); err != nil {
 			continue
 		}
-		//log.Debug("活动数据:%v", activityData)
 		results = append(results, activityData)
 	}
 
@@ -242,4 +262,14 @@ func decodePlayerDataKey(key int64) (actId, playerId int64) {
 
 func activityPlayerRedisKey(actId int64) string {
 	return fmt.Sprintf("%s:%d", define.ActivityPlayerRedisKey, actId)
+}
+
+// GetActivityPlayerCount 获取活动参与人数（Redis Hash 中的 field 数）
+func GetActivityPlayerCount(actId int64) int64 {
+	count, err := redis.Int64(db.RedisExec("HLEN", activityPlayerRedisKey(actId)))
+	if err != nil {
+		log.Error("GetActivityPlayerCount HLEN error: actId=%v, err=%v", actId, err)
+		return 0
+	}
+	return count
 }

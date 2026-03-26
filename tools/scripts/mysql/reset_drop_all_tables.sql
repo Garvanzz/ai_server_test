@@ -1,6 +1,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS account_role;
 DROP TABLE IF EXISTS server_group;
 DROP TABLE IF EXISTS game_server;
 DROP TABLE IF EXISTS hot_update;
@@ -19,5 +20,6 @@ DROP TABLE IF EXISTS guild_log;
 DROP TABLE IF EXISTS merge_plan;
 DROP TABLE IF EXISTS merge_server_map;
 DROP TABLE IF EXISTS merge_conflict_log;
+DROP TABLE IF EXISTS server_process;
 
 SET FOREIGN_KEY_CHECKS = 1;

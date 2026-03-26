@@ -28,10 +28,7 @@ func ReqReceiveReward(ctx global.IPlayer, pl *model.Player, req *proto_task.C2SG
 	taskConfs := config.Task.All()
 	if req.TaskId == 0 {
 		for id, v := range tasks {
-			if v.ReceiveAward {
-				continue
-			}
-			if !isTaskCompletable(pl, v) {
+			if v.ReceiveAward || !isTaskCompletable(pl, v) {
 				continue
 			}
 			taskConf, ok := taskConfs[int64(id)]
@@ -45,22 +42,15 @@ func ReqReceiveReward(ctx global.IPlayer, pl *model.Player, req *proto_task.C2SG
 		}
 	} else {
 		task, ok := tasks[req.TaskId]
-		if !ok || task.ReceiveAward {
+		if !ok || task.ReceiveAward || !isTaskCompletable(pl, task) {
 			ctx.Send(&proto_task.S2CGetReward{Succ: false})
 			return
 		}
-
-		if !isTaskCompletable(pl, task) {
-			ctx.Send(&proto_task.S2CGetReward{Succ: false})
-			return
-		}
-
 		taskConf, ok := taskConfs[int64(req.TaskId)]
 		if !ok {
 			ctx.Send(&proto_task.S2CGetReward{Succ: false})
 			return
 		}
-
 		task.ReceiveAward = true
 		awards = append(awards, taskConf.Reward...)
 		rewarded = true
@@ -71,12 +61,10 @@ func ReqReceiveReward(ctx global.IPlayer, pl *model.Player, req *proto_task.C2SG
 		ctx.Send(&proto_task.S2CGetReward{Succ: false, TaskId: req.TaskId})
 		return
 	}
-
 	if len(awards) > 0 {
 		bag.AddAward(ctx, pl, awards, true)
 		internal.PushPlayerData(ctx, pl)
 	}
-
 	pushTasks := &proto_task.PushTask{}
 	applyBucketPush(pushTasks, req.BucketType, pl)
 	if len(pushTasks.Groups) > 0 {
@@ -92,42 +80,62 @@ func ReqReceiveActivePointReward(ctx global.IPlayer, pl *model.Player, req *prot
 		return
 	}
 
-	if taskActivityConf.Type == define.TaskActivityTypeDaily {
-		resetTask(ctx, pl, define.TaskTypeDaily)
-	} else if taskActivityConf.Type == define.TaskActivityTypeGuild {
-		resetTask(ctx, pl, define.TaskTypeGuild)
+	// Find the bucket policy whose local point type matches the activity reward type.
+	var matchPolicy bucketPolicy
+	found := false
+	for _, p := range bucketPolicies {
+		if p.pointType != 0 && p.pointType == taskActivityConf.Type {
+			matchPolicy = p
+			found = true
+			resetTask(ctx, pl, p.bucketType)
+			break
+		}
 	}
-
-	claimType := claimTypeDaily
-	pointType := int32(define.TaskActivityTypeDaily)
-	if taskActivityConf.Type == define.TaskActivityTypeGuild {
-		claimType = claimTypeGuild
-		pointType = int32(define.TaskActivityTypeGuild)
-	}
-
-	if taskActivityConf.Value > getPoint(pl, pointType) {
+	if !found {
 		ctx.Send(&proto_task.S2CGetActivePointReward{Succ: false})
 		return
 	}
 
-	claims := getClaimMap(pl, claimType)
+	if taskActivityConf.Value > getPoint(pl, matchPolicy.pointType) {
+		ctx.Send(&proto_task.S2CGetActivePointReward{Succ: false})
+		return
+	}
+	claims := getClaimMap(pl, matchPolicy.claimType)
 	if claims[req.RewardId] {
 		ctx.Send(&proto_task.S2CGetActivePointReward{Succ: false})
 		return
 	}
 	claims[req.RewardId] = true
-	setClaimMap(pl, claimType, claims)
+	setClaimMap(pl, matchPolicy.claimType, claims)
 
 	if len(taskActivityConf.Reward) > 0 {
 		bag.AddAward(ctx, pl, taskActivityConf.Reward, true)
 	}
-
 	pushTasks := &proto_task.PushTask{}
-	applyBucketPush(pushTasks, pointTypeToBucketType(pointType), pl)
+	applyBucketPush(pushTasks, matchPolicy.bucketType, pl)
 	if len(pushTasks.Groups) > 0 {
 		ctx.Send(pushTasks)
 	}
 	ctx.Send(&proto_task.S2CGetActivePointReward{Succ: true})
+}
+
+// addActivityValue credits activity value for a completed task.
+// Buckets with a local pointType accumulate points; passport buckets fire an external event.
+func addActivityValue(ctx global.IPlayer, pl *model.Player, taskType int32, value int32) {
+	if value == 0 {
+		return
+	}
+	p, ok := findPolicy(taskType)
+	if !ok {
+		return
+	}
+	if p.pointType != 0 {
+		setPoint(pl, p.pointType, getPoint(pl, p.pointType)+value)
+		return
+	}
+	if p.notifyPassport {
+		addPassportScore(ctx, pl, value)
+	}
 }
 
 func addPassportScore(ctx global.IPlayer, pl *model.Player, score int32) {
@@ -140,31 +148,15 @@ func addPassportScore(ctx global.IPlayer, pl *model.Player, score int32) {
 	})
 }
 
-func addActivityValue(ctx global.IPlayer, pl *model.Player, taskType int32, value int32) {
-	if taskType == define.TaskTypeDaily {
-		setPoint(pl, define.TaskActivityTypeDaily, getPoint(pl, define.TaskActivityTypeDaily)+value)
-		return
-	}
-	if taskType == define.TaskTypeGuild {
-		setPoint(pl, define.TaskActivityTypeGuild, getPoint(pl, define.TaskActivityTypeGuild)+value)
-		return
-	}
-	if taskType == define.TaskTypePassportDaily || taskType == define.TaskTypePassportWeek || taskType == define.TaskTypePassportSeason {
-		addPassportScore(ctx, pl, value)
-	}
-}
-
+// applyBucketPush finalises a reward and pushes the updated bucket to the client.
+// For auto-advance buckets (achieve, main) it reloads the next task set when all are done.
 func applyBucketPush(pushTasks *proto_task.PushTask, taskType int32, pl *model.Player) {
-	if taskType == define.TaskTypeAchieve && allRewarded(getBucket(pl, define.TaskTypeAchieve)) {
-		setBucket(pl, define.TaskTypeAchieve, loadTaskFromConfig(pl, define.TaskTypeAchieve))
-	}
-	if taskType == define.TaskTypeMain && allRewarded(getBucket(pl, define.TaskTypeMain)) {
-		setBucket(pl, define.TaskTypeMain, loadTaskFromConfig(pl, define.TaskTypeMain))
-	}
-
-	meta, ok := findTaskGroupMeta(taskType)
+	p, ok := findPolicy(taskType)
 	if !ok {
 		return
 	}
-	pushTasks.Groups = []*proto_task.TaskGroup{buildTaskGroup(pl, meta)}
+	if p.autoAdvance && allRewarded(getBucket(pl, taskType)) {
+		setBucket(pl, taskType, loadTaskFromConfig(pl, taskType))
+	}
+	pushTasks.Groups = []*proto_task.TaskGroup{buildTaskGroup(pl, p)}
 }

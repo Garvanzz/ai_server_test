@@ -54,6 +54,7 @@ func (m *Manager) OnInit(app module.App) {
 
 	activities, err := data.LoadAllActivityData()
 	if err != nil {
+		log.Error("activity load activity data error: %v", err)
 		panic("activity load activity data error")
 		return
 	}
@@ -75,7 +76,8 @@ func (m *Manager) OnInit(app module.App) {
 
 		desc := impl.GetActivityDesc(ent.Type)
 		if desc == nil || desc.NewHandler == nil {
-			panic(fmt.Sprintf("missing activity handler: %v", ent.Type))
+			log.Error("missing activity handler for type: %v, cfgId: %v, skipping", ent.Type, ent.CfgId)
+			continue
 		}
 
 		ent.handler = desc.NewHandler()
@@ -122,6 +124,9 @@ func (m *Manager) OnInit(app module.App) {
 	m.Register("RemoveActivity", m.OnRemoveActivity)
 	m.Register("CloseActivityByCfgId", m.OnCloseActivityByCfgId)
 	m.Register("StopActivityByType", m.OnStopActivityByType)
+	m.Register("AdjustActivityTime", m.OnAdjustActivityTime)
+	m.Register("ForceStartActivity", m.OnForceStartActivity)
+	m.Register("GetActivityPlayerCount", m.OnGetActivityPlayerCount)
 }
 
 func (m *Manager) OnStart(ctx module.Context) {
@@ -363,6 +368,7 @@ func (m *Manager) handleActionRestart(ent *entity) error {
 		return err
 	}
 	ent.Id = int64(actID)
+	ent.manualClosed = false // 重启时清除主动关闭标记
 	m.entities.store(ent)
 	ent.handler.OnRestart(previousActID)
 	log.Debug("activity restart:%v,%v", ent.Id, ent.CfgId)
@@ -704,6 +710,8 @@ func (m *Manager) OnCloseActivity(actId int64) error {
 	if err := m.sm.Trigger(ent.State, EventClose, ent); err != nil {
 		return err
 	}
+	// 标记为 GM 主动关闭，防止 Tick 自动重启
+	ent.manualClosed = true
 	return nil
 }
 
@@ -754,4 +762,59 @@ func (m *Manager) OnStopActivityByType(typ string) error {
 		return errors.New("activity not found or not running")
 	}
 	return m.OnStopActivity(ent.Id)
+}
+
+// OnAdjustActivityTime 调整活动时间（GM 调试/运营纠错用）；仅更新内存，下次 saveData 时落库
+// 传 0 表示不修改该字段
+func (m *Manager) OnAdjustActivityTime(actId, startTime, endTime, closeTime int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State == StateClosed {
+		return errors.New("activity already closed, use restart first")
+	}
+	if startTime > 0 {
+		ent.StartTime = startTime
+	}
+	if endTime > 0 {
+		ent.EndTime = endTime
+	}
+	if closeTime > 0 {
+		ent.CloseTime = closeTime
+	}
+	if ent.StartTime > 0 && ent.EndTime > 0 && ent.StartTime >= ent.EndTime {
+		return errors.New("startTime must be less than endTime")
+	}
+	// 时间更新后清除 manualClosed，允许状态机在下次 Tick 中自动推进
+	ent.manualClosed = false
+	// 强制重新检查配置（不重置 checked，直接让 checkState 下次 Tick 重新评估）
+	log.Info("activity time adjusted: actId=%v, start=%v, end=%v, close=%v", actId, ent.StartTime, ent.EndTime, ent.CloseTime)
+	return nil
+}
+
+// OnForceStartActivity 强制开启等待中的活动（Waiting -> Running）
+func (m *Manager) OnForceStartActivity(actId int64) error {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return errors.New("activity not found")
+	}
+	if ent.State != StateWaiting {
+		return fmt.Errorf("can only force-start a waiting activity, current state: %s", ent.State)
+	}
+	if err := m.sm.Trigger(ent.State, EventStart, ent); err != nil {
+		return err
+	}
+	log.Info("activity force-started by GM: actId=%v, cfgId=%v", actId, ent.CfgId)
+	return nil
+}
+
+// OnGetActivityPlayerCount 获取活动参与玩家数（统计 Redis Hash 中的 field 数量）
+func (m *Manager) OnGetActivityPlayerCount(actId int64) (int64, error) {
+	ent := m.getEntityByActId(actId)
+	if ent == nil {
+		return 0, errors.New("activity not found")
+	}
+	count := data.GetActivityPlayerCount(actId)
+	return count, nil
 }

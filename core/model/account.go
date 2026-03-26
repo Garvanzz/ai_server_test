@@ -45,6 +45,8 @@ type AccountRoleProfile struct {
 	Uid                    string    `json:"uid" xorm:"uid"`
 	Account                string    `json:"account" xorm:"account"`
 	NickName               string    `json:"nickName" xorm:"nick_name"`
+	Type                   int       `json:"type" xorm:"type"`
+	DeviceId               string    `json:"deviceId" xorm:"device_id"`
 	Platform               int       `json:"platform" xorm:"platform"`
 	IsWhiteAcc             int       `json:"isWhiteAcc" xorm:"is_white_acc"`
 	LoginBan               int64     `json:"loginBan" xorm:"login_ban"`

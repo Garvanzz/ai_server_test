@@ -21,4 +21,5 @@ const (
 	MergePlanTable      = "merge_plan"         // 合服计划
 	MergeServerMapTable = "merge_server_map"   // 合服服映射
 	MergeConflictTable  = "merge_conflict_log" // 合服冲突日志
+	ServerProcessTable  = "server_process"     // 进程管理（login/main/game 统一）
 )

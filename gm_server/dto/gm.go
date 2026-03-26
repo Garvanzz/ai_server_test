@@ -209,43 +209,10 @@ type GMRespServerItem struct {
 	OpenServerTime    string `json:"openServerTime"`
 	StopServerTime    string `json:"stopServerTime"`
 	RunState          string `json:"runState"`
-	ManageMode        string `json:"manageMode"`
-	ProcessName       string `json:"processName"`
-	StartCommand      string `json:"startCommand"`
-	WorkDir           string `json:"workDir"`
-	ExeName           string `json:"exeName"`
-	ExePath           string `json:"exePath"`
-	ServerKind        string `json:"serverKind"`
-	ServerKindText    string `json:"serverKindText"`
 }
 
-type GMGameRespServerItem struct {
-	Id                int64  `json:"id"`
-	LogicServerId     int64  `json:"logicServerId"`
-	MergeState        int    `json:"mergeState"`
-	MergeStateText    string `json:"mergeStateText"`
-	MergeTime         int64  `json:"mergeTime"`
-	ServerName        string `json:"serverName"`
-	GroupId           int    `json:"groupId"`
-	GroupName         string `json:"groupName"`
-	Channel           int    `json:"channel"`
-	Ip                string `json:"ip"`
-	Port              int    `json:"port"`
-	MainServerHttpUrl string `json:"mainServerHttpUrl"`
-	ServerState       string `json:"serverState"`
-	ServerStateCode   int    `json:"serverStateCode"`
-	OpenServerTime    string `json:"openServerTime"`
-	StopServerTime    string `json:"stopServerTime"`
-	RunState          string `json:"runState"`
-	ManageMode        string `json:"manageMode"`
-	ProcessName       string `json:"processName"`
-	StartCommand      string `json:"startCommand"`
-	WorkDir           string `json:"workDir"`
-	ExeName           string `json:"exeName"`
-	ExePath           string `json:"exePath"`
-	ServerKind        string `json:"serverKind"`
-	ServerKindText    string `json:"serverKindText"`
-}
+// GMGameRespServerItem is an alias — game servers and entry servers share the same response shape
+type GMGameRespServerItem = GMRespServerItem
 
 type RechargeOrder struct {
 	Amount        float32 `json:"amount"`
@@ -270,4 +237,38 @@ type GMRespRechargeOrder struct {
 	PaymentTime   string
 	ChannelNumber string
 	Award         string
+}
+
+// ==================== 活动管理 ====================
+
+// GmReqActivityList 列出所有活动
+type GmReqActivityList struct {
+	ServerId int `json:"serverId"`
+}
+
+// GmReqActivityByActId 按活动实例 ID 查询/操作
+type GmReqActivityByActId struct {
+	ServerId int   `json:"serverId"`
+	ActId    int64 `json:"actId"`
+}
+
+// GmReqActivityByCfgId 按配置 ID 查询/操作
+type GmReqActivityByCfgId struct {
+	ServerId int   `json:"serverId"`
+	CfgId    int64 `json:"cfgId"`
+}
+
+// GmReqActivityAdjustTime 调整活动时间（Unix 秒，传 0 表示不修改该字段）
+type GmReqActivityAdjustTime struct {
+	ServerId  int   `json:"serverId"`
+	ActId     int64 `json:"actId"`
+	StartTime int64 `json:"startTime"`
+	EndTime   int64 `json:"endTime"`
+	CloseTime int64 `json:"closeTime"`
+}
+
+// GmReqActivityStopByType 按类型暂停
+type GmReqActivityStopByType struct {
+	ServerId int    `json:"serverId"`
+	Type     string `json:"type"`
 }

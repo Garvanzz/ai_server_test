@@ -34,13 +34,15 @@ ai_server_test - MySQL 全量建表脚本（合服彻底版）
 -- 说明：
 -- - 一个 uid 可在多个逻辑服拥有角色，因此唯一键使用 (uid, server_id)
 -- - account 字段保留全局唯一，避免同名账号注册冲突
+-- 说明：
+-- - account 为全局唯一账号主体，uid 全局唯一，不含服务器/角色字段
+-- - account_role 为每入口服下的角色映射，支持一账号多服多角色
 CREATE TABLE IF NOT EXISTS `account` (
     `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `uid`              VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '平台用户唯一标识',
+    `uid`              VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '平台用户唯一标识（全局唯一）',
     `account`          VARCHAR(128) NOT NULL DEFAULT '' COMMENT '账号名',
     `password`         VARCHAR(128) NOT NULL DEFAULT '' COMMENT '密码',
     `type`             INT          NOT NULL DEFAULT 0 COMMENT '账号类型',
-    `nick_name`        VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '昵称',
     `create_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `online_time`      DATETIME     NULL COMMENT '上线时间',
     `offline_time`     DATETIME     NULL COMMENT '下线时间',
@@ -49,22 +51,48 @@ CREATE TABLE IF NOT EXISTS `account` (
     `login_ban`        BIGINT       NOT NULL DEFAULT 0 COMMENT '登录封禁结束时间戳, 0未封禁',
     `login_ban_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '登录封禁原因',
     `platform`         INT          NOT NULL DEFAULT 0 COMMENT '平台 1pc 2ios 3安卓',
-    `redis_id`         BIGINT       NOT NULL DEFAULT 0 COMMENT '玩家ID(dbId)',
-    `last_token`       VARCHAR(512) NOT NULL DEFAULT '' COMMENT '最近登录 token',
-    `system_mail_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '已处理的最大系统邮件ID（按服）',
     `chat_ban`         BIGINT       NOT NULL DEFAULT 0 COMMENT '聊天封禁结束时间戳, 0未封禁',
     `chat_ban_reason`  VARCHAR(255) NOT NULL DEFAULT '' COMMENT '聊天封禁原因',
-    `server_id`        INT          NOT NULL DEFAULT 0 COMMENT '当前逻辑服ID',
-    `origin_server_id` INT          NOT NULL DEFAULT 0 COMMENT '来源服ID',
+    `last_login_entry_server_id` INT NOT NULL DEFAULT 0 COMMENT '最近一次登录入口服ID',
+    `last_login_logic_server_id` INT NOT NULL DEFAULT 0 COMMENT '最近一次登录逻辑服ID',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_uid_server` (`uid`, `server_id`),
-    UNIQUE KEY `uk_account` (`account`),
-    KEY `idx_server_uid` (`server_id`, `uid`),
-    KEY `idx_server_redis` (`server_id`, `redis_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家账号与角色映射表';
+    UNIQUE KEY `uk_uid` (`uid`),
+    UNIQUE KEY `uk_account` (`account`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家全局账号表';
 
 
--- 1.2 区服组（仅用于前端分组展示）
+-- 1.2 玩家角色映射表
+-- 说明：
+-- - 一个 uid 可在多个入口服拥有角色，唯一键使用 (uid, entry_server_id)
+-- - entry_server_id：客户端选服ID，合服后永不改变
+-- - logic_server_id：实际业务归属服，合服时只需改此字段
+-- - origin_server_id：首次创建时的服ID，写入后不再修改，用于审计追溯
+CREATE TABLE IF NOT EXISTS `account_role` (
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `account_id`       BIGINT       NOT NULL DEFAULT 0 COMMENT '账号主表ID',
+    `uid`              VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '平台用户唯一标识',
+    `entry_server_id`  INT          NOT NULL DEFAULT 0 COMMENT '入口服ID（客户端选服ID，合服后不变）',
+    `logic_server_id`  INT          NOT NULL DEFAULT 0 COMMENT '当前逻辑服ID（合服后指向目标服）',
+    `origin_server_id` INT          NOT NULL DEFAULT 0 COMMENT '来源服ID（首次创建时写入，后续不改）',
+    `nick_name`        VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '角色昵称',
+    `redis_id`         BIGINT       NOT NULL DEFAULT 0 COMMENT '玩家ID(dbId)，对应Redis中的Player数据',
+    `system_mail_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '已处理的最大系统邮件ID（按角色）',
+    `last_token`       VARCHAR(512) NOT NULL DEFAULT '' COMMENT '该角色最近登录 token',
+    `create_time`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `online_time`      DATETIME     NULL COMMENT '上线时间',
+    `offline_time`     DATETIME     NULL COMMENT '下线时间',
+    `last_login_time`  DATETIME     NULL COMMENT '最近登录时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uid_entry_server` (`uid`, `entry_server_id`),
+    UNIQUE KEY `uk_redis_id` (`redis_id`),
+    KEY `idx_account_id` (`account_id`),
+    KEY `idx_logic_uid` (`logic_server_id`, `uid`),
+    KEY `idx_logic_redis` (`logic_server_id`, `redis_id`),
+    KEY `idx_entry_logic` (`entry_server_id`, `logic_server_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家角色映射表（支持一账号多服多角色）';
+
+
+-- 1.3 区服组（仅用于前端分组展示）
 CREATE TABLE IF NOT EXISTS `server_group` (
     `id`          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '分组ID',
     `name`        VARCHAR(64) NOT NULL DEFAULT '' COMMENT '分组名称',
@@ -95,8 +123,6 @@ CREATE TABLE IF NOT EXISTS `game_server` (
     `open_server_time`     BIGINT       NOT NULL DEFAULT 0 COMMENT '开服时间戳',
     `stop_server_time`     BIGINT       NOT NULL DEFAULT 0 COMMENT '停服时间戳',
     `server_name`          VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '服务器名称',
-    `exe_name`             VARCHAR(128) NOT NULL DEFAULT '' COMMENT '可执行文件名',
-    `exe_path`             VARCHAR(512) NOT NULL DEFAULT '' COMMENT '可执行文件路径',
     PRIMARY KEY (`id`),
     KEY `idx_group_id` (`group_id`),
     KEY `idx_logic_server_id` (`logic_server_id`),
@@ -154,16 +180,17 @@ CREATE TABLE IF NOT EXISTS `admin` (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `pay_order` (
-    `id`             BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `order_id`       VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '订单ID',
-    `amount`         DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '金额',
-    `product_id`     VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '商品ID',
-    `product_name`   VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '商品名称',
-    `user_id`        VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '平台用户ID',
-    `game_user_id`   VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '游戏用户ID(uid)',
-    `server_id`      INT           NOT NULL DEFAULT 0 COMMENT '逻辑服ID',
-    `payment_time`   VARCHAR(32)   NOT NULL DEFAULT '' COMMENT '支付时间文本',
-    `channel_number` VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '渠道号',
+    `id`              BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `order_id`        VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '订单ID',
+    `amount`          DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '金额',
+    `product_id`      VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '商品ID',
+    `product_name`    VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '商品名称',
+    `user_id`         VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '平台用户ID',
+    `game_user_id`    VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '游戏用户ID(uid)',
+    `server_id`       INT           NOT NULL DEFAULT 0 COMMENT '逻辑服ID',
+    `entry_server_id` INT           NOT NULL DEFAULT 0 COMMENT '充值入口服ID（审计/补偿追溯用）',
+    `payment_time`    VARCHAR(32)   NOT NULL DEFAULT '' COMMENT '支付时间文本',
+    `channel_number`  VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '渠道号',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_id` (`order_id`),
     KEY `idx_server_game_user` (`server_id`, `game_user_id`),
@@ -171,16 +198,17 @@ CREATE TABLE IF NOT EXISTS `pay_order` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付完成订单表';
 
 CREATE TABLE IF NOT EXISTS `pay_cache_order` (
-    `id`             BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `order_id`       VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '订单ID',
-    `amount`         DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '金额',
-    `product_id`     VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '商品ID',
-    `product_name`   VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '商品名称',
-    `user_id`        VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '平台用户ID',
-    `game_user_id`   VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '游戏用户ID(uid)',
-    `server_id`      INT           NOT NULL DEFAULT 0 COMMENT '逻辑服ID',
-    `payment_time`   VARCHAR(32)   NOT NULL DEFAULT '' COMMENT '支付时间文本',
-    `channel_number` VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '渠道号',
+    `id`              BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `order_id`        VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '订单ID',
+    `amount`          DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '金额',
+    `product_id`      VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '商品ID',
+    `product_name`    VARCHAR(128)  NOT NULL DEFAULT '' COMMENT '商品名称',
+    `user_id`         VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '平台用户ID',
+    `game_user_id`    VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '游戏用户ID(uid)',
+    `server_id`       INT           NOT NULL DEFAULT 0 COMMENT '逻辑服ID',
+    `entry_server_id` INT           NOT NULL DEFAULT 0 COMMENT '充值入口服ID（审计/补偿追溯用）',
+    `payment_time`    VARCHAR(32)   NOT NULL DEFAULT '' COMMENT '支付时间文本',
+    `channel_number`  VARCHAR(64)   NOT NULL DEFAULT '' COMMENT '渠道号',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_id` (`order_id`),
     KEY `idx_server_game_user` (`server_id`, `game_user_id`)
@@ -406,30 +434,132 @@ CREATE TABLE IF NOT EXISTS `merge_conflict_log` (
 
 
 -- ============================================================
--- 8) 合服后推荐执行模板（注释，不自动执行）
+-- 8) 进程管理表（与 game_server 展示/路由表解耦）
+-- ============================================================
+-- 设计目标：
+-- - game_server 只负责客户端选服路由（展示、ip/port、logic_server_id）
+-- - server_process 统一管理所有服务进程的生命周期（login/main/game/battle）
+-- - 支持 login_server 进程管理（之前完全缺失）
+-- - 将 build 相关配置（仓库地址、编译目录）从代码硬编码迁到数据库
+-- - server_ref_id 关联 game_server.id，便于启动后更新 server_state；login_server 为 0
+CREATE TABLE IF NOT EXISTS `server_process` (
+    `id`                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `server_type`       TINYINT      NOT NULL DEFAULT 0 COMMENT '进程类型 1=login_server 2=main_server 3=game_server/battle',
+    `server_ref_id`     BIGINT       NOT NULL DEFAULT 0 COMMENT '关联 game_server.id（main/game 进程对应的展示服ID，login 为 0）',
+    `server_name`       VARCHAR(128) NOT NULL DEFAULT '' COMMENT '进程显示名称',
+    `manage_mode`       VARCHAR(32)  NOT NULL DEFAULT 'manual' COMMENT '管理模式 manual=手动 local_command=本地命令',
+    `process_bin_name`  VARCHAR(128) NOT NULL DEFAULT '' COMMENT '进程二进制名称（用于 pgrep/tasklist 检测）',
+    `start_command`     VARCHAR(512) NOT NULL DEFAULT '' COMMENT '启动命令（完整可执行路径或 shell 命令）',
+    `work_dir`          VARCHAR(512) NOT NULL DEFAULT '' COMMENT '工作目录（启动时的 cwd）',
+    `http_health_url`   VARCHAR(256) NOT NULL DEFAULT '' COMMENT 'HTTP 健康检查地址（连通性检测，如 http://ip:port）',
+    `build_repo_url`    VARCHAR(512) NOT NULL DEFAULT '' COMMENT '代码仓库 URL（空=不支持在线编译）',
+    `build_source_dir`  VARCHAR(512) NOT NULL DEFAULT '' COMMENT '编译源码目录（go build 执行目录）',
+    `build_output_dir`  VARCHAR(512) NOT NULL DEFAULT '' COMMENT '编译产物复制目标目录',
+    `build_output_name` VARCHAR(128) NOT NULL DEFAULT '' COMMENT '编译产物文件名',
+    `sort_order`        INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    `remark`            VARCHAR(512) NOT NULL DEFAULT '' COMMENT '备注',
+    PRIMARY KEY (`id`),
+    KEY `idx_server_type` (`server_type`),
+    KEY `idx_server_ref` (`server_ref_id`),
+    KEY `idx_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='进程管理表（统一管理 login/main/game 所有服务进程）';
+
+
+-- ============================================================
+-- 9) 合服后推荐执行模板（注释，不自动执行）
 -- ============================================================
 /*
-示例：将入口服2并入逻辑服1
+本模板演示将「入口服 @src」并入「逻辑服 @dst」的完整步骤。
+使用前替换 @src / @dst 为实际服ID，例如 SET @src=2, @dst=1。
 
-1) 路由映射
-UPDATE game_server
-SET logic_server_id = 1,
-    merge_state = 2,
-    merge_time = UNIX_TIMESTAMP()
-WHERE id = 2;
+────────────────────────────────────────────────────────────
+Step 0: 停服维护，执行前做全量数据库备份
+────────────────────────────────────────────────────────────
 
-2) 业务数据迁移（按表更新 server_id）
-UPDATE guild            SET server_id = 1, origin_server_id = IF(origin_server_id=0,2,origin_server_id) WHERE server_id = 2;
-UPDATE guild_apply      SET server_id = 1 WHERE server_id = 2;
-UPDATE guild_log        SET server_id = 1 WHERE server_id = 2;
-UPDATE player_mail_info SET server_id = 1, origin_server_id = IF(origin_server_id=0,2,origin_server_id) WHERE server_id = 2;
-UPDATE friend_apply     SET server_id = 1 WHERE server_id = 2;
-UPDATE friend_block     SET server_id = 1 WHERE server_id = 2;
-UPDATE account          SET server_id = 1, origin_server_id = IF(origin_server_id=0,2,origin_server_id) WHERE server_id = 2;
+────────────────────────────────────────────────────────────
+Step 1: 预检查——扫描潜在冲突，写入 merge_conflict_log
+────────────────────────────────────────────────────────────
+-- 1.1 公会重名检查
+SELECT g1.guild_name, g1.server_id AS src_server, g2.server_id AS dst_server
+FROM guild g1
+JOIN guild g2 ON g1.guild_name = g2.guild_name AND g2.server_id = @dst
+WHERE g1.server_id = @src;
+
+-- 1.2 有冲突时先处理重名（追加来源服后缀，并发邮件通知玩家改名）
+-- UPDATE guild
+--   SET guild_name = CONCAT(guild_name, '_', @src)
+-- WHERE server_id = @src
+--   AND guild_name IN (SELECT guild_name FROM guild WHERE server_id = @dst);
+
+────────────────────────────────────────────────────────────
+Step 2: 路由重定向（ip / port / http_url 必须同步更新）
+────────────────────────────────────────────────────────────
+UPDATE game_server gs_src
+JOIN   game_server gs_dst ON gs_dst.id = @dst
+SET    gs_src.logic_server_id      = @dst,
+       gs_src.ip                   = gs_dst.ip,
+       gs_src.port                 = gs_dst.port,
+       gs_src.main_server_http_url = gs_dst.main_server_http_url,
+       gs_src.merge_state          = 2,
+       gs_src.merge_time           = UNIX_TIMESTAMP()
+WHERE  gs_src.id = @src;
+
+────────────────────────────────────────────────────────────
+Step 3: account_role 逻辑服路由更新（此步骤之前模板遗漏）
+────────────────────────────────────────────────────────────
+UPDATE account_role
+SET    logic_server_id = @dst
+WHERE  logic_server_id = @src;
+
+────────────────────────────────────────────────────────────
+Step 4: 全业务表 server_id 迁移
+────────────────────────────────────────────────────────────
+UPDATE guild
+SET    server_id        = @dst,
+       origin_server_id = IF(origin_server_id = 0, @src, origin_server_id)
+WHERE  server_id = @src;
+
+UPDATE guild_apply      SET server_id = @dst WHERE server_id = @src;
+UPDATE guild_log        SET server_id = @dst WHERE server_id = @src;
+
+UPDATE player_mail_info
+SET    server_id        = @dst,
+       origin_server_id = IF(origin_server_id = 0, @src, origin_server_id)
+WHERE  server_id = @src;
+
+UPDATE sys_mail_info
+SET    server_id        = @dst,
+       origin_server_id = IF(origin_server_id = 0, @src, origin_server_id)
+WHERE  server_id = @src AND server_id != 0;  -- server_id=0 为全服邮件，不迁移
+
+UPDATE admin_mail
+SET    server_id        = @dst,
+       origin_server_id = IF(origin_server_id = 0, @src, origin_server_id)
+WHERE  server_id = @src;
+
+UPDATE friend_apply     SET server_id = @dst WHERE server_id = @src;
+UPDATE friend_block     SET server_id = @dst WHERE server_id = @src;
+
+UPDATE pay_order        SET server_id = @dst WHERE server_id = @src;
+UPDATE pay_cache_order  SET server_id = @dst WHERE server_id = @src;
+
+────────────────────────────────────────────────────────────
+Step 5: 排行榜 Redis 数据合并（在 Redis 侧执行，以 rank_power 为例）
+────────────────────────────────────────────────────────────
+-- ZUNIONSTORE rank_power_{@dst}    2  rank_power_{@src}    rank_power_{@dst}    AGGREGATE MAX
+-- ZUNIONSTORE rank_recharge_{@dst} 2  rank_recharge_{@src} rank_recharge_{@dst} AGGREGATE MAX
+-- （其余榜单同理，参考 core/define/rank.go 中的 RankTypeToKey）
+-- 合并后删除源服 key：DEL rank_power_{@src} rank_recharge_{@src} ...
+
+────────────────────────────────────────────────────────────
+Step 6: 更新合服计划状态
+────────────────────────────────────────────────────────────
+-- UPDATE merge_plan SET status = 2, end_time = UNIX_TIMESTAMP() WHERE id = <plan_id>;
 
 注意：
-- 合服前先处理同服唯一冲突（如 guild_name）。
-- 推荐停服窗口内执行，执行前做全量备份。
+- Step 2（路由重定向）执行后客户端即可进入新服，务必在维护窗口内完成全部步骤。
+- 若中途失败，将 game_server.merge_state 改为 3（回滚中）并回滚路由。
+- 合服完成后保留旧入口服记录（merge_state=2），用于历史追溯。
 */
 
 SET FOREIGN_KEY_CHECKS = 1;

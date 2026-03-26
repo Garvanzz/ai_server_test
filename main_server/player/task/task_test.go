@@ -87,8 +87,8 @@ func TestBuildTaskSnapshotIncludesGroups(t *testing.T) {
 	setClaimMap(pl, claimTypeDaily, map[int32]bool{1: true})
 
 	snapshot := buildTaskSnapshot(pl)
-	if len(snapshot.Groups) != len(taskGroupMetas) {
-		t.Fatalf("group count = %d, want %d", len(snapshot.Groups), len(taskGroupMetas))
+	if len(snapshot.Groups) != len(bucketPolicies) {
+		t.Fatalf("group count = %d, want %d", len(snapshot.Groups), len(bucketPolicies))
 	}
 
 	daily := findGroup(snapshot.Groups, define.TaskTypeDaily)

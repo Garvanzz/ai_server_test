@@ -8,13 +8,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -69,14 +67,7 @@ func GmGetServerList(c *gin.Context) {
 	}
 
 	items := make([]model.ServerItem, 0)
-	err := retryLegacyGameServerFind(
-		func() error {
-			return db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
-		},
-		func() error {
-			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
-		},
-	)
+	err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&items)
 	if err != nil {
 		log.Error("GmGetServerList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -121,39 +112,6 @@ func parseManagedServerActionReq(c *gin.Context) (int64, error) {
 	return req.ServerID, nil
 }
 
-func loadManagedServerForAction(serverID int64, entryServer bool) (*model.ServerItem, bool, error) {
-	serverItem := new(model.ServerItem)
-	serverItem.Id = serverID
-	query := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverID)
-	if entryServer {
-		query = query.And("group_id > ?", 0)
-	} else {
-		query = query.And("group_id = ?", 0)
-	}
-	has, err := retryLegacyGameServerGet(
-		func() (bool, error) {
-			return query.Get(serverItem)
-		},
-		func() (bool, error) {
-			fallbackQuery := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverID)
-			if entryServer {
-				fallbackQuery = fallbackQuery.And("group_id > ?", 0)
-			} else {
-				fallbackQuery = fallbackQuery.And("group_id = ?", 0)
-			}
-			return applyLegacyGameServerCols(fallbackQuery).Get(serverItem)
-		},
-	)
-	return serverItem, has, err
-}
-
-func managedServerNotFoundMessage(entryServer bool) string {
-	if entryServer {
-		return "鍖烘湇涓嶅瓨鍦?"
-	}
-	return "娓告垙鏈嶄笉瀛樺湪"
-}
-
 func isManagedServerUserError(err error) bool {
 	switch err {
 	case errManagedServerManualStart,
@@ -176,250 +134,73 @@ func writeManagedServerActionErr(c *gin.Context, err error) {
 	HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 }
 
-func handleManagedServerLifecycle(c *gin.Context, entryServer bool, action string) {
+func handleManagedServerLifecycle(c *gin.Context, action string) {
 	serverID, err := parseManagedServerActionReq(c)
 	if err != nil {
 		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
 		return
 	}
 
-	serverItem, has, err := loadManagedServerForAction(serverID, entryServer)
-	if err != nil {
+	// Find process(es) linked to this entry server by server_ref_id.
+	// A single entry server may have multiple process records (e.g. main_server + sidecar).
+	var processes []model.ServerProcess
+	if err = db.AccountDb.Table(define.ServerProcessTable).Where("server_ref_id = ?", serverID).Find(&processes); err != nil {
 		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, managedServerNotFoundMessage(entryServer))
+	if len(processes) == 0 {
+		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "该服未配置进程，请先在进程管理中添加")
 		return
 	}
 
-	switch action {
-	case "start":
-		err = startManagedServer(*serverItem)
-	case "stop":
-		err = stopManagedServer(*serverItem)
-	case "restart":
-		if effectiveManageMode(*serverItem) != manageModeLocalCommand {
-			err = errManagedServerManualStart
-			break
-		}
-		if managedServerProcessRunning(*serverItem) {
-			if stopErr := stopManagedServer(*serverItem); stopErr != nil && stopErr != errManagedServerNotRunning {
-				err = stopErr
+	var lastErr error
+	for _, p := range processes {
+		var pErr error
+		switch action {
+		case "start":
+			pErr = startProcess(p)
+		case "stop":
+			pErr = stopProcess(p)
+		case "restart":
+			if strings.TrimSpace(p.ManageMode) != manageModeLocalCommand {
+				pErr = errManagedServerManualStart
 				break
 			}
-			time.Sleep(500 * time.Millisecond)
+			if strings.TrimSpace(p.ProcessBinName) != "" && execCommandExists(p.ProcessBinName) {
+				if stopErr := stopProcess(p); stopErr != nil && stopErr != errManagedServerNotRunning {
+					pErr = stopErr
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+			pErr = startProcess(p)
+		default:
+			pErr = simpleError("unsupported action")
 		}
-		err = startManagedServer(*serverItem)
-	default:
-		err = simpleError("unsupported action")
+		if pErr != nil && lastErr == nil {
+			lastErr = pErr
+		}
 	}
 
-	if err != nil {
-		writeManagedServerActionErr(c, err)
+	if lastErr != nil {
+		writeManagedServerActionErr(c, lastErr)
 		return
 	}
 	HTTPRetGame(c, SUCCESS, "success")
 }
 
 func GmStartServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, true, "start")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmStartServer unmarshal err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		log.Error("GmStartServer missing serverId")
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
-		return
-	}
-
-	log.Debug("请求启动大厅服 serverId:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("GmStartServer get err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "区服不存在")
-		return
-	}
-	if serverItem.ExeName == "" || serverItem.ExePath == "" {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "区服未配置 ExeName/ExePath")
-		return
-	}
-
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	_, err = cmd.Output()
-	if err == nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "该大厅服进程已在运行")
-		return
-	}
-	cmd = exec.Command(serverItem.ExePath)
-	cmd.Dir = "/usr/local/games/xiyou/server"
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err = cmd.Start()
-	if err != nil {
-		log.Error("Start failed: %v, Stderr: %s", err, stderr.String())
-		HTTPRetGame(c, ERR_DB, fmt.Sprintf("start failed: %v", err))
-		return
-	}
-	time.Sleep(1 * time.Second)
-	if cmd.Process == nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "process failed to start")
-		return
-	}
-	HTTPRetGame(c, SUCCESS, "success")
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Error("Process crashed: %v, Stderr: %s", err, stderr.String())
-		}
-	}()
+	handleManagedServerLifecycle(c, "start")
 }
 
-// GmStopServer 停止大厅服（区服进程，数据来自 game_server，group_id>0）
+// GmStopServer 停止大厅服（通过关联进程记录操作）
 func GmStopServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, true, "stop")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmStopServer unmarshal err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
-		return
-	}
-
-	log.Debug("请求停止大厅服 serverId:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("getserverlist2 find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "区服不存在")
-		return
-	}
-
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	output, err := cmd.Output()
-	if err != nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "该大厅服进程未在运行")
-		return
-	}
-	pidStr := strings.TrimSpace(string(output))
-	pid, err := strconv.Atoi(pidStr)
-	if err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	if err = process.Signal(syscall.SIGTERM); err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	HTTPRetGame(c, SUCCESS, "success")
+	handleManagedServerLifecycle(c, "stop")
 }
 
-// GmReStartServer 重启大厅服（区服进程，数据来自 game_server，group_id>0）
+// GmReStartServer 重启大厅服（通过关联进程记录操作）
 func GmReStartServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, true, "restart")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmReStartServer unmarshal err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
-		return
-	}
-
-	log.Debug("请求重启大厅服 serverId:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id > ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("getserverlist2 find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "区服不存在")
-		return
-	}
-
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	output, err := cmd.Output()
-	if err == nil {
-		pidStr := strings.TrimSpace(string(output))
-		pid, pErr := strconv.Atoi(pidStr)
-		if pErr != nil {
-			HTTPRetGame(c, ERR_DB, pErr.Error())
-			return
-		}
-		process, pErr := os.FindProcess(pid)
-		if pErr != nil {
-			HTTPRetGame(c, ERR_DB, pErr.Error())
-			return
-		}
-		if pErr = process.Signal(syscall.SIGTERM); pErr != nil {
-			HTTPRetGame(c, ERR_DB, pErr.Error())
-			return
-		}
-	}
-
-	cmd = exec.Command(serverItem.ExePath)
-	cmd.Dir = "/usr/local/games/xiyou/server"
-	if err = cmd.Start(); err != nil {
-		log.Error("GmReStartServer start err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	HTTPRetGame(c, SUCCESS, "success")
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Error("GmReStartServer wait err: %v", err)
-		}
-	}()
+	handleManagedServerLifecycle(c, "restart")
 }
 
 // GmGetGameServerList 获取区服列表（含区服组、关联游戏服、进程状态）；区服来自 game_server（group_id>0）
@@ -434,14 +215,7 @@ func GmGetGameServerList(c *gin.Context) {
 	}
 
 	var serverItem []model.ServerItem
-	err := retryLegacyGameServerFind(
-		func() error {
-			return db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
-		},
-		func() error {
-			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
-		},
-	)
+	err := db.AccountDb.Table(define.GameServerTable).Where("group_id > ?", 0).Asc("group_id", "id").Find(&serverItem)
 	if err != nil {
 		log.Error("GmGetGameServerList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
@@ -868,244 +642,33 @@ func GmGetServerTime(c *gin.Context) {
 	HTTPRetGameData(c, SUCCESS, message, payload, buildServerTimeLegacy(payload))
 }
 
-// GmStartGameServer 启动游戏服进程（仅 game_server 表中 group_id=0 的记录）
+// GmStartGameServer 启动游戏服进程（通过 server_process ID 操作）
 func GmStartGameServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, false, "start")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmStartGameServer unmarshal err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "serverId required")
-		return
-	}
-	log.Debug("请求启动游戏服 serverId:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("getserverlist2 find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "游戏服不存在")
-		return
-	}
-	if serverItem.ExeName == "" || serverItem.ExePath == "" {
-		HTTPRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "游戏服未配置 ExeName/ExePath")
-		return
-	}
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	if _, err = cmd.Output(); err == nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "该游戏服进程已在运行")
-		return
-	}
-	cmd = exec.Command(serverItem.ExePath)
-	cmd.Dir = "/usr/local/games/xiyou/server"
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err = cmd.Start(); err != nil {
-		log.Error("GmStartGameServer start failed: %v, Stderr: %s", err, stderr.String())
-		HTTPRetGame(c, ERR_DB, fmt.Sprintf("start failed: %v", err))
-		return
-	}
-	time.Sleep(1 * time.Second)
-	if cmd.Process == nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "process failed to start")
-		return
-	}
-	HTTPRetGame(c, SUCCESS, "success")
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Error("GmStartGameServer process crashed: %v, Stderr: %s", err, stderr.String())
-		}
-	}()
+	handleProcessLifecycle(c, "start")
 }
 
-// GmStopGameServer 停止游戏服进程（仅 group_id=0）
+// GmStopGameServer 停止游戏服进程
 func GmStopGameServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, false, "stop")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmStartGameServer find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		log.Error("GmStartGameServer find serverName err")
-		HTTPRetGame(c, ERR_DB, "GmStartGameServer find serverName err")
-		return
-	}
-
-	log.Debug("请求服务中心数据:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("GmStopGameServer get err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "游戏服不存在")
-		return
-	}
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	output, err := cmd.Output()
-	if err != nil {
-		HTTPRetGame(c, ERR_SERVER_INTERNAL, "该游戏服进程未在运行")
-		return
-	}
-	pidStr := strings.TrimSpace(string(output))
-	pid, err := strconv.Atoi(pidStr)
-	if err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	if err = process.Signal(syscall.SIGTERM); err != nil {
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	HTTPRetGame(c, SUCCESS, "success")
+	handleProcessLifecycle(c, "stop")
 }
 
-// GmReStartGameServer 重启游戏服进程（仅 group_id=0）
+// GmReStartGameServer 重启游戏服进程
 func GmReStartGameServer(c *gin.Context) {
-	if c != nil {
-		handleManagedServerLifecycle(c, false, "restart")
-		return
-	}
-	rawData, _ := c.GetRawData()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawData, &result); err != nil {
-		log.Error("GmStartServer find err :%v", err.Error())
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-
-	serverId, ok := result["serverId"].(float64)
-	if !ok {
-		log.Error("GmStartServer find serverName err")
-		HTTPRetGame(c, ERR_DB, "GmStartServer find serverName err")
-		return
-	}
-
-	log.Debug("请求服务中心数据:%v", serverId)
-
-	serverItem := new(model.ServerItem)
-	serverItem.Id = int64(serverId)
-	has, err := db.AccountDb.Table(define.GameServerTable).Where("id = ? AND group_id = ?", serverItem.Id, 0).Get(serverItem)
-	if err != nil {
-		log.Error("GmReStartGameServer get err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	if !has {
-		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "游戏服不存在")
-		return
-	}
-	cmd := exec.Command("pgrep", "-x", serverItem.ExeName)
-	output, err := cmd.Output()
-	if err == nil {
-		pidStr := strings.TrimSpace(string(output))
-		pid, pErr := strconv.Atoi(pidStr)
-		if pErr != nil {
-			HTTPRetGame(c, ERR_DB, pErr.Error())
-			return
-		}
-		process, pErr := os.FindProcess(pid)
-		if pErr != nil {
-			HTTPRetGame(c, ERR_DB, pErr.Error())
-			return
-		}
-		_ = process.Signal(syscall.SIGTERM)
-	}
-	cmd = exec.Command(serverItem.ExePath)
-	cmd.Dir = "/usr/local/games/xiyou/server"
-	if err = cmd.Start(); err != nil {
-		log.Error("GmReStartGameServer start err :%v", err)
-		HTTPRetGame(c, ERR_DB, err.Error())
-		return
-	}
-	HTTPRetGame(c, SUCCESS, "success")
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Error("GmReStartGameServer wait err: %v", err)
-		}
-	}()
+	handleProcessLifecycle(c, "restart")
 }
 
-// GmGetGameServerProcessList 获取所有游戏服进程列表（game_server 表中 group_id=0 的记录）
+// GmGetGameServerProcessList 获取游戏服进程列表（来自 server_process 表，server_type=3）
 func GmGetGameServerProcessList(c *gin.Context) {
 	log.Debug("请求游戏服进程列表")
-
-	var serverItem []model.ServerItem
-	err := retryLegacyGameServerFind(
-		func() error {
-			return db.AccountDb.Table(define.GameServerTable).Where("group_id = ?", 0).Find(&serverItem)
-		},
-		func() error {
-			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("group_id = ?", 0).Find(&serverItem)
-		},
-	)
-	if err != nil {
+	list := make([]model.ServerProcess, 0)
+	if err := db.AccountDb.Table(define.ServerProcessTable).Where("server_type = ?", dto.ServerProcessTypeGame).Asc("sort_order", "id").Find(&list); err != nil {
 		log.Error("GmGetGameServerProcessList find err :%v", err)
 		HTTPRetGame(c, ERR_DB, err.Error())
 		return
 	}
-	items := make([]*dto.GMGameRespServerItem, 0, len(serverItem))
-	metaMap := buildServerGroupMap()
-	for i := range serverItem {
-		managed := buildManagedServerItem(serverItem[i], metaMap)
-		items = append(items, &dto.GMGameRespServerItem{
-			Id:                managed.Id,
-			LogicServerId:     managed.LogicServerId,
-			MergeState:        managed.MergeState,
-			MergeStateText:    managed.MergeStateText,
-			MergeTime:         managed.MergeTime,
-			ServerName:        managed.ServerName,
-			GroupId:           managed.GroupId,
-			GroupName:         managed.GroupName,
-			Channel:           managed.Channel,
-			Ip:                managed.Ip,
-			Port:              managed.Port,
-			MainServerHttpUrl: managed.MainServerHttpUrl,
-			ServerState:       managed.ServerState,
-			ServerStateCode:   managed.ServerStateCode,
-			OpenServerTime:    managed.OpenServerTime,
-			StopServerTime:    managed.StopServerTime,
-			RunState:          managed.RunState,
-			ManageMode:        managed.ManageMode,
-			ProcessName:       managed.ProcessName,
-			StartCommand:      managed.StartCommand,
-			WorkDir:           managed.WorkDir,
-			ExeName:           managed.ExeName,
-			ExePath:           managed.ExePath,
-			ServerKind:        managed.ServerKind,
-			ServerKindText:    managed.ServerKindText,
-		})
+	resp := make([]dto.GMRespProcessItem, 0, len(list))
+	for _, p := range list {
+		resp = append(resp, buildProcessRespItem(p))
 	}
-	HTTPRetGameData(c, SUCCESS, "success", items, map[string]any{"totalCount": len(items)})
+	HTTPRetGameData(c, SUCCESS, "success", resp, map[string]any{"totalCount": len(resp)})
 }

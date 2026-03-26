@@ -65,6 +65,9 @@ func (m *HttpModule) register() {
 		gm.POST("/activity/remove", m.GMActivityRemove)
 		gm.POST("/activity/close_by_cfg_id", m.GMActivityCloseByCfgId)
 		gm.POST("/activity/stop_by_type", m.GMActivityStopByType)
+		gm.POST("/activity/adjust_time", m.GMActivityAdjustTime)
+		gm.POST("/activity/force_start", m.GMActivityForceStart)
+		gm.POST("/activity/player_count", m.GMActivityPlayerCount)
 	}
 }
 

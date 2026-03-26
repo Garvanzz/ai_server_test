@@ -76,12 +76,14 @@ func Register(r *gin.Engine) {
 		players.POST("/grant-item", logic.GmAddItem)
 		players.POST("/grant-item-all", logic.GmOneKeyAddItem)
 		players.POST("/item-delete", logic.GmDeleteItem)
+		players.POST("/kick", logic.GmKickPlayer)
 	}
 
 	// ========== 需转发 main_server 的接口 ==========
 	gm.POST("/mail/send", logic.GmCreateAdminMail)
 	gm.POST("/notice/horse", logic.GmSendHorse)
 	gm.POST("/notice/send", logic.GmSendNotice)
+	gm.POST("/notices/list", logic.GmGetNoticeList)
 
 	// ========== 订单、帮会 ==========
 	gm.POST("/orders/list", logic.GmGetOrderList)
@@ -101,6 +103,19 @@ func Register(r *gin.Engine) {
 		merge.POST("/conflicts", logic.GmListMergeConflicts)
 	}
 
+	// ========== 进程管理（login/main/game 统一管理，替代 game_server 进程管理混用）==========
+	processes := gm.Group("/processes")
+	{
+		processes.POST("/list", logic.GmListProcesses)
+		processes.POST("/create", logic.GmCreateProcess)
+		processes.POST("/update", logic.GmUpdateProcess)
+		processes.POST("/delete", logic.GmDeleteProcess)
+		processes.POST("/start", logic.GmStartProcess)
+		processes.POST("/stop", logic.GmStopProcess)
+		processes.POST("/restart", logic.GmRestartProcess)
+		processes.POST("/build", logic.GmBuildProcess)
+	}
+
 	// ========== 热更 ==========
 	hotfix := gm.Group("/hotfix")
 	{
@@ -117,4 +132,22 @@ func Register(r *gin.Engine) {
 	gm.POST("/config/game-update", logic.GmGameUpdateConfig)
 	gm.POST("/build", logic.GmBuildServer)
 	gm.POST("/build/game", logic.GmGameBuildServer)
+
+	// ========== 活动管理 ==========
+	activity := gm.Group("/activity")
+	{
+		activity.POST("/list", logic.GmActivityList)
+		activity.POST("/get-by-act-id", logic.GmActivityGetByActId)
+		activity.POST("/get-by-cfg-id", logic.GmActivityGetByCfgId)
+		activity.POST("/stop", logic.GmActivityStop)
+		activity.POST("/recover", logic.GmActivityRecover)
+		activity.POST("/close", logic.GmActivityClose)
+		activity.POST("/restart", logic.GmActivityRestart)
+		activity.POST("/remove", logic.GmActivityRemove)
+		activity.POST("/close-by-cfg-id", logic.GmActivityCloseByCfgId)
+		activity.POST("/stop-by-type", logic.GmActivityStopByType)
+		activity.POST("/adjust-time", logic.GmActivityAdjustTime)
+		activity.POST("/force-start", logic.GmActivityForceStart)
+		activity.POST("/player-count", logic.GmActivityPlayerCount)
+	}
 }

@@ -174,3 +174,58 @@ func (m *HttpModule) GMActivityStopByType(c *gin.Context) {
 	}
 	m.httpRetGame(c, SUCCESS, "success")
 }
+
+// GMActivityAdjustTime 调整活动时间（startTime/endTime/closeTime，Unix 秒，传 0 表示不修改）
+func (m *HttpModule) GMActivityAdjustTime(c *gin.Context) {
+	var req struct {
+		ActId     int64 `json:"act_id"`
+		StartTime int64 `json:"start_time"`
+		EndTime   int64 `json:"end_time"`
+		CloseTime int64 `json:"close_time"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ActId == 0 {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err, need act_id")
+		return
+	}
+	client := invoke.ActivityClient(m)
+	if err := client.AdjustActivityTime(req.ActId, req.StartTime, req.EndTime, req.CloseTime); err != nil {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		return
+	}
+	m.httpRetGame(c, SUCCESS, "success")
+}
+
+// GMActivityForceStart 强制开启等待中的活动（Waiting -> Running）
+func (m *HttpModule) GMActivityForceStart(c *gin.Context) {
+	var req struct {
+		ActId int64 `json:"act_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ActId == 0 {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err, need act_id")
+		return
+	}
+	client := invoke.ActivityClient(m)
+	if err := client.ForceStartActivity(req.ActId); err != nil {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		return
+	}
+	m.httpRetGame(c, SUCCESS, "success")
+}
+
+// GMActivityPlayerCount 查询活动参与玩家数
+func (m *HttpModule) GMActivityPlayerCount(c *gin.Context) {
+	var req struct {
+		ActId int64 `json:"act_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ActId == 0 {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, "params err, need act_id")
+		return
+	}
+	client := invoke.ActivityClient(m)
+	count, err := client.GetActivityPlayerCount(req.ActId)
+	if err != nil {
+		m.httpRetGame(c, ERR_ACCOUNT_PARAMS_ERROR, err.Error())
+		return
+	}
+	m.httpRetGameData(c, SUCCESS, "success", map[string]any{"count": count})
+}

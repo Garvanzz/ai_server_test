@@ -301,3 +301,54 @@ func (c ActivityModClient) StopActivityByType(typ string) (error) {
 	return v
 }
 
+func (c ActivityModClient) AdjustActivityTime(actId, startTime, endTime, closeTime int64) error {
+	result, err := c.invoke.Invoke(c.Type, "AdjustActivityTime", actId, startTime, endTime, closeTime)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "AdjustActivityTime", err)
+		return err
+	}
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "AdjustActivityTime", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) ForceStartActivity(actId int64) error {
+	result, err := c.invoke.Invoke(c.Type, "ForceStartActivity", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "ForceStartActivity", err)
+		return err
+	}
+	if result == nil {
+		return nil
+	}
+	v, err2 := As[error](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "ForceStartActivity", err2)
+		return err2
+	}
+	return v
+}
+
+func (c ActivityModClient) GetActivityPlayerCount(actId int64) (int64, error) {
+	result, err := c.invoke.Invoke(c.Type, "GetActivityPlayerCount", actId)
+	if err != nil {
+		log.Error("invoke failed: type=%s method=%s err=%v", c.Type, "GetActivityPlayerCount", err)
+		return 0, err
+	}
+	if result == nil {
+		return 0, nil
+	}
+	v, err2 := As[int64](result)
+	if err2 != nil {
+		log.Error("invoke result type assert failed: type=%s method=%s err=%v", c.Type, "GetActivityPlayerCount", err2)
+		return 0, err2
+	}
+	return v, nil
+}
+

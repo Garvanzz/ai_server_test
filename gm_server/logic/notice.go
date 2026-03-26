@@ -83,3 +83,42 @@ func GmSendHorse(c *gin.Context) {
 	}
 	HTTPRetGame(c, SUCCESS, "success")
 }
+
+// GmGetNoticeList 查询公告列表（从 DB 读取，支持按区服过滤）
+func GmGetNoticeList(c *gin.Context) {
+	var req struct {
+		ServerId int `json:"serverId"`
+		Page     int `json:"page"`
+		PageSize int `json:"pageSize"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	if req.PageSize <= 0 {
+		req.PageSize = 50
+	}
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	offset := (req.Page - 1) * req.PageSize
+
+	sess := db.AccountDb.Table(define.NoticeTable)
+	if req.ServerId > 0 {
+		sess = sess.Where("server_id = ?", req.ServerId)
+	}
+	total, err := sess.Count(new(model.NoticeItem))
+	if err != nil {
+		log.Error("GmGetNoticeList count err: %v", err)
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
+	}
+	list := make([]model.NoticeItem, 0)
+	sess2 := db.AccountDb.Table(define.NoticeTable)
+	if req.ServerId > 0 {
+		sess2 = sess2.Where("server_id = ?", req.ServerId)
+	}
+	if err := sess2.OrderBy("id DESC").Limit(req.PageSize, offset).Find(&list); err != nil {
+		log.Error("GmGetNoticeList find err: %v", err)
+		HTTPRetGame(c, ERR_DB, err.Error())
+		return
+	}
+	HTTPRetGameData(c, SUCCESS, "success", list, map[string]any{"totalCount": total})
+}

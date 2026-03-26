@@ -1,7 +1,6 @@
 package logic
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"net/url"
@@ -38,20 +37,6 @@ func serverGroupTypeToText(groupType int) string {
 	}
 }
 
-func serverKind(groupId int) string {
-	if groupId > 0 {
-		return "entry"
-	}
-	return "process"
-}
-
-func serverKindText(groupId int) string {
-	if groupId > 0 {
-		return "大厅服"
-	}
-	return "游戏服"
-}
-
 func formatServerTime(ts int64) string {
 	if ts <= 0 {
 		return ""
@@ -69,76 +54,6 @@ func parseServerTime(value string) (int64, error) {
 		return 0, err
 	}
 	return parsed.Unix(), nil
-}
-
-func normalizeManageMode(mode string) string {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case manageModeLocalCommand:
-		return manageModeLocalCommand
-	case manageModeManual:
-		return manageModeManual
-	default:
-		return ""
-	}
-}
-
-func normalizeManagedServerItem(item model.ServerItem) model.ServerItem {
-	item.ManageMode = strings.TrimSpace(item.ManageMode)
-	item.ProcessName = strings.TrimSpace(item.ProcessName)
-	item.StartCommand = strings.TrimSpace(item.StartCommand)
-	item.WorkDir = strings.TrimSpace(item.WorkDir)
-	item.ExeName = strings.TrimSpace(item.ExeName)
-	item.ExePath = strings.TrimSpace(item.ExePath)
-
-	if item.ProcessName == "" {
-		item.ProcessName = item.ExeName
-	}
-	if item.StartCommand == "" {
-		item.StartCommand = item.ExePath
-	}
-	if item.ExeName == "" {
-		item.ExeName = item.ProcessName
-	}
-	if item.ExePath == "" {
-		item.ExePath = item.StartCommand
-	}
-
-	normalizedMode := normalizeManageMode(item.ManageMode)
-	if normalizedMode == "" {
-		if item.ProcessName != "" || item.StartCommand != "" {
-			item.ManageMode = manageModeLocalCommand
-		} else {
-			item.ManageMode = manageModeManual
-		}
-	} else {
-		item.ManageMode = normalizedMode
-	}
-
-	return item
-}
-
-func managedServerProcessRunning(item model.ServerItem) bool {
-	processName := effectiveProcessName(item)
-	if processName == "" {
-		return false
-	}
-	return execCommandExists(processName)
-}
-
-func effectiveManageMode(item model.ServerItem) string {
-	return normalizeManagedServerItem(item).ManageMode
-}
-
-func effectiveProcessName(item model.ServerItem) string {
-	return normalizeManagedServerItem(item).ProcessName
-}
-
-func effectiveStartCommand(item model.ServerItem) string {
-	return normalizeManagedServerItem(item).StartCommand
-}
-
-func effectiveWorkDir(item model.ServerItem) string {
-	return normalizeManagedServerItem(item).WorkDir
 }
 
 func buildManagedServerStartShell(command string) (string, []string) {
@@ -164,82 +79,6 @@ func processCandidates(processName string) []string {
 	return candidates
 }
 
-func startManagedServer(item model.ServerItem) error {
-	item = normalizeManagedServerItem(item)
-	if item.ManageMode != manageModeLocalCommand {
-		return errManagedServerManualStart
-	}
-	if item.StartCommand == "" {
-		return errManagedServerStartCommandRequired
-	}
-	if managedServerProcessRunning(item) {
-		return errManagedServerAlreadyRunning
-	}
-
-	name, args := buildManagedServerStartShell(item.StartCommand)
-	cmd := execCommand(name, args...)
-	if item.WorkDir != "" {
-		cmd.Dir = item.WorkDir
-	}
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		if stderr.Len() > 0 {
-			return fmt.Errorf("%w: %s", err, strings.TrimSpace(stderr.String()))
-		}
-		return err
-	}
-
-	go func(serverName string) {
-		if waitErr := cmd.Wait(); waitErr != nil {
-			log.Error("managed server process exited: %s, err: %v, stderr: %s", serverName, waitErr, strings.TrimSpace(stderr.String()))
-		}
-	}(item.ServerName)
-
-	return nil
-}
-
-func stopManagedServer(item model.ServerItem) error {
-	item = normalizeManagedServerItem(item)
-	if item.ManageMode != manageModeLocalCommand {
-		return errManagedServerManualStop
-	}
-	if item.ProcessName == "" {
-		return errManagedServerProcessNameRequired
-	}
-	if !managedServerProcessRunning(item) {
-		return errManagedServerNotRunning
-	}
-
-	var lastErr error
-	for _, candidate := range processCandidates(item.ProcessName) {
-		var err error
-		if runtime.GOOS == "windows" {
-			err = execCommandRun("taskkill", "/IM", candidate, "/F")
-		} else {
-			err = execCommandRun("pkill", "-x", candidate)
-		}
-		if err == nil {
-			time.Sleep(500 * time.Millisecond)
-			if !managedServerProcessRunning(item) {
-				return nil
-			}
-		} else {
-			lastErr = err
-		}
-	}
-
-	time.Sleep(500 * time.Millisecond)
-	if !managedServerProcessRunning(item) {
-		return nil
-	}
-	if lastErr != nil {
-		return lastErr
-	}
-	return errManagedServerStopFailed
-}
-
 func buildServerGroupMap() map[int64]model.ServerGroup {
 	groups := make([]model.ServerGroup, 0)
 	_ = db.AccountDb.Table(define.ServerGroupTable).Asc("sort_order", "id").Find(&groups)
@@ -251,7 +90,6 @@ func buildServerGroupMap() map[int64]model.ServerGroup {
 }
 
 func buildManagedServerItem(item model.ServerItem, groupMap map[int64]model.ServerGroup) dto.GMRespServerItem {
-	item = normalizeManagedServerItem(item)
 	groupName := ""
 	if group, ok := groupMap[int64(item.GroupId)]; ok {
 		groupName = group.Name
@@ -278,23 +116,11 @@ func buildManagedServerItem(item model.ServerItem, groupMap map[int64]model.Serv
 		OpenServerTime:    formatServerTime(item.OpenServerTime),
 		StopServerTime:    formatServerTime(item.StopServerTime),
 		RunState:          runState,
-		ManageMode:        item.ManageMode,
-		ProcessName:       item.ProcessName,
-		StartCommand:      item.StartCommand,
-		WorkDir:           item.WorkDir,
-		ExeName:           item.ExeName,
-		ExePath:           item.ExePath,
-		ServerKind:        serverKind(item.GroupId),
-		ServerKindText:    serverKindText(item.GroupId),
 	}
 }
 
 func managedServerReachable(item model.ServerItem) bool {
-	item = normalizeManagedServerItem(item)
-	if mainServerHTTPReachable(item.MainServerHttpUrl) {
-		return true
-	}
-	return managedServerProcessRunning(item)
+	return mainServerHTTPReachable(item.MainServerHttpUrl)
 }
 
 func mainServerHTTPReachable(rawURL string) bool {
@@ -441,13 +267,6 @@ func hydrateServerItem(req dto.GmServerManageUpsertReq, current *model.ServerIte
 	item.OpenServerTime = openTime
 	item.StopServerTime = stopTime
 	item.ServerName = name
-	item.ManageMode = strings.TrimSpace(req.ManageMode)
-	item.ProcessName = strings.TrimSpace(req.ProcessName)
-	item.StartCommand = strings.TrimSpace(req.StartCommand)
-	item.WorkDir = strings.TrimSpace(req.WorkDir)
-	item.ExeName = strings.TrimSpace(req.ExeName)
-	item.ExePath = strings.TrimSpace(req.ExePath)
-	*item = normalizeManagedServerItem(*item)
 	if item.LogicServerId == 0 && item.Id > 0 {
 		item.LogicServerId = item.Id
 	}
@@ -712,7 +531,7 @@ func GmUpdateManagedServer(c *gin.Context) {
 		return
 	}
 	if _, err = db.AccountDb.Table(define.GameServerTable).Where("id = ?", req.Id).
-		Cols("channel", "group_id", "logic_server_id", "ip", "port", "main_server_http_url", "server_state", "open_server_time", "stop_server_time", "server_name", "manage_mode", "process_name", "start_command", "work_dir", "exe_name", "exe_path").
+		Cols("channel", "group_id", "logic_server_id", "ip", "port", "main_server_http_url", "server_state", "open_server_time", "stop_server_time", "server_name").
 		Update(item); err != nil {
 		HTTPRetGame(c, ERR_DB, err.Error())
 		return

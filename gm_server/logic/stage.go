@@ -11,7 +11,51 @@ import (
 	"xfx/pkg/log"
 )
 
-// GmGetStageInfo 获取关卡列表信息（经 main_server 读 Redis）
+// stageRow 关卡平铺行，供前端表格展示
+type stageRow struct {
+	Cycle   int32 `json:"Cycle"`
+	Chapter int32 `json:"Chapter"`
+	Stage   int32 `json:"Stage"`
+	Exp     int32 `json:"Exp"`
+	State   int32 `json:"State"` // 0=未知 1=未通关 2=正在通关 3=通关
+}
+
+// flattenStage 将嵌套 model.Stage 展开为平铺列表
+func flattenStage(stage *model.Stage) []*stageRow {
+	rows := make([]*stageRow, 0)
+	if stage == nil || stage.Stage == nil {
+		return rows
+	}
+	for cycle, chapterMap := range stage.Stage {
+		if chapterMap == nil {
+			continue
+		}
+		for chapter, chapterOpt := range chapterMap {
+			if chapterOpt == nil || chapterOpt.Stages == nil {
+				continue
+			}
+			for stageId, opt := range chapterOpt.Stages {
+				if opt == nil {
+					continue
+				}
+				state := opt.PassState
+				if state == 0 && opt.Pass {
+					state = 3 // 已通关兜底
+				}
+				rows = append(rows, &stageRow{
+					Cycle:   cycle,
+					Chapter: chapter,
+					Stage:   stageId,
+					Exp:     opt.Exp,
+					State:   state,
+				})
+			}
+		}
+	}
+	return rows
+}
+
+// GmGetStageInfo 获取关卡列表信息（经 main_server 读 Redis），返回平铺列表供前端表格展示
 func GmGetStageInfo(c *gin.Context) {
 	rawData, _ := c.GetRawData()
 
@@ -42,7 +86,13 @@ func GmGetStageInfo(c *gin.Context) {
 		HTTPRetGame(c, ERR_SERVER_INTERNAL, err.Error())
 		return
 	}
-	forwardMainServerResponse(c, respBody)
+	var stage model.Stage
+	if err := decodeForwardedData(respBody, &stage); err != nil {
+		HTTPRetGame(c, ERR_SERVER_INTERNAL, "parse stage data err")
+		return
+	}
+	rows := flattenStage(&stage)
+	HTTPRetGameData(c, SUCCESS, "success", rows, map[string]any{"totalCount": len(rows)})
 }
 
 // GmSetStageInfo 设置关卡信息（经 main_server 读-写 Redis）

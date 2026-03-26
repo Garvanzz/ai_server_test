@@ -25,6 +25,7 @@ type entity struct {
 	mod           module.Module
 	checked       bool
 	lastUpdateDay int32 // 上次更新的日期，用于跨天检测 (格式：YYYYMMDD)
+	manualClosed  bool  // GM 主动关闭标记，防止 Tick 自动重启
 }
 
 func (e *entity) GetId() int64          { return e.Id }
@@ -61,8 +62,11 @@ func (e *entity) checkState() (event string) {
 			event = EventClose
 		}
 	case StateClosed:
-		if (now >= e.StartTime && now < e.EndTime) || e.TimeType == define.ActTimeAlwaysOpen {
-			event = EventRestart
+		// manualClosed 为 true 表示 GM 主动关闭，不自动重启
+		if !e.manualClosed {
+			if (now >= e.StartTime && now < e.EndTime) || e.TimeType == define.ActTimeAlwaysOpen {
+				event = EventRestart
+			}
 		}
 	}
 
@@ -114,6 +118,12 @@ func (e *entity) determineStateFromConfig(Sid int) (event string) {
 		if startTime.Unix() >= endTime.Unix() {
 			log.Error("checkCfg startTime>=endTime err")
 			return
+		}
+
+		// 配置更新带来新的时间窗口时，清除 manualClosed 标记，允许自动重启
+		if e.manualClosed && (startTime.Unix() != e.StartTime || endTime.Unix() != e.EndTime) {
+			e.manualClosed = false
+			log.Info("activity manualClosed cleared due to new schedule: cfgId=%v", e.CfgId)
 		}
 
 		e.StartTime = startTime.Unix()

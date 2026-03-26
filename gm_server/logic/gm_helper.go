@@ -17,14 +17,7 @@ func resolveLogicServerID(serverId int) int {
 		return 0
 	}
 	var item model.ServerItem
-	ok, err := retryLegacyGameServerGet(
-		func() (bool, error) {
-			return db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
-		},
-		func() (bool, error) {
-			return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", serverId).Get(&item)
-		},
-	)
+	ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
 	if err != nil || !ok {
 		return serverId
 	}
@@ -41,26 +34,12 @@ func getMainServerURL(serverId int) string {
 		baseURL = defaultMainServerBaseURL()
 	} else {
 		var item model.ServerItem
-		ok, err := retryLegacyGameServerGet(
-			func() (bool, error) {
-				return db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
-			},
-			func() (bool, error) {
-				return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", serverId).Get(&item)
-			},
-		)
+		ok, err := db.AccountDb.Table(define.GameServerTable).Where("id = ?", serverId).Get(&item)
 		if err != nil || !ok {
 			baseURL = defaultMainServerBaseURL()
 		} else if item.LogicServerId > 0 {
 			var logicItem model.ServerItem
-			logicOk, logicErr := retryLegacyGameServerGet(
-				func() (bool, error) {
-					return db.AccountDb.Table(define.GameServerTable).Where("id = ?", item.LogicServerId).Get(&logicItem)
-				},
-				func() (bool, error) {
-					return applyLegacyGameServerCols(db.AccountDb.Table(define.GameServerTable)).Where("id = ?", item.LogicServerId).Get(&logicItem)
-				},
-			)
+			logicOk, logicErr := db.AccountDb.Table(define.GameServerTable).Where("id = ?", item.LogicServerId).Get(&logicItem)
 			if logicErr == nil && logicOk && strings.TrimSpace(logicItem.MainServerHttpUrl) != "" {
 				baseURL = strings.TrimRight(strings.TrimSpace(logicItem.MainServerHttpUrl), "/")
 			} else if strings.TrimSpace(item.MainServerHttpUrl) == "" {
