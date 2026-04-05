@@ -219,7 +219,7 @@ func GetRoomId() (id int64, err error) {
 	return redis.Int64(RedisExec("INCRBY", "roomId", 1))
 }
 
-// Close 关闭该引擎的 Redis 与 MySQL（单服时一般由 db.Close() 统一关闭全局 Engine）
+// Close 关闭引擎
 func (c *CDBEngine) Close() {
 	if c == nil {
 		return

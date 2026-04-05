@@ -101,12 +101,22 @@ func (p *ParadisePeach) ToPlantPeachOption() *proto_huaguoshan.PlantPeachOption 
 	if p == nil {
 		return &proto_huaguoshan.PlantPeachOption{}
 	}
+
+	awards := make([]*proto_public.Item, 0)
+	for _, v := range p.Awards {
+		awards = append(awards, &proto_public.Item{
+			ItemId:   v.ItemId,
+			ItemNum:  v.ItemNum,
+			ItemType: v.ItemType,
+		})
+	}
 	return &proto_huaguoshan.PlantPeachOption{
 		CurTreeId:              p.CurTreeId,
 		CurPlantPeachStage:     p.CurPlantPeachStage,
 		CurPlantPeachStartTime: p.CurPlantPeachStartTime,
 		CurPlantPeachEndTime:   p.CurPlantPeachEndTime,
 		OwerTreeId:             p.OwerTreeId,
+		Items:                  awards,
 	}
 }
 

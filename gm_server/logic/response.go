@@ -38,6 +38,7 @@ const (
 	ERR_ACCOUNT_HAS_NO_NFT_HERO          = 1815 // 帐号没有nft英雄
 	ERR_ACCOUNT_FORCED_OFFLINE           = 1816 // 帐号强制下线中
 	ERR_GIT_ERROR                        = 1817 // git错误
+	ERR_PERMISSION_DENIED                = 1820 // 权限不足
 )
 
 // HTTPRetGame 游戏接口统一返回格式，HTTP 状态码固定 200，业务码在 body 的 errcode。

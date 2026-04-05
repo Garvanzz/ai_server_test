@@ -39,3 +39,30 @@ func GmAuth(c *gin.Context) {
 	c.Set(logic.ContextKeyGmUser, player)
 	c.Next()
 }
+
+// RequirePermission 返回一个 Gin 中间件，校验当前用户的权限等级是否在 allowed 列表中。
+// 必须在 GmAuth 之后使用（依赖 ContextKeyGmUser）。
+func RequirePermission(allowed ...int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		val, exists := c.Get(logic.ContextKeyGmUser)
+		if !exists {
+			logic.HTTPRetGame(c, logic.ERR_ACCOUNT_NOT_FOUND, "user not found in context")
+			c.Abort()
+			return
+		}
+		user, ok := val.(*dto.GmAccount)
+		if !ok {
+			logic.HTTPRetGame(c, logic.ERR_SERVER_INTERNAL, "invalid user in context")
+			c.Abort()
+			return
+		}
+		for _, perm := range allowed {
+			if user.Permission == perm {
+				c.Next()
+				return
+			}
+		}
+		logic.HTTPRetGame(c, logic.ERR_PERMISSION_DENIED, "permission denied")
+		c.Abort()
+	}
+}

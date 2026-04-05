@@ -17,8 +17,8 @@ type ServerItem struct {
 	MergeTime         int64  `json:"mergeTime" xorm:"merge_time notnull default 0"`
 	Ip                string `json:"ip" xorm:"varchar(64) notnull"`
 	Port              int    `json:"port" xorm:"notnull"`
-	MainServerHttpUrl string `json:"mainServerHttpUrl" xorm:"main_server_http_url"` // 大厅服 HTTP 地址，GM 转发用（如 http://ip:9505）
-	ServerState       int    `json:"serverState" xorm:"server_state"`               // 0：正常 1：拥挤 2：爆满 3：维护 4：未开服 5：停服
+	MainServerHttpUrl string `json:"mainServerHttpUrl" xorm:"main_server_http_url"`
+	ServerState       int    `json:"serverState" xorm:"server_state"` // 0：正常 1：拥挤 2：爆满 3：维护 4：未开服 5：停服
 	OpenServerTime    int64  `json:"openServerTime" xorm:"open_server_time"`
 	StopServerTime    int64  `json:"stopServerTime" xorm:"stop_server_time"`
 	ServerName        string `json:"serverName" xorm:"server_name varchar(64)"`

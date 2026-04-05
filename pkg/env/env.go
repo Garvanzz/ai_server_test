@@ -39,6 +39,8 @@ type Env struct {
 	Debug      bool     // 是否是DEBUG模式(Debug模式不可设置时间偏移)
 	ConfPath   string   // json 文件路径
 	HttpUrl    string   // http 服务地址
+	GmToken    string   // GM HTTP 接口鉴权 Token（X-GM-Token 请求头）；为空则拒绝所有请求
+	GmAllowIPs []string // 允许访问 GM 接口的 IP 白名单；GmToken 非空时此字段不生效
 	TcpGate    *TcpGate // TCP 网关配置
 	Gate       *Gate    // WebSocket 网关配置
 	Mysql      *Mysql   // 通用 Mysql

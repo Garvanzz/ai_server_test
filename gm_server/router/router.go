@@ -48,10 +48,11 @@ func Register(r *gin.Engine) {
 		servers.POST("/game-restart", logic.GmReStartGameServer)
 		servers.POST("/game-list-all", logic.GmGetGameServerProcessList)
 		servers.GET("/time", logic.GmGetServerTime)
-		servers.POST("/time", logic.GmSetServerTime)
+		servers.POST("/time", middleware.RequirePermission(1, 2), logic.GmSetServerTime)
 	}
 
 	serverGroups := gm.Group("/server-groups")
+	serverGroups.Use(middleware.RequirePermission(1, 2))
 	{
 		serverGroups.POST("/list", logic.GmGetServerGroupManageList)
 		serverGroups.POST("/create", logic.GmCreateServerGroup)
@@ -90,8 +91,9 @@ func Register(r *gin.Engine) {
 	gm.POST("/orders/cache-list", logic.GmGetCacheOrderList)
 	gm.POST("/guild/list", logic.GmGetGuildList)
 
-	// ========== 合服管理 ==========
+	// ========== 合服管理（仅管理员以上 permission=1,2）==========
 	merge := gm.Group("/merge")
+	merge.Use(middleware.RequirePermission(1, 2))
 	{
 		merge.POST("/plan/create", logic.GmCreateMergePlan)
 		merge.POST("/plan/list", logic.GmListMergePlans)
@@ -103,8 +105,9 @@ func Register(r *gin.Engine) {
 		merge.POST("/conflicts", logic.GmListMergeConflicts)
 	}
 
-	// ========== 进程管理（login/main/game 统一管理，替代 game_server 进程管理混用）==========
+	// ========== 进程管理（仅管理员以上 permission=1,2）==========
 	processes := gm.Group("/processes")
+	processes.Use(middleware.RequirePermission(1, 2))
 	{
 		processes.POST("/list", logic.GmListProcesses)
 		processes.POST("/create", logic.GmCreateProcess)
@@ -132,6 +135,16 @@ func Register(r *gin.Engine) {
 	gm.POST("/config/game-update", logic.GmGameUpdateConfig)
 	gm.POST("/build", logic.GmBuildServer)
 	gm.POST("/build/game", logic.GmGameBuildServer)
+
+	// ========== GM 账号管理（仅超级管理员 permission=1）==========
+	accounts := gm.Group("/accounts")
+	accounts.Use(middleware.RequirePermission(1))
+	{
+		accounts.POST("/list", logic.GmListAdminAccounts)
+		accounts.POST("/create", logic.GmCreateAdminAccount)
+		accounts.POST("/update", logic.GmUpdateAdminAccount)
+		accounts.POST("/delete", logic.GmDeleteAdminAccount)
+	}
 
 	// ========== 活动管理 ==========
 	activity := gm.Group("/activity")

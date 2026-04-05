@@ -1,7 +1,9 @@
 package http
 
 import (
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +16,11 @@ func (m *HttpModule) register() {
 		})
 	})
 
-	// GM 接口：建议内网访问 + 鉴权（见 gmAuth 中间件）
+	// 健康检查（无需鉴权），gm_server 通过 TCP dial 此端口判定大厅服是否在线
+	m.router.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "message": "ok"})
+	})
+
 	gm := m.router.Group("/gm")
 	gm.Use(m.gmAuth())
 	{
@@ -71,10 +77,50 @@ func (m *HttpModule) register() {
 	}
 }
 
-// gmAuth GM 鉴权中间件，目前仅占位，生产环境应校验 token/白名单等
+// gmAuth GM 接口鉴权中间件。
+// 优先使用 Token 鉴权：env.toml 中设置 GmToken，请求须携带 "X-GM-Token: <token>" 请求头。
+// 若未配置 Token，则回落到 IP 白名单（GmAllowIPs）；两者均未配置则拦截全部请求。
 func (m *HttpModule) gmAuth() gin.HandlerFunc {
+	env := m.GetApp().GetEnv()
+	token := strings.TrimSpace(env.GmToken)
+	allowIPs := env.GmAllowIPs
+
 	return func(c *gin.Context) {
-		// TODO: 校验 X-GM-Token 或 IP 白名单，失败则 c.AbortWithStatus(403)
-		c.Next()
+		if token != "" {
+			if c.GetHeader("X-GM-Token") != token {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": 403, "message": "forbidden"})
+				return
+			}
+			c.Next()
+			return
+		}
+
+		// 无 Token 配置时走 IP 白名单
+		if len(allowIPs) > 0 {
+			clientIP := c.ClientIP()
+			allowed := false
+			for _, cidr := range allowIPs {
+				cidr = strings.TrimSpace(cidr)
+				if strings.Contains(cidr, "/") {
+					_, network, err := net.ParseCIDR(cidr)
+					if err == nil && network.Contains(net.ParseIP(clientIP)) {
+						allowed = true
+						break
+					}
+				} else if cidr == clientIP {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": 403, "message": "forbidden"})
+				return
+			}
+			c.Next()
+			return
+		}
+
+		// Token 和白名单均未配置，拒绝所有请求（安全默认值）
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": 403, "message": "gm auth not configured"})
 	}
 }

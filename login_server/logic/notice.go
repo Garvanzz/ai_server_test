@@ -5,6 +5,7 @@ import (
 	"xfx/core/define"
 	"xfx/core/model"
 	dto2 "xfx/login_server/dto"
+	"xfx/pkg/utils"
 
 	"slices"
 	"xfx/login_server/internal/middleware"
@@ -47,15 +48,22 @@ func GetNotices(c *gin.Context) {
 	}
 
 	slices.SortFunc(items, func(a, b model.NoticeItem) int {
-		return int(a.EffectTime - b.EffectTime)
+		return int(b.EffectTime - a.EffectTime)
 	})
 
 	log.Debug("公告列表： %v", items)
 
-	//获取最新的5条数据
-	latestCount := 5
-	if len(items) > latestCount {
-		items = items[:latestCount]
+	//去除过期的
+	temp := make([]model.NoticeItem, 0)
+	for k := 0; k < len(items); k++ {
+		if items[k].ExpireTime > 0 && items[k].ExpireTime <= utils.Now().Unix() {
+			continue
+		}
+
+		temp = append(temp, items[k])
+		if len(temp) >= 5 {
+			break
+		}
 	}
 
 	js, _ := json.Marshal(items)

@@ -29,7 +29,6 @@ func GmLogin(c *gin.Context) {
 
 	player := new(dto.GmAccount)
 	player.UserName = loginUser.UserName
-	player.Password = loginUser.Password
 
 	has, err := db.AccountDb.Table(define.AdminTable).Get(player)
 	if err != nil {
@@ -40,6 +39,13 @@ func GmLogin(c *gin.Context) {
 
 	if !has {
 		HTTPRetGame(c, ERR_ACCOUNT_NOT_FOUND, "account not found")
+		return
+	}
+
+	// 验证密码：对明文密码进行MD5加密后与数据库中的密码对比
+	inputPasswordHash := utils.MD5(loginUser.Password)
+	if player.Password != inputPasswordHash {
+		HTTPRetGame(c, ERR_ACCOUNT_PASSWORD_FAILED, "password failed")
 		return
 	}
 
@@ -125,16 +131,21 @@ func GmAdminUserInfo(c *gin.Context) {
 
 	permiss := make([]string, 0)
 	if player.Permission == 1 {
-		permiss = []string{"admin", "editor"}
+		permiss = []string{"superadmin", "admin", "editor"}
 	} else if player.Permission == 2 {
-		permiss = []string{"admin"}
+		permiss = []string{"admin", "editor"}
 	} else if player.Permission == 3 {
 		permiss = []string{"editor"}
 	}
 
+	displayName := player.Name
+	if displayName == "" {
+		displayName = player.UserName
+	}
+
 	HTTPRetGame(c, SUCCESS, "success",
 		map[string]any{
-			"username":    player.Name,
+			"username":    displayName,
 			"permissions": permiss,
 		})
 }

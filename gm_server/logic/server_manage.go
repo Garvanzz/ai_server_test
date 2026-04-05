@@ -2,7 +2,7 @@ package logic
 
 import (
 	"fmt"
-	"net"
+	"net/http"
 	"net/url"
 	"os/exec"
 	"path/filepath"
@@ -135,12 +135,15 @@ func mainServerHTTPReachable(rawURL string) bool {
 	if err != nil || strings.TrimSpace(parsed.Host) == "" {
 		return false
 	}
-	conn, err := net.DialTimeout("tcp", parsed.Host, 800*time.Millisecond)
+	// 发送真实 HTTP GET /ping，确认 HTTP 层正常响应（而非仅 TCP 端口在监听）
+	pingURL := parsed.Scheme + "://" + parsed.Host + "/ping"
+	client := &http.Client{Timeout: 800 * time.Millisecond}
+	resp, err := client.Get(pingURL)
 	if err != nil {
 		return false
 	}
-	_ = conn.Close()
-	return true
+	_ = resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
 }
 
 func execCommandExists(exeName string) bool {

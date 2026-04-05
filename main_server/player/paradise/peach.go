@@ -1,7 +1,6 @@
 package paradise
 
 import (
-	"xfx/pkg/utils"
 	"xfx/core/config"
 	"xfx/core/config/conf"
 	"xfx/core/define"
@@ -11,6 +10,7 @@ import (
 	"xfx/main_server/player/internal"
 	"xfx/main_server/player/task"
 	"xfx/pkg/log"
+	"xfx/pkg/utils"
 	"xfx/proto/proto_huaguoshan"
 	"xfx/proto/proto_public"
 )
@@ -52,12 +52,6 @@ func ReqStartPlantPeach(ctx global.IPlayer, pl *model.Player, req *proto_huaguos
 	// 检查是否已经在种植中
 	if pl.Paradise.Peach.CurTreeId > 0 {
 		resp.Code = proto_public.CommonErrorCode_ERR_OutPutLimit
-		ctx.Send(resp)
-		return
-	}
-
-	if !utils.ContainsInt32(treeConf.Type, req.TreeType) {
-		resp.Code = proto_public.CommonErrorCode_ERR_ParamTypeError
 		ctx.Send(resp)
 		return
 	}
@@ -203,12 +197,12 @@ func fertilizePeach(ctx global.IPlayer, pl *model.Player) {
 
 	// 检查是否在成熟期(阶段3产量翻倍)
 	if pl.Paradise.Peach.CurPlantPeachStage == 3 {
-		for _, v := range pl.Paradise.Peach.Awards {
-			v.ItemNum += treeConf.AddNum * 2
+		for i := range pl.Paradise.Peach.Awards {
+			pl.Paradise.Peach.Awards[i].ItemNum += treeConf.AddNum * 2
 		}
 	} else {
-		for _, v := range pl.Paradise.Peach.Awards {
-			v.ItemNum += treeConf.AddNum
+		for i := range pl.Paradise.Peach.Awards {
+			pl.Paradise.Peach.Awards[i].ItemNum += treeConf.AddNum
 		}
 	}
 
